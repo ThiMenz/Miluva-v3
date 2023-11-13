@@ -56,16 +56,18 @@ namespace ChessBot
             }
         }
 
-        private void FillDictionaryArray(Dictionary<ulong, RayPrecalcs>[,] pArr, int pSquare, ulong pAttkBB, ulong pTU, int pAscendingOption, int pAscendingPinO, int pDescendingOption, int pDescendingPinO)
+        private void FillDictionaryArray(Dictionary<ulong, RayPrecalcs>[,] pArr, int pSquare, ulong pAttkBB, ulong pTU, int pAscendingOption, int pAscendingPinO, int pDescendingOption, int pDescendingPinO, int pAscendingAdder)
         {
             if (pAscendingOption != -1) pAttkBB = ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption);
             if (pDescendingOption != -1) pAttkBB = ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption);
             if (pAscendingPinO != -1) pArr[pSquare, pAscendingPinO].Add(pTU, new RayPrecalcs(pAttkBB, ULONG_OPERATIONS.SetBitToOne(0ul, pAscendingOption)));
             if (pDescendingPinO != -1) pArr[pSquare, pDescendingPinO].Add(pTU, new RayPrecalcs(pAttkBB, ULONG_OPERATIONS.SetBitToOne(0ul, pDescendingOption)));
+            if (pAscendingOption != -1) pArr[pSquare, pAscendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption + pAscendingAdder), 0ul));
+            if (pDescendingOption != -1) pArr[pSquare, pDescendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption - pAscendingAdder), 0ul));
             RayPrecalcs tRP = new RayPrecalcs(pAttkBB, 0ul);
             for (int kSq = 0; kSq < 64; kSq++)
             {
-                if (kSq == pAscendingPinO || kSq == pDescendingPinO) continue;
+                if (kSq == pAscendingPinO || kSq == pDescendingPinO || kSq == pAscendingOption || kSq == pDescendingOption) continue;
                 pArr[pSquare, kSq].Add(pTU, tRP);
             }
         }
@@ -138,7 +140,7 @@ namespace ChessBot
                 for (int t = pSquare - 7; t > -1 && t % 8 != 0; t -= 7)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictLB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO);
+                FillDictionaryArray(rayPrecalcDictLB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 7);
             } while (o-- != 0);
         }
 
@@ -161,7 +163,7 @@ namespace ChessBot
                 for (int t = pSquare - 9; t > -1 && t % 8 != 7; t -= 9)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictRB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO);
+                FillDictionaryArray(rayPrecalcDictRB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 9);
             } while (o-- != 0);
         }
 
@@ -184,7 +186,7 @@ namespace ChessBot
                 for (int t = pSquare - 1; t > tmin; t--)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictLR, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO);
+                FillDictionaryArray(rayPrecalcDictLR, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 1);
             } while (o-- != 0);
         }
 
@@ -206,7 +208,7 @@ namespace ChessBot
                 for (int t = pSquare - 8; t > -1; t -= 8)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictTB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO);
+                FillDictionaryArray(rayPrecalcDictTB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 8);
             } while (o-- != 0);
         }
 

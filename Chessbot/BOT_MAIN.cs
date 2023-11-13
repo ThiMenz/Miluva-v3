@@ -4,14 +4,6 @@ using System.Linq;
 
 namespace ChessBot
 {
-
-    // King Pin Bitboard Creation:
-    // ?! -> 4 Rays (Precalcs = 2^7*64 => 8192)
-    // -> if (blackBitboard.IsBitOne) if (piece.)
-
-    // =!? -> 2/4 Rays (Precalcs = 2^7*64*64) => ref / out vars (probs out)
-    // -> Ray Class (Precalcs = 4*2^7*64*64 = 2.097.152) => Precalc Structlike Class (ulong, ulong)
-
     public static class BOT_MAIN
     {
         public readonly static string[] FIGURE_TO_ID_LIST = new string[] { "Nichts", "Bauer", "Springer", "Läufer", "Turm", "Dame", "König" };
@@ -38,7 +30,7 @@ namespace ChessBot
         private List<Piece> whitePieceList = new List<Piece>();
         private List<Piece> blackPieceList = new List<Piece>();
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
-        private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, lastMoveSquare = 65;
+        private int whiteKingSquare, blackKingSquare, enPassantSquare = 65;
 
         private ulong[] knightSquareBitboards = new ulong[64];
         private ulong[] whitePawnAttackSquareBitboards = new ulong[64];

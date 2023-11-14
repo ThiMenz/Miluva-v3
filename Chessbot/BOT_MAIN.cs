@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("8/4qk2/8/3P4/1K3pP1/8/2Q5/8 w - - 0 2");
+            _ = new BoardManager("8/8/5q2/8/1r6/2KB4/2n5/8 w - - 0 2");
         }
     }
 
@@ -181,69 +181,69 @@ namespace ChessBot
             else if (curCheckCount == 1)
             {
                 //// En Passant +~300ms/10mil in Test 1
-                //if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
-                //{
-                //    int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
-                //    ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
-                //    int possibleAttacker2 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM8] & tu];
-                //    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
-                //    {
-                //        int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                //        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                //            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                //            moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
-                //    }
-                //    epM9 += 2;
-                //    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
-                //    {
-                //        int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                //        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                //            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                //            moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
-                //    }
-                //}
-                //for (int p = whitePieceList.Count; p-- > 0;)
-                //{
-                //    Piece pc = whitePieceList[p];
-                //    int pcSquare = pc.square;
-                //
-                //    switch (pc.pieceTypeID)
-                //    {
-                //        case 1:
-                //            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whitePieceBitboard, blackPieceBitboard);
-                //            else whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
-                //            break;
-                //        case 2:
-                //            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) knightMovement.AddMovesToMoveOptionList(pcSquare, allPieceBitboard, blackPieceBitboard);
-                //            break;
-                //        case 3:
-                //            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) bishopMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                //            else bishopMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
-                //            break;
-                //        case 4:
-                //            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) rookMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                //            else rookMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
-                //            break;
-                //        case 5:
-                //            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) queenMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                //            else queenMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
-                //            break;
-                //        case 6:
-                //            kingMovement.AddMoveOptionsToMoveList(pcSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
-                //            break;
-                //    }
-                //}
-                //
-                //ulong tLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | lastMoveSquare];
-                //int s_molc = moveOptionList.Count;
-                //List<Move> tMoves = new List<Move>();
-                //for (int m = 0; m < s_molc; m++)
-                //{
-                //    Move mm = moveOptionList[m];
-                //    if (mm.pieceType == 6) tMoves.Add(moveOptionList[m]);
-                //    else if (ULONG_OPERATIONS.IsBitOne(tLine, moveOptionList[m].endPos)) tMoves.Add(moveOptionList[m]);
-                //}
-                //moveOptionList = tMoves;
+                if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
+                {
+                    int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
+                    ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
+                    int possibleAttacker2 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM8] & tu];
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    {
+                        int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                            moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                    }
+                    epM9 += 2;
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    {
+                        int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                            moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                    }
+                }
+                for (int p = whitePieceList.Count; p-- > 0;)
+                {
+                    Piece pc = whitePieceList[p];
+                    int pcSquare = pc.square;
+                
+                    switch (pc.pieceTypeID)
+                    {
+                        case 1:
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whitePieceBitboard, blackPieceBitboard);
+                            else whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
+                            break;
+                        case 2:
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) knightMovement.AddMovesToMoveOptionList(pcSquare, allPieceBitboard, blackPieceBitboard);
+                            break;
+                        case 3:
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) bishopMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
+                            else bishopMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            break;
+                        case 4:
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) rookMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
+                            else rookMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            break;
+                        case 5:
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) queenMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
+                            else queenMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            break;
+                        case 6:
+                            kingMovement.AddMoveOptionsToMoveList(pcSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
+                            break;
+                    }
+                }
+                
+                ulong tLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | 45];
+                int s_molc = moveOptionList.Count;
+                List<Move> tMoves = new List<Move>();
+                for (int m = 0; m < s_molc; m++)
+                {
+                    Move mm = moveOptionList[m];
+                    if (mm.pieceType == 6) tMoves.Add(moveOptionList[m]);
+                    else if (ULONG_OPERATIONS.IsBitOne(tLine, moveOptionList[m].endPos)) tMoves.Add(moveOptionList[m]);
+                }
+                moveOptionList = tMoves;
                 ////{
                 ////    Move curMove = moveOptionList[m];
                 ////    // Bis hierhin: 2150ms/10mil in Test 1

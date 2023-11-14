@@ -90,7 +90,19 @@ namespace ChessBot
                     if (!pBNA) pMoves.Add(new Move(pSq, pI, KING_PIECE_ID, false));
                     continue;
                 }
-                if (pBNA) pMoves.Add(new Move(pSq, pI, KING_PIECE_ID, true));
+                if (pBNA) {
+                    pMoves.Add(new Move(pSq, pI, KING_PIECE_ID, true));
+                    int t_ti_L = pMoves.Count;
+                    for (int j = 0; j < t_ti_L; j++)
+                    {
+                        if (pMoves[j].endPos == pI)
+                        {
+                            pMoves.RemoveAt(j);
+                            break;
+                        }
+                    }
+                    //if (pMoves.Contains(pSq)) (new Move());
+                }
                 outp = ULONG_OPERATIONS.SetBitToOne(outp, pI);
             }
             return outp;

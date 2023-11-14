@@ -30,6 +30,11 @@ namespace ChessBot
             } 
             PrecalculateAllRayBitboards(); 
             PrecalculateAllRays();
+
+            //ulong tu = 0ul;
+            //tu = ULONG_OPERATIONS.SetBitsToOne(tu, 5, 7);
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tu));
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(rayPrecalcDictLR[3, 5][tu].attackingBitboard));
         }
 
         private void PrecalculateAllRays()
@@ -62,6 +67,8 @@ namespace ChessBot
             if (pDescendingOption != -1) pAttkBB = ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption);
             if (pAscendingPinO != -1) pArr[pSquare, pAscendingPinO].Add(pTU, new RayPrecalcs(pAttkBB, ULONG_OPERATIONS.SetBitToOne(0ul, pAscendingOption)));
             if (pDescendingPinO != -1) pArr[pSquare, pDescendingPinO].Add(pTU, new RayPrecalcs(pAttkBB, ULONG_OPERATIONS.SetBitToOne(0ul, pDescendingOption)));
+            //pAscendingOption = pDescendingOption = -1;
+            //if (pSquare == 3) { Console.WriteLine(pAscendingOption + "-" + pDescendingOption); }
             if (pAscendingOption != -1) pArr[pSquare, pAscendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption + pAscendingAdder), 0ul));
             if (pDescendingOption != -1) pArr[pSquare, pDescendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption - pAscendingAdder), 0ul));
             RayPrecalcs tRP = new RayPrecalcs(pAttkBB, 0ul);

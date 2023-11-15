@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("8/8/5q2/8/1r6/2KB4/2n5/8 w - - 0 2");
+            _ = new BoardManager("rnbq1bnr/ppppkppp/8/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQha - 0 1");
         }
     }
 
@@ -23,14 +23,22 @@ namespace ChessBot
         private KingMovement kingMovement;
         private WhitePawnMovement whitePawnMovement;
         private Rays rays;
+        private ZobristHashing zobristHashing;
         public List<Move> moveOptionList = new List<Move>();
 
         private Piece[] pieceArray = new Piece[65];
         private List<Piece> pieceList = new List<Piece>();
         private List<Piece> whitePieceList = new List<Piece>();
         private List<Piece> blackPieceList = new List<Piece>();
+
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
-        private int whiteKingSquare, blackKingSquare, enPassantSquare = 65;
+        private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, happenedFullMoves = 0, fiftyMoveRuleCounter = 0;
+        private bool whiteCastleRightKingSide, whiteCastleRightQueenSide, blackCastleRightKingSide, blackCastleRightQueenSide;
+        private bool isWhiteToMove;
+
+        private const ulong WHITE_KING_ROCHADE = 96, WHITE_QUEEN_ROCHADE = 14, BLACK_KING_ROCHADE = 6917529027641081856, BLACK_QUEEN_ROCHADE = 1008806316530991104;
+        private readonly Move mWHITE_KING_ROCHADE = new Move(4, 6, 7, 5), mWHITE_QUEEN_ROCHADE = new Move(4, 2, 0, 3), 
+            mBLACK_KING_ROCHADE = new Move(60, 62, 63, 61), mBLACK_QUEEN_ROCHADE = new Move(60, 58, 56, 59);
 
         private ulong[] knightSquareBitboards = new ulong[64];
         private ulong[] whitePawnAttackSquareBitboards = new ulong[64];
@@ -42,6 +50,9 @@ namespace ChessBot
             LoadFenString(fen);
 
             Stopwatch setupStopwatch = Stopwatch.StartNew();
+
+            Console.Write("[PRECALCS] Zobrist Hashing");
+            zobristHashing = new ZobristHashing(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.Write("[PRECALCS] Square Connectives");
             SquareConnectivesPrecalculations(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.Write("[PRECALCS] Pawn Attack Bitboards");
@@ -64,17 +75,42 @@ namespace ChessBot
 
             Stopwatch sw = Stopwatch.StartNew();
 
-            for (int p = 0; p < 1; p++)
+            for (int p = 0; p < 1_000_000; p++)
             {
-                Minimax(0, 0);
+                Minimax();
+                //LeafCheckingPieceCheck(44, 45, 5);
             }
 
             sw.Stop();
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
+
+            Console.WriteLine((int)((10_000_000d / (double)sw.ElapsedTicks) * 31_000_000));
         }
 
-        private void Minimax(int checkCount, int inCheckSpot)
+        private int LeafCheckingPieceCheck(int pStartPos, int pEndPos, int pPieceType)
         {
+            int tI, tPossibleAttackPiece;
+            if (pPieceType == 1)
+            {
+                if (ULONG_OPERATIONS.IsBitOne(blackPawnAttackSquareBitboards[pEndPos], whiteKingSquare)) return pEndPos;
+            }
+            else if (pPieceType == 2)
+            {
+                if (ULONG_OPERATIONS.IsBitOne(knightSquareBitboards[pEndPos], whiteKingSquare)) return pEndPos;
+            }
+            else if (pPieceType != 6) {
+                tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | pEndPos] & allPieceBitboard];
+                if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceArray[tPossibleAttackPiece].moveAbilities[squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
+            }
+            tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | pStartPos] & allPieceBitboard];
+            if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceArray[tPossibleAttackPiece].moveAbilities[squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
+            return -1;
+        }
+
+        private void Minimax()
+        {
+            int tCheckingPieceSquare = LeafCheckingPieceCheck(49, 50, 5);
+
             // -> Schneller Leaf Check Check für Check Extensions (hmm, vielleicht auch einfach seperater Quiescence Search Generator; wäre besser imo, wohl da müsste man das ja auch iwi haben)
             // -> Queens [DONE]
             // -> Knights [DONE]
@@ -82,8 +118,7 @@ namespace ChessBot
             //    - Control Bitboards BoardManager
             //    - PreCalc Dicts on Pin and without Pin (including Promotions)
             //    - Iwi En Passant Handling (Mask != 0ul >> Add En Passant zu Square)
-
-            // -> Kings & 1 & 2+ Check Cases & Rochade ahh (Bei 1 erstmal die Lazy Variante wählen)
+            // -> Kings & 1 & 2+ Check Cases & Rochade ahh (Bei 1 erstmal die Lazy Variante wählen) [DONE]
 
             // -> Repetitions (Zobrist Keys)
             // -> Draw by 50 Move Rule
@@ -120,10 +155,13 @@ namespace ChessBot
             }
             oppAttkBitboard = oppDiagonalSliderVision | oppStraightSliderVision | oppStaticPieceVision;
             int curCheckCount = ULONG_OPERATIONS.TrippleIsBitOne(oppDiagonalSliderVision, oppStaticPieceVision, oppStraightSliderVision, whiteKingSquare);
-            // Bis hierhin ~500ms/10mil in Test 1
 
+            // Bis hierhin ~500ms/10mil in Test 1
             if (curCheckCount == 0)
             {
+                if (whiteCastleRightKingSide && ((allPieceBitboard | oppAttkBitboard) & WHITE_KING_ROCHADE) == 0ul) moveOptionList.Add(mWHITE_KING_ROCHADE);
+                if (whiteCastleRightQueenSide && ((allPieceBitboard | oppAttkBitboard) & WHITE_QUEEN_ROCHADE) == 0ul) moveOptionList.Add(mWHITE_QUEEN_ROCHADE);
+
                 // En Passant +~300ms/10mil in Test 1
                 if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
                 {
@@ -180,8 +218,8 @@ namespace ChessBot
             }
             else if (curCheckCount == 1)
             {
-                //// En Passant +~300ms/10mil in Test 1
-                if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
+                ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | tCheckingPieceSquare];
+                if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) && enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
                 {
                     int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
                     ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
@@ -233,28 +271,17 @@ namespace ChessBot
                             break;
                     }
                 }
-                
-                ulong tLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | 45];
                 int s_molc = moveOptionList.Count;
                 List<Move> tMoves = new List<Move>();
                 for (int m = 0; m < s_molc; m++)
                 {
                     Move mm = moveOptionList[m];
                     if (mm.pieceType == 6) tMoves.Add(moveOptionList[m]);
-                    else if (ULONG_OPERATIONS.IsBitOne(tLine, moveOptionList[m].endPos)) tMoves.Add(moveOptionList[m]);
+                    else if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, moveOptionList[m].endPos)) tMoves.Add(moveOptionList[m]);
                 }
                 moveOptionList = tMoves;
-                ////{
-                ////    Move curMove = moveOptionList[m];
-                ////    // Bis hierhin: 2150ms/10mil in Test 1
-                ////
-                ////    //Console.WriteLine(curMove);
-                ////}
             }
-            else
-            {
-
-            }
+            else kingMovement.AddMoveOptionsToMoveList(whiteKingSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
             // Bis hierhin: 1700ms/10mil in Test 1
 
             int molc = moveOptionList.Count;
@@ -263,7 +290,7 @@ namespace ChessBot
                 Move curMove = moveOptionList[m];
                 // Bis hierhin: 2150ms/10mil in Test 1
 
-                Console.WriteLine(curMove);
+                //Console.WriteLine(curMove);
             }
         }
 
@@ -289,6 +316,33 @@ namespace ChessBot
             string epstr = spaceSpl[3];
             if (epstr == "-") enPassantSquare = 65;
             else enPassantSquare = (epstr[0] - 'a') + 8 * (epstr[1] - '1');
+
+            isWhiteToMove = true;
+            if (spaceSpl[1] == "b") isWhiteToMove = false;
+
+            string crstr = spaceSpl[2];
+            whiteCastleRightKingSide = whiteCastleRightQueenSide = blackCastleRightKingSide = blackCastleRightQueenSide = false;
+            int crStrL = crstr.Length;
+            for (int i = 0; i < crStrL; i++) {
+                switch (crstr[i])
+                {
+                    case 'K':
+                        whiteCastleRightKingSide = true;
+                        break;
+                    case 'Q':
+                        whiteCastleRightQueenSide = true;
+                        break;
+                    case 'k':
+                        blackCastleRightKingSide = true;
+                        break;
+                    case 'q':
+                        blackCastleRightQueenSide = true;
+                        break;
+                }
+            }
+
+            fiftyMoveRuleCounter = Convert.ToInt32(spaceSpl[4]);
+            happenedFullMoves = Convert.ToInt32(spaceSpl[5]);
 
             int tSq = 0;
             for (int i = rowSpl.Length; i-- > 0; )
@@ -430,7 +484,7 @@ namespace ChessBot
                     squareConnectivesPrecalculationArray[square << 6 | square2] = t;
                     squareConnectivesPrecalculationRayArray[square << 6 | square2] = tRay;
                     squareConnectivesCrossDirsPrecalculationArray[square << 6 | square2] = t2;
-                    squareConnectivesPrecalculationLineArray[square << 6 | square2] = tExclRay;
+                    squareConnectivesPrecalculationLineArray[square << 6 | square2] = ULONG_OPERATIONS.SetBitToOne(tExclRay, square2);
                 }
             }
         }
@@ -475,6 +529,8 @@ namespace ChessBot
     {
         public int startPos { get; private set; }
         public int endPos { get; private set; }
+        public int rochadeStartPos { get; private set; }
+        public int rochadeEndPos { get; private set; }
         public int pieceType { get; private set; }
         public int enPassantOption { get; private set; } = 65;
         public int promotionType { get; private set; } = 0;
@@ -482,6 +538,7 @@ namespace ChessBot
         public bool isSliderMove { get; private set; }
         public bool isEnPassant { get; private set; } = false;
         public bool isPromotion { get; private set; } = false;
+        public bool isRochade { get; private set; } = false;
 
         public Move(int pSP, int pEP, int pPT)
         {
@@ -489,6 +546,16 @@ namespace ChessBot
             endPos = pEP;
             pieceType = pPT;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
+        }
+        public Move(int pSP, int pEP, int pRSP, int pREP)
+        {
+            startPos = pSP;
+            endPos = pEP;
+            pieceType = 6;
+            isSliderMove = false;
+            isRochade = true;
+            rochadeStartPos = pRSP;
+            rochadeEndPos = pREP;
         }
         public Move(int pSP, int pEP, int pPT, bool pIC)
         {
@@ -532,6 +599,7 @@ namespace ChessBot
             if (enPassantOption != 65) s += " [EP = " + enPassantOption + "] ";
             if (isCapture) s += " /CAPTURE/";
             if (isEnPassant) s += " /EN PASSANT/";
+            if (isRochade) s += " /ROCHADE/";
             if (isPromotion) s += " /" + BOT_MAIN.FIGURE_TO_ID_LIST[promotionType] + "-PROMOTION/";
             return s;
         }

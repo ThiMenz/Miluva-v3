@@ -32,6 +32,7 @@ namespace ChessBot
         private List<Piece> blackPieceList = new List<Piece>();
 
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
+        private ulong zobristKey, zobristSideSwap;
         private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, happenedFullMoves = 0, fiftyMoveRuleCounter = 0;
         private bool whiteCastleRightKingSide, whiteCastleRightQueenSide, blackCastleRightKingSide, blackCastleRightQueenSide;
         private bool isWhiteToMove;
@@ -52,7 +53,7 @@ namespace ChessBot
             Stopwatch setupStopwatch = Stopwatch.StartNew();
 
             Console.Write("[PRECALCS] Zobrist Hashing");
-            zobristHashing = new ZobristHashing(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            zobristHashing = new ZobristHashing(this); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.Write("[PRECALCS] Square Connectives");
             SquareConnectivesPrecalculations(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.Write("[PRECALCS] Pawn Attack Bitboards");
@@ -73,11 +74,15 @@ namespace ChessBot
 
             Console.WriteLine("[DONE]\n\n");
 
+            int[] i234 = new int[64] { 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6 };
+            int[] i235 = new int[64];
+
             Stopwatch sw = Stopwatch.StartNew();
 
-            for (int p = 0; p < 1_000_000; p++)
+            for (int p = 0; p < 10_000_000; p++)
             {
-                Minimax();
+                Array.Copy(i234, i235, 64);
+                //MinimaxWhite();
                 //LeafCheckingPieceCheck(44, 45, 5);
             }
 
@@ -107,7 +112,7 @@ namespace ChessBot
             return -1;
         }
 
-        private void Minimax()
+        private void GetLegalWhiteMoves()
         {
             int tCheckingPieceSquare = LeafCheckingPieceCheck(49, 50, 5);
 
@@ -284,14 +289,96 @@ namespace ChessBot
             else kingMovement.AddMoveOptionsToMoveList(whiteKingSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
             // Bis hierhin: 1700ms/10mil in Test 1
 
-            int molc = moveOptionList.Count;
+            //int molc = moveOptionList.Count;
+            //for (int m = 0; m < molc; m++)
+            //{
+            //    Move curMove = moveOptionList[m];
+            //    // Bis hierhin: 2150ms/10mil in Test 1
+            //
+            //    //Console.WriteLine(curMove);
+            //}
+        }
+
+        private void MinimaxWhite()
+        {
+            GetLegalWhiteMoves();
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare;
+            ulong tZobristKey = zobristKey ^ zobristSideSwap;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide;
+            ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
+
+            // Unary Set Bit To Zero?
+            // Remove of PieceArray & PieceList => Replace with just two 64 sized int arrays; indicating the pieceType
+            // Dann mit Array.Copy hier einmal diese pieceTypeList kopieren; wohl dann wüsste ich nicht weiter -> oder es schließlich wie normal in Undo reinschreiben
+
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
-                // Bis hierhin: 2150ms/10mil in Test 1
 
-                //Console.WriteLine(curMove);
+                #region MakeMove()
+
+                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos;
+
+                if (tPieceType == 6) // König Moves
+                {
+                    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                    if (curMove.isStandard)
+                    {
+                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                    }
+                    else if (curMove.isCapture)
+                    {
+                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                        blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                    }
+                    else // Rochade
+                    {
+                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), whiteKingSquare = tEndPos);
+                    }
+                }
+                else if (curMove.isStandard) 
+                {
+                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                }
+                else if (curMove.isEnPassant)
+                {
+                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.enPassantOption);
+                }
+                else // Captures
+                {
+                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                }
+
+                if ((whitePieceBitboard & 1) == 0ul) whiteCastleRightQueenSide = false;
+                if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, 7)) whiteCastleRightKingSide = false;
+
+                allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+
+                #endregion
+
+                Console.WriteLine(curMove);
+                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard));
+
+                #region UndoMove()
+
+                whiteCastleRightKingSide = tWKSCR;
+                whiteCastleRightQueenSide = tWQSCR;
+                whiteKingSquare = tWhiteKingSquare;
+
+                #endregion
             }
+
+            zobristKey = tZobristKey ^ zobristSideSwap;
+            allPieceBitboard = tAPB;
+            whitePieceBitboard = tWPB;
+            blackPieceBitboard = tBPB;
+        }
+
+        public void SetZobristSideSwap(ulong ul)
+        {
+            zobristSideSwap = ul;
         }
 
         public void SetKnightMasks(ulong[] uls)
@@ -539,12 +626,14 @@ namespace ChessBot
         public bool isEnPassant { get; private set; } = false;
         public bool isPromotion { get; private set; } = false;
         public bool isRochade { get; private set; } = false;
+        public bool isStandard { get; private set; } = false;
 
         public Move(int pSP, int pEP, int pPT)
         {
             startPos = pSP;
             endPos = pEP;
             pieceType = pPT;
+            isStandard = true;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }
         public Move(int pSP, int pEP, int pRSP, int pREP)
@@ -571,6 +660,7 @@ namespace ChessBot
             endPos = pEP;
             pieceType = pPT;
             isCapture = pIC;
+            isStandard = !pIC;
             enPassantOption = enPassPar;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }

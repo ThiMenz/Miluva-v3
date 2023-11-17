@@ -14,6 +14,12 @@ namespace ChessBot
         }
     }
 
+    // => Finalize V1 of Make / Undo
+    // Zobrist Hashing Fix
+    // Zobrist Hashing More Efficient Version -> all Move Combinations (Captures also?)
+    // Repetitions
+    // 50 Move Rule & Move Counter
+
     public class BoardManager
     {
         private RookMovement rookMovement;
@@ -23,22 +29,17 @@ namespace ChessBot
         private KingMovement kingMovement;
         private WhitePawnMovement whitePawnMovement;
         private Rays rays;
-        private ZobristHashing zobristHashing;
         public List<Move> moveOptionList = new List<Move>();
-
-        private Piece[] pieceArray = new Piece[65];
-        private List<Piece> pieceList = new List<Piece>();
-        private List<Piece> whitePieceList = new List<Piece>();
-        private List<Piece> blackPieceList = new List<Piece>();
+        private int[] pieceTypeArray = new int[64];
 
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
-        private ulong zobristKey, zobristSideSwap;
+        private ulong zobristKey;
         private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, happenedFullMoves = 0, fiftyMoveRuleCounter = 0;
         private bool whiteCastleRightKingSide, whiteCastleRightQueenSide, blackCastleRightKingSide, blackCastleRightQueenSide;
         private bool isWhiteToMove;
 
         private const ulong WHITE_KING_ROCHADE = 96, WHITE_QUEEN_ROCHADE = 14, BLACK_KING_ROCHADE = 6917529027641081856, BLACK_QUEEN_ROCHADE = 1008806316530991104;
-        private readonly Move mWHITE_KING_ROCHADE = new Move(4, 6, 7, 5), mWHITE_QUEEN_ROCHADE = new Move(4, 2, 0, 3), 
+        private readonly Move mWHITE_KING_ROCHADE = new Move(4, 6, 7, 5), mWHITE_QUEEN_ROCHADE = new Move(4, 2, 0, 3),
             mBLACK_KING_ROCHADE = new Move(60, 62, 63, 61), mBLACK_QUEEN_ROCHADE = new Move(60, 58, 56, 59);
 
         private ulong[] knightSquareBitboards = new ulong[64];
@@ -46,50 +47,77 @@ namespace ChessBot
         private ulong[] blackPawnAttackSquareBitboards = new ulong[64];
         private ulong[] kingSquareBitboards = new ulong[64];
 
+        private bool[,] pieceTypeAbilities = new bool[7, 3] 
+        {
+            { false, false, false }, // Null
+            { false, false, false }, // Bauer
+            { false, false, false }, // Springer 
+            { false, false, true }, // Läufer
+            { false, true, false }, // Turm
+            { false, true, true }, // Dame
+            { false, false, false }  // König
+        };
+
         public BoardManager(string fen)
         {
-            LoadFenString(fen);
-
             Stopwatch setupStopwatch = Stopwatch.StartNew();
 
             Console.Write("[PRECALCS] Zobrist Hashing");
-            zobristHashing = new ZobristHashing(this); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            InitZobrist();
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
             Console.Write("[PRECALCS] Square Connectives");
-            SquareConnectivesPrecalculations(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SquareConnectivesPrecalculations(); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
             Console.Write("[PRECALCS] Pawn Attack Bitboards");
-            PawnAttackBitboards(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            PawnAttackBitboards(); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
             Console.Write("[PRECALCS] Rays");
-            rays = new Rays(); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            rays = new Rays(); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
             queenMovement = new QueenMovement(this);
             Console.Write("[PRECALCS] Rook Movement");
-            rookMovement = new RookMovement(this, queenMovement); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
-            Console.Write("[PRECALCS] Bishop Movement");
-            bishopMovement = new BishopMovement(this, queenMovement); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
-            Console.Write("[PRECALCS] Knight Movement");
-            knightMovement = new KnightMovement(this); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
-            Console.Write("[PRECALCS] King Movement");
-            kingMovement = new KingMovement(this); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
-            Console.Write("[PRECALCS] Pawn Movement");
-            whitePawnMovement = new WhitePawnMovement(this); Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            rookMovement = new RookMovement(this, queenMovement); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
+            Console.Write("[PRECALCS] Bishop Movement");
+            bishopMovement = new BishopMovement(this, queenMovement); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
+            Console.Write("[PRECALCS] Knight Movement");
+            knightMovement = new KnightMovement(this); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
+            Console.Write("[PRECALCS] King Movement");
+            kingMovement = new KingMovement(this); 
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+
+            Console.Write("[PRECALCS] Pawn Movement");
+            whitePawnMovement = new WhitePawnMovement(this);
+            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.WriteLine("[DONE]\n\n");
 
-            int[] i234 = new int[64] { 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6, 3, 5, 2, 6 };
-            int[] i235 = new int[64];
+            LoadFenString(fen);
 
             Stopwatch sw = Stopwatch.StartNew();
 
-            for (int p = 0; p < 10_000_000; p++)
+            for (int p = 0; p < 1; p++)
             {
-                Array.Copy(i234, i235, 64);
-                //MinimaxWhite();
+                //Array.Copy(i234, i235, 64);
+                MinimaxWhite();
                 //LeafCheckingPieceCheck(44, 45, 5);
             }
 
             sw.Stop();
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
 
-            Console.WriteLine((int)((10_000_000d / (double)sw.ElapsedTicks) * 31_000_000));
+            Console.WriteLine((int)((10_000_000d / (double)sw.ElapsedTicks) * 32_000_000));
+
+            LoadFenString("rnbq1bnr/ppppkppp/8/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b - - 1 1");
+            Console.WriteLine(zobristKey);
         }
 
         private int LeafCheckingPieceCheck(int pStartPos, int pEndPos, int pPieceType)
@@ -105,17 +133,15 @@ namespace ChessBot
             }
             else if (pPieceType != 6) {
                 tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | pEndPos] & allPieceBitboard];
-                if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceArray[tPossibleAttackPiece].moveAbilities[squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
+                if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
             }
             tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | pStartPos] & allPieceBitboard];
-            if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceArray[tPossibleAttackPiece].moveAbilities[squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
+            if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
             return -1;
         }
 
-        private void GetLegalWhiteMoves()
+        private void GetLegalWhiteMoves(int pCheckingPieceSquare)
         {
-            int tCheckingPieceSquare = LeafCheckingPieceCheck(49, 50, 5);
-
             // -> Schneller Leaf Check Check für Check Extensions (hmm, vielleicht auch einfach seperater Quiescence Search Generator; wäre besser imo, wohl da müsste man das ja auch iwi haben)
             // -> Queens [DONE]
             // -> Knights [DONE]
@@ -130,34 +156,35 @@ namespace ChessBot
             // -> Other Sided Minimax
 
             moveOptionList.Clear();
-            ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
-            for (int p = blackPieceList.Count; p-- > 0;)
-            {
-                Piece pc = blackPieceList[p];
 
-                switch (pc.pieceTypeID)
+            ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
+            for (int p = 0; p < 64; p++)
+            {
+                if (ULONG_OPERATIONS.IsBitZero(blackPieceBitboard, p)) continue;
+                switch (pieceTypeArray[p])
                 {
                     case 1:
-                        oppStaticPieceVision |= blackPawnAttackSquareBitboards[pc.square];
+                        oppStaticPieceVision |= blackPawnAttackSquareBitboards[p];
                         break;
                     case 2:
-                        oppStaticPieceVision |= knightSquareBitboards[pc.square];
+                        oppStaticPieceVision |= knightSquareBitboards[p];
                         break;
                     case 3:
-                        rays.DiagonalRays(allPieceBitboard, pc.square, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
+                        rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
                         break;
                     case 4:
-                        rays.StraightRays(allPieceBitboard, pc.square, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
+                        rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
                         break;
                     case 5:
-                        rays.DiagonalRays(allPieceBitboard, pc.square, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
-                        rays.StraightRays(allPieceBitboard, pc.square, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
+                        rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
+                        rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
                         break;
                     case 6:
-                        oppStaticPieceVision |= kingSquareBitboards[pc.square];
+                        oppStaticPieceVision |= kingSquareBitboards[p];
                         break;
                 }
             }
+
             oppAttkBitboard = oppDiagonalSliderVision | oppStraightSliderVision | oppStaticPieceVision;
             int curCheckCount = ULONG_OPERATIONS.TrippleIsBitOne(oppDiagonalSliderVision, oppStaticPieceVision, oppStraightSliderVision, whiteKingSquare);
 
@@ -173,106 +200,102 @@ namespace ChessBot
                     int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
                     ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
                     int possibleAttacker2 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM8] & tu];
-                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
                     {
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
                                 moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
                     }
                     epM9 += 2;
-                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
                     {
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
                                 moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
                     }
                 }
-                for (int p = whitePieceList.Count; p-- > 0;)
+                for (int p = 0; p < 64; p++)
                 {
-                    Piece pc = whitePieceList[p];
-                    int pcSquare = pc.square;
-
-                    switch (pc.pieceTypeID)
+                    if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, p)) continue;
+                    switch (pieceTypeArray[p])
                     {
                         case 1:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whitePieceBitboard, blackPieceBitboard);
-                            else whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) whitePawnMovement.AddMoveOptionsToMoveList(p, whitePieceBitboard, blackPieceBitboard);
+                            else whitePawnMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
                             break;
                         case 2:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) knightMovement.AddMovesToMoveOptionList(pcSquare, allPieceBitboard, blackPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) knightMovement.AddMovesToMoveOptionList(p, allPieceBitboard, blackPieceBitboard);
                             break;
                         case 3:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) bishopMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else bishopMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) bishopMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else bishopMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 4:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) rookMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else rookMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) rookMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else rookMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 5:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) queenMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else queenMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) queenMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else queenMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 6:
-                            kingMovement.AddMoveOptionsToMoveList(pcSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
+                            kingMovement.AddMoveOptionsToMoveList(p, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
                             break;
                     }
                 }
             }
             else if (curCheckCount == 1)
             {
-                ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | tCheckingPieceSquare];
+                ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | pCheckingPieceSquare];
                 if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) && enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
                 {
                     int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
                     ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
                     int possibleAttacker2 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM8] & tu];
-                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
                     {
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
                             moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
                     }
                     epM9 += 2;
-                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceArray[epM9].pieceTypeID == 1)
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
                     {
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
-                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceArray[possibleAttacker1].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
-                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceArray[possibleAttacker2].moveAbilities[squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
+                        if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
+                            ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
                             moveOptionList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
                     }
                 }
-                for (int p = whitePieceList.Count; p-- > 0;)
+                for (int p = 0; p < 64; p++)
                 {
-                    Piece pc = whitePieceList[p];
-                    int pcSquare = pc.square;
-                
-                    switch (pc.pieceTypeID)
+                    if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, p)) continue;
+                    switch (pieceTypeArray[p])
                     {
                         case 1:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whitePieceBitboard, blackPieceBitboard);
-                            else whitePawnMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) whitePawnMovement.AddMoveOptionsToMoveList(p, whitePieceBitboard, blackPieceBitboard);
+                            else whitePawnMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, whitePieceBitboard, blackPieceBitboard);
                             break;
                         case 2:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) knightMovement.AddMovesToMoveOptionList(pcSquare, allPieceBitboard, blackPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) knightMovement.AddMovesToMoveOptionList(p, allPieceBitboard, blackPieceBitboard);
                             break;
                         case 3:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) bishopMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else bishopMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) bishopMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else bishopMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 4:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) rookMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else rookMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) rookMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else rookMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 5:
-                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, pcSquare)) queenMovement.AddMoveOptionsToMoveList(pcSquare, blackPieceBitboard, allPieceBitboard);
-                            else queenMovement.AddMoveOptionsToMoveList(pcSquare, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
+                            if (ULONG_OPERATIONS.IsBitZero(pinnedPieces, p)) queenMovement.AddMoveOptionsToMoveList(p, blackPieceBitboard, allPieceBitboard);
+                            else queenMovement.AddMoveOptionsToMoveList(p, whiteKingSquare, blackPieceBitboard, allPieceBitboard);
                             break;
                         case 6:
-                            kingMovement.AddMoveOptionsToMoveList(pcSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
+                            kingMovement.AddMoveOptionsToMoveList(p, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
                             break;
                     }
                 }
@@ -288,40 +311,31 @@ namespace ChessBot
             }
             else kingMovement.AddMoveOptionsToMoveList(whiteKingSquare, oppAttkBitboard | whitePieceBitboard, ~oppAttkBitboard & blackPieceBitboard);
             // Bis hierhin: 1700ms/10mil in Test 1
-
-            //int molc = moveOptionList.Count;
-            //for (int m = 0; m < molc; m++)
-            //{
-            //    Move curMove = moveOptionList[m];
-            //    // Bis hierhin: 2150ms/10mil in Test 1
-            //
-            //    //Console.WriteLine(curMove);
-            //}
         }
 
         private void MinimaxWhite()
         {
-            GetLegalWhiteMoves();
-            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare;
-            ulong tZobristKey = zobristKey ^ zobristSideSwap;
+            GetLegalWhiteMoves(LeafCheckingPieceCheck(0, 1, 6));
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare;
+            ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
-            // Unary Set Bit To Zero?
-            // Remove of PieceArray & PieceList => Replace with just two 64 sized int arrays; indicating the pieceType
-            // Dann mit Array.Copy hier einmal diese pieceTypeList kopieren; wohl dann wüsste ich nicht weiter -> oder es schließlich wie normal in Undo reinschreiben
+            enPassantSquare = 65;
 
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
+                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos];
 
                 #region MakeMove()
 
-                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos;
+                zobristKey = tZobristKey ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
 
                 if (tPieceType == 6) // König Moves
                 {
                     whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                    zobristKey = zobristKey ^ whiteKingSideRochadeRightHash ^ whiteQueenSideRochadeRightHash;
                     if (curMove.isStandard)
                     {
                         whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
@@ -330,55 +344,101 @@ namespace ChessBot
                     {
                         whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
                         blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
                     }
                     else // Rochade
                     {
                         whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), whiteKingSquare = tEndPos);
+                        pieceTypeArray[curMove.rochadeEndPos] = 5;
+                        pieceTypeArray[curMove.rochadeStartPos] = 0;
+                        zobristKey = zobristKey ^ pieceHashesWhite[curMove.rochadeStartPos, 5] ^ pieceHashesWhite[curMove.rochadeEndPos, 5];
                     }
                 }
                 else if (curMove.isStandard) 
                 {
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                    zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
                 }
                 else if (curMove.isEnPassant)
                 {
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
                     blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.enPassantOption);
+                    zobristKey ^= pieceHashesBlack[curMove.enPassantOption, 1];
+                    pieceTypeArray[curMove.enPassantOption] = 0;
                 }
                 else // Captures
                 {
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
                     blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
                 }
 
-                if ((whitePieceBitboard & 1) == 0ul) whiteCastleRightQueenSide = false;
-                if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, 7)) whiteCastleRightKingSide = false;
+                if ((whitePieceBitboard & 1) == 0ul)
+                {
+                    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                    whiteCastleRightQueenSide = false;
+                }
+                if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, 7))
+                {
+                    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                    whiteCastleRightKingSide = false;
+                }
 
                 allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+
+                pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
+                pieceTypeArray[tStartPos] = 0;
 
                 #endregion
 
                 Console.WriteLine(curMove);
-                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard));
+                Console.WriteLine(zobristKey);
 
                 #region UndoMove()
 
                 whiteCastleRightKingSide = tWKSCR;
                 whiteCastleRightQueenSide = tWQSCR;
                 whiteKingSquare = tWhiteKingSquare;
+                pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos];
+                pieceTypeArray[tEndPos] = tPTI;
+                enPassantSquare = tEPSquare;
+                if (curMove.isRochade)
+                {
+                    pieceTypeArray[curMove.rochadeStartPos] = 5;
+                    pieceTypeArray[curMove.rochadeEndPos] = 0;
+                }
+                else if (curMove.isEnPassant) pieceTypeArray[curMove.enPassantOption] = 1;
 
                 #endregion
             }
 
-            zobristKey = tZobristKey ^ zobristSideSwap;
+            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             allPieceBitboard = tAPB;
             whitePieceBitboard = tWPB;
             blackPieceBitboard = tBPB;
         }
 
-        public void SetZobristSideSwap(ulong ul)
+
+        private ulong[,] pieceHashesWhite = new ulong[64, 7], pieceHashesBlack = new ulong[64, 7];
+        private ulong blackTurnHash, whiteKingSideRochadeRightHash, whiteQueenSideRochadeRightHash, blackKingSideRochadeRightHash, blackQueenSideRochadeRightHash;
+        private ulong[] enPassantSquareHashes = new ulong[66];
+        private void InitZobrist()
         {
-            zobristSideSwap = ul;
+            Random rng = new Random(2344);
+            for (int sq = 0; sq < 64; sq++)
+            {
+                enPassantSquareHashes[sq] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                for (int it = 1; it < 7; it++)
+                {
+                    pieceHashesWhite[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                    pieceHashesBlack[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                }
+            }
+            blackTurnHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            whiteKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            whiteQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            blackKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            blackQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
         }
 
         public void SetKnightMasks(ulong[] uls)
@@ -395,8 +455,7 @@ namespace ChessBot
 
         public void LoadFenString(string fenStr)
         {
-            for (int i = 0; i < 64; i++) pieceArray[i] = new Piece();
-
+            zobristKey = 0ul;
             string[] spaceSpl = fenStr.Split(' ');
             string[] rowSpl = spaceSpl[0].Split('/');
 
@@ -406,6 +465,8 @@ namespace ChessBot
 
             isWhiteToMove = true;
             if (spaceSpl[1] == "b") isWhiteToMove = false;
+
+            if (!isWhiteToMove) zobristKey ^= blackTurnHash;
 
             string crstr = spaceSpl[2];
             whiteCastleRightKingSide = whiteCastleRightQueenSide = blackCastleRightKingSide = blackCastleRightQueenSide = false;
@@ -449,19 +510,27 @@ namespace ChessBot
                         if (tChar == 'k') blackKingSquare = tSq;
                         else if (tChar == 'K') whiteKingSquare = tSq;
 
-                        pieceArray[tSq] = new Piece(!tCol, Array.IndexOf(fenPieces, Char.ToLower(tChar)), tSq);
+                        pieceTypeArray[tSq] = Array.IndexOf(fenPieces, Char.ToLower(tChar));
 
-                        pieceList.Add(pieceArray[tSq]);
-                        if (tCol) blackPieceList.Add(pieceArray[tSq]);
-                        else whitePieceList.Add(pieceArray[tSq]);
+                        if (tCol) zobristKey ^= pieceHashesBlack[tSq, pieceTypeArray[tSq]]; 
+                        else zobristKey ^= pieceHashesWhite[tSq, pieceTypeArray[tSq]]; 
 
                         tSq++;
                     }
                 }
             }
 
+            if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+            if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+            if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+            if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+
+            zobristKey ^= enPassantSquareHashes[enPassantSquare];
+
             allPieceBitboard = whitePieceBitboard | blackPieceBitboard;
         }
+
+        #region | PRECALCULATIONS |
 
         private void PawnAttackBitboards()
         {
@@ -478,8 +547,6 @@ namespace ChessBot
             }
         }
 
-        //364 Rays, 1400 RayBits & 10588/10952 RayCombinations
-        //TECHNICAL OPTIMIZATION: EDGE RAYS
         private int[] squareConnectivesPrecalculationArray = new int[4096];
         public int[] squareConnectivesCrossDirsPrecalculationArray = new int[4096];
         private ulong[] squareConnectivesPrecalculationRayArray = new ulong[4096];
@@ -575,16 +642,18 @@ namespace ChessBot
                 }
             }
         }
+
+        #endregion
     }
 
-    public class Piece
+    public class Piece // Theoretisch ist dies Legacy; aber ich lasse es erstmals noch hier
     {
         public bool isNull;
         public bool isWhite;
         public bool[] moveAbilities = new bool[3];
         public int pieceTypeID;
         public int square;
-
+    
         public Piece()
         {
             isNull = true;
@@ -602,7 +671,7 @@ namespace ChessBot
             pieceTypeID = pieceType;
             square = pSquare;
         }
-
+    
         public Piece(Piece copy)
         {
             isNull = copy.isNull;
@@ -628,7 +697,7 @@ namespace ChessBot
         public bool isRochade { get; private set; } = false;
         public bool isStandard { get; private set; } = false;
 
-        public Move(int pSP, int pEP, int pPT)
+        public Move(int pSP, int pEP, int pPT) //Standard Move
         {
             startPos = pSP;
             endPos = pEP;
@@ -636,7 +705,7 @@ namespace ChessBot
             isStandard = true;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }
-        public Move(int pSP, int pEP, int pRSP, int pREP)
+        public Move(int pSP, int pEP, int pRSP, int pREP) // Rochade
         {
             startPos = pSP;
             endPos = pEP;
@@ -646,7 +715,7 @@ namespace ChessBot
             rochadeStartPos = pRSP;
             rochadeEndPos = pREP;
         }
-        public Move(int pSP, int pEP, int pPT, bool pIC)
+        public Move(int pSP, int pEP, int pPT, bool pIC) // Capture
         {
             startPos = pSP;
             endPos = pEP;
@@ -654,7 +723,7 @@ namespace ChessBot
             isCapture = pIC;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }
-        public Move(int pSP, int pEP, int pPT, bool pIC, int enPassPar)
+        public Move(int pSP, int pEP, int pPT, bool pIC, int enPassPar) // Bauer von Base Line zwei nach vorne
         {
             startPos = pSP;
             endPos = pEP;
@@ -664,7 +733,7 @@ namespace ChessBot
             enPassantOption = enPassPar;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }
-        public Move(bool b, int pSP, int pEP, int pEPS)
+        public Move(bool b, int pSP, int pEP, int pEPS) // En Passant (bool param einfach nur damit ich noch einen Konstruktur haben kann)
         {
             startPos = pSP;
             endPos = pEP;
@@ -673,7 +742,7 @@ namespace ChessBot
             enPassantOption = pEPS;
             isSliderMove = false;
         }
-        public Move(int pSP, int pEP, int pPT, int promType, bool pIC)
+        public Move(int pSP, int pEP, int pPT, int promType, bool pIC) // Promotio
         {
             startPos = pSP;
             endPos = pEP;

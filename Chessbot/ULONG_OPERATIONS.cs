@@ -78,9 +78,14 @@ namespace ChessBot
             return u;
         }
 
-        public static ulong SetBitToZero(ulong u, int index)
+        public static ulong LegacySetBitToZero(ulong u, int index)
         {
             return (ulong.MaxValue ^ (1ul << index)) & u;
+        }
+
+        public static ulong SetBitToZero(ulong u, int index)
+        {
+            return ~(1ul << index) & u;
         }
 
         public static string GetStringBoardVisualization(ulong u)
@@ -97,6 +102,13 @@ namespace ChessBot
             }
 
             return r;
+        }
+
+        public static ulong GetRandomULONG(Random pRNG)
+        {
+            ulong ru = 0ul;
+            for (int i = 0; i < 64; i++) if (pRNG.NextDouble() < 0.5d) ru = ULONG_OPERATIONS.SetBitToOne(ru, i);
+            return ru;
         }
     }
 }

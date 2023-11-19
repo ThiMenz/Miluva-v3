@@ -18,6 +18,9 @@ namespace ChessBot
             boardManager = pBM;
             queenMovement = pQM;
             PreCalculateMoves();
+
+            //List<Move> tM = precalculatedMoves[11][ULONG_OPERATIONS.SetBitsToOne(0ul, 32, 2, 4)].classicMoves;
+            //foreach(Move m in tM) Console.WriteLine(m);
         }
 
         public void AddMoveOptionsToMoveList(int startSquare, ulong opposingSideBitboard, ulong allPieceBitboard)

@@ -39,13 +39,13 @@ namespace ChessBot
                 for (int k = 0; k < 64; k++) pinMovePrecalcs[sq].Add(new Dictionary<ulong, List<Move>>());
 
                 ulong u = 0ul, u2 = 0ul;
-                if (sq - 16 < 64) u = ULONG_OPERATIONS.SetBitToOne(u, sq - 16);
-                if (sq - 8 < 64) u = ULONG_OPERATIONS.SetBitToOne(u, sq - 8);
-                if (sq - 7 < 64 && sq % 8 != 7) u2 = ULONG_OPERATIONS.SetBitToOne(u2, sq - 7);
-                if (sq - 9 < 64 && sq % 8 != 0) u2 = ULONG_OPERATIONS.SetBitToOne(u2, sq - 9);
+                if (sq - 16 > -1) u = ULONG_OPERATIONS.SetBitToOne(u, sq - 16);
+                if (sq - 8 > -1) u = ULONG_OPERATIONS.SetBitToOne(u, sq - 8);
+                if (sq - 7 > -1 && sq % 8 != 7) u2 = ULONG_OPERATIONS.SetBitToOne(u2, sq - 7);
+                if (sq - 9 > -1 && sq % 8 != 0) u2 = ULONG_OPERATIONS.SetBitToOne(u2, sq - 9);
 
                 squareBitboards[sq] = u;
-                oppSquareBitboards[sq] = ULONG_OPERATIONS.SetBitToOne(u2, sq - 8);
+                oppSquareBitboards[sq] = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(u2, sq - 16), sq - 8);
             }
 
             for (int k = 0; k < 64; k++)

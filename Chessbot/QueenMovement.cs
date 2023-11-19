@@ -55,6 +55,8 @@ namespace ChessBot
         public void AddMoveOptionsToMoveList(int startSquare, int ownKingPosFilter, ulong opposingSideBitboard, ulong allPieceBitboard)
         {
             BishopPreCalcsKingPin tbpc = precalculatedMovesDiagonal[startSquare][allPieceBitboard & diagonalMasks[startSquare]].classicMovesOnKingPin[ownKingPosFilter];
+            //Console.WriteLine(startSquare + ": " + (allPieceBitboard & diagonalMasks[startSquare]));
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard & diagonalMasks[startSquare]));
             boardManager.moveOptionList.AddRange(tbpc.moves);
 
             if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove1);
@@ -101,8 +103,8 @@ namespace ChessBot
                     tRPCKP_Moves.Add(new Move(tM.startPos, tM.endPos, QUEEN_TILE_ID));
                 }
                 rpckp[i] = new RookPreCalcsKingPin(tRPCKP_Moves, tRPCKP.possibleCapture1, tRPCKP.possibleCapture2,
-                    (tc1 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc1.startPos, tc1.endPos, QUEEN_TILE_ID),
-                    (tc2 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc2.startPos, tc2.endPos, QUEEN_TILE_ID));
+                    (tc1 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc1.startPos, tc1.endPos, QUEEN_TILE_ID, true),
+                    (tc2 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc2.startPos, tc2.endPos, QUEEN_TILE_ID, true));
             }
             RookPreCalcs modRPC = new RookPreCalcs(moves, rpc.possibleCaptures, rpc.captureMovesQueen, square, rpc.visionBitboard, rpckp, new Move[4]);
             precalculatedMovesStraigth[square].Add(apb, modRPC);
@@ -132,8 +134,8 @@ namespace ChessBot
                     tRPCKP_Moves.Add(new Move(tM.startPos, tM.endPos, QUEEN_TILE_ID));
                 }
                 rpckp[i] = new BishopPreCalcsKingPin(tRPCKP_Moves, tRPCKP.possibleCapture1, tRPCKP.possibleCapture2,
-                    (tc1 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc1.startPos, tc1.endPos, QUEEN_TILE_ID),
-                    (tc2 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc2.startPos, tc2.endPos, QUEEN_TILE_ID));
+                    (tc1 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc1.startPos, tc1.endPos, QUEEN_TILE_ID, true),
+                    (tc2 == null) ? new Move(square, square, QUEEN_TILE_ID) : new Move(tc2.startPos, tc2.endPos, QUEEN_TILE_ID, true));
             }
             BishopPreCalcs modBPC = new BishopPreCalcs(moves, bpc.possibleCaptures, bpc.captureMovesQueen, square, bpc.visionBitboard, rpckp, new Move[4]);
             tempDiaPreCalcDict.Add(t, modBPC);

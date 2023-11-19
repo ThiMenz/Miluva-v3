@@ -117,20 +117,30 @@ namespace ChessBot
 
             curSearchZobristKeyLine = new ulong[1];
 
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4503599627370496ul));
+
+            //Console.WriteLine(CreateFenString());
+
             for (int p = 0; p < 1; p++)
             {
-                MinimaxRoot(1);
+                MinimaxRoot(6);
                 //Array.Copy(i234, i235, 64);
                 //MinimaxWhite(0);
                 //MinimaxBlack(0);
                 //LeafCheckingPieceCheck(44, 45, 5);
             }
 
+
+            //Console.WriteLine(CreateFenString());
+
+
             sw.Stop();
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
 
             Console.WriteLine((int)((10_000_000d / (double)sw.ElapsedTicks) * 32_000_000));
         }
+
+        private Move[] tMoveLine = new Move[10];
 
         private int LeafCheckingPieceCheckWhite(int pStartPos, int pEndPos, int pPieceType)
         {
@@ -485,7 +495,7 @@ namespace ChessBot
             else kingMovement.AddMoveOptionsToMoveList(blackKingSquare, oppAttkBitboard | blackPieceBitboard, ~oppAttkBitboard & whitePieceBitboard);
         }
 
-        private void MinimaxRoot(int pDepth)
+        public int MinimaxRoot(int pDepth)
         {
             int baseLineLen = curSearchZobristKeyLine.Length;
             ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth];
@@ -498,22 +508,29 @@ namespace ChessBot
             else perftScore = MinimaxBlack(pDepth, baseLineLen, blackKingSquare, blackKingSquare, 2);
 
             Console.WriteLine(perftScore);
+            return perftScore;
         }
 
         private int MinimaxWhite(int pDepth, int pRepetitionHistoryPly, int pLastMoveStartPos, int pLastMoveEndPos, int pLastMovePieceType)
         {
             if (pDepth == 0) return 1;
 
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard));
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
+
             List<Move> moveOptionList = new List<Move>();
             GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
-            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
             enPassantSquare = 65;
             happenedHalfMoves++;
-            isWhiteToMove = !isWhiteToMove;
+            isWhiteToMove = true;
+
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tBPB));
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tAPB));
 
             int tC = 0;
 
@@ -536,6 +553,7 @@ namespace ChessBot
                     if (curMove.isStandard)
                     {
                         whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                        blackPieceBitboard = tBPB;
                     }
                     else if (curMove.isCapture)
                     {
@@ -557,7 +575,9 @@ namespace ChessBot
                     }
                     else // Rochade
                     {
+                        //Console.WriteLine(curMove);
                         whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), whiteKingSquare = tEndPos);
+                        blackPieceBitboard = tBPB;
                         pieceTypeArray[curMove.rochadeEndPos] = 4;
                         pieceTypeArray[curMove.rochadeStartPos] = 0;
                         zobristKey ^= pieceHashesWhite[curMove.rochadeStartPos, 4] ^ pieceHashesWhite[curMove.rochadeEndPos, 4];
@@ -566,6 +586,7 @@ namespace ChessBot
                 else if (curMove.isStandard) 
                 {
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                    blackPieceBitboard = tBPB;
                     zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
 
                     if (whiteCastleRightQueenSide && tStartPos == 0)
@@ -626,17 +647,27 @@ namespace ChessBot
 
                 #endregion
 
-                Console.WriteLine(CreateFenString());
+                //Console.WriteLine(curMove);
+                //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0)
+                //{
+                //    //Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
+                //    //Console.WriteLine(curMove);
+                //    //Console.WriteLine(CreateFenString());
+                //}
+                tMoveLine[pDepth] = curMove;
                 tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                tMoveLine[pDepth] = null;
 
                 #region UndoMove()
 
                 whiteCastleRightKingSide = tWKSCR;
                 whiteCastleRightQueenSide = tWQSCR;
+                blackCastleRightKingSide = tBKSCR;
+                blackCastleRightQueenSide = tBQSCR;
                 whiteKingSquare = tWhiteKingSquare;
                 pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos];
                 pieceTypeArray[tEndPos] = tPTI;
-                enPassantSquare = tEPSquare;
+                enPassantSquare = 65;
                 if (curMove.isRochade)
                 {
                     pieceTypeArray[curMove.rochadeStartPos] = 4;
@@ -647,8 +678,8 @@ namespace ChessBot
                 #endregion
             }
 
-            isWhiteToMove = !isWhiteToMove;
-            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
+            isWhiteToMove = false;
+            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
             happenedHalfMoves--;
             allPieceBitboard = tAPB;
             whitePieceBitboard = tWPB;
@@ -660,23 +691,39 @@ namespace ChessBot
         private int MinimaxBlack(int pDepth, int pRepetitionHistoryPly, int pLastMoveStartPos, int pLastMoveEndPos, int pLastMovePieceType)
         {
             if (pDepth == 0) return 1;
-
             List<Move> moveOptionList = new List<Move>();
-            GetLegalBlackMoves(LeafCheckingPieceCheckBlack(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
+            int ttt;
+            GetLegalBlackMoves(ttt = LeafCheckingPieceCheckBlack(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
             int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
-            bool tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
             enPassantSquare = 65;
             happenedHalfMoves++;
-            isWhiteToMove = !isWhiteToMove;
+            isWhiteToMove = false;
 
             int tC = 0;
 
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
+                //if (curMove == null)
+                //{
+                //    return 0;
+                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tBPB));
+                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
+                //    Console.WriteLine(ttt);
+                //    for (int m2 = 0; m2 < molc; m2++) Console.WriteLine(moveOptionList[m2]);
+                //    //for (int i = 9; i >= 0; i--)
+                //    //{
+                //    //    Console.WriteLine(tMoveLine[i]);
+                //    //}
+                //    Console.WriteLine(CreateFenString());
+                //    Console.WriteLine(pDepth);
+                //    Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
+                //    return 0;
+                //}
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos];
 
                 #region MakeMove()
@@ -693,6 +740,7 @@ namespace ChessBot
                     if (curMove.isStandard)
                     {
                         blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), blackKingSquare = tEndPos);
+                        whitePieceBitboard = tWPB;
                     }
                     else if (curMove.isCapture)
                     {
@@ -715,6 +763,7 @@ namespace ChessBot
                     else // Rochade
                     {
                         blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), blackKingSquare = tEndPos);
+                        whitePieceBitboard = tWPB;
                         pieceTypeArray[curMove.rochadeEndPos] = 4;
                         pieceTypeArray[curMove.rochadeStartPos] = 0;
                         zobristKey ^= pieceHashesBlack[curMove.rochadeStartPos, 4] ^ pieceHashesBlack[curMove.rochadeEndPos, 4];
@@ -723,6 +772,7 @@ namespace ChessBot
                 else if (curMove.isStandard)
                 {
                     blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                    whitePieceBitboard = tWPB;
                     zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
 
                     if (blackCastleRightQueenSide && tStartPos == 56)
@@ -786,17 +836,21 @@ namespace ChessBot
 
                 #endregion
 
-                //Console.WriteLine(curMove);
+                //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0) Console.WriteLine(CreateFenString());
+                tMoveLine[pDepth] = curMove;
                 tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                tMoveLine[pDepth] = null;
 
                 #region UndoMove()
 
+                whiteCastleRightKingSide = tWKSCR;
+                whiteCastleRightQueenSide = tWQSCR;
                 blackCastleRightKingSide = tBKSCR;
                 blackCastleRightQueenSide = tBQSCR;
                 blackKingSquare = tBlackKingSquare;
                 pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos];
                 pieceTypeArray[tEndPos] = tPTI;
-                enPassantSquare = tEPSquare;
+                enPassantSquare = 65;
                 if (curMove.isRochade)
                 {
                     pieceTypeArray[curMove.rochadeStartPos] = 4;
@@ -807,8 +861,8 @@ namespace ChessBot
                 #endregion
             }
 
-            isWhiteToMove = !isWhiteToMove;
-            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
+            isWhiteToMove = true;
+            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
             happenedHalfMoves--;
             allPieceBitboard = tAPB;
             whitePieceBitboard = tWPB;
@@ -867,46 +921,46 @@ namespace ChessBot
         public string CreateFenString()
         {
             string rFEN = "";
-
-            int t = 0;
-            for (int i = 63; i >= 0; i--)
+            for (int i = 7; i >= 0; i--)
             {
-                if ((i+1) % 8 == 0 && i != 63)
+                int t = 0;
+                for (int j = 0; j < 8; j++)
                 {
-                    if (t != 0) rFEN += t;
-                    rFEN += "/";
-                    t = 0;
-                }
-                else if (pieceTypeArray[i] != 0 && t != 0)
-                {
-                    rFEN += t;
-                    t = 0;
-                }
-                if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, i)) {
-                    switch (pieceTypeArray[i]) 
+                    int sq = i * 8 + j;
+                    if (pieceTypeArray[sq] != 0)
                     {
-                        case 0: t++; break;
-                        case 1: rFEN += 'P'; break;
-                        case 2: rFEN += 'N'; break;
-                        case 3: rFEN += 'B'; break;
-                        case 4: rFEN += 'R'; break;
-                        case 5: rFEN += 'Q'; break;
-                        case 6: rFEN += 'K'; break;
+                        if (t != 0) rFEN += t;
+                        t = 0;
+                    }
+                    if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, sq))
+                    {
+                        switch (pieceTypeArray[sq])
+                        {
+                            case 0: t++; Console.WriteLine("???"); break;
+                            case 1: rFEN += 'P'; break;
+                            case 2: rFEN += 'N'; break;
+                            case 3: rFEN += 'B'; break;
+                            case 4: rFEN += 'R'; break;
+                            case 5: rFEN += 'Q'; break;
+                            case 6: rFEN += 'K'; break;
+                        }
+                    }
+                    else
+                    {
+                        switch (pieceTypeArray[sq])
+                        {
+                            case 0: t++; break;
+                            case 1: rFEN += 'p'; break;
+                            case 2: rFEN += 'n'; break;
+                            case 3: rFEN += 'b'; break;
+                            case 4: rFEN += 'r'; break;
+                            case 5: rFEN += 'q'; break;
+                            case 6: rFEN += 'k'; break;
+                        }
                     }
                 }
-                else
-                {
-                    switch (pieceTypeArray[i])
-                    {
-                        case 0: t++; break;
-                        case 1: rFEN += 'p'; break;
-                        case 2: rFEN += 'n'; break;
-                        case 3: rFEN += 'b'; break;
-                        case 4: rFEN += 'r'; break;
-                        case 5: rFEN += 'q'; break;
-                        case 6: rFEN += 'k'; break;
-                    }
-                }
+                if (t != 0) rFEN += t;
+                if (i != 0) rFEN += "/";
             }
 
             rFEN += (isWhiteToMove ? " w" : " b");
@@ -916,11 +970,22 @@ namespace ChessBot
             rFEN += (blackCastleRightQueenSide ? "q" : "");
             if (!whiteCastleRightKingSide && !whiteCastleRightQueenSide && !blackCastleRightKingSide && !blackCastleRightQueenSide) rFEN += "-";
 
-            if (enPassantSquare < 64) rFEN += " " + enPassantSquare + " ";
+            if (enPassantSquare < 64) rFEN += " " + squareNames[enPassantSquare] + " ";
             else rFEN += " - ";
-
+            //= (epstr[0] - 'a') + 8 * (epstr[1] - '1');
             return rFEN + fiftyMoveRuleCounter + " " + ((happenedHalfMoves - happenedHalfMoves % 2) / 2);
         }
+
+        private string[] squareNames = new string[64] {
+            "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+            "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+            "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+            "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+            "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+            "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+            "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+            "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
+        };
 
         public void LoadFenString(string fenStr)
         {
@@ -1195,6 +1260,7 @@ namespace ChessBot
             endPos = pEP;
             pieceType = pPT;
             isCapture = pIC;
+            if (!isCapture) isStandard = true;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
         }
         public Move(int pSP, int pEP, int pPT, bool pIC, int enPassPar) // Bauer von Base Line zwei nach vorne
@@ -1216,7 +1282,7 @@ namespace ChessBot
             enPassantOption = pEPS;
             isSliderMove = false;
         }
-        public Move(int pSP, int pEP, int pPT, int promType, bool pIC) // Promotio
+        public Move(int pSP, int pEP, int pPT, int promType, bool pIC) // Promotion
         {
             startPos = pSP;
             endPos = pEP;

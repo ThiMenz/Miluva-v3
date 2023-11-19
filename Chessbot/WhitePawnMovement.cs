@@ -45,7 +45,7 @@ namespace ChessBot
                 if (sq + 9 < 64 && sq % 8 != 7) u2 = ULONG_OPERATIONS.SetBitToOne(u2, sq + 9);
 
                 squareBitboards[sq] = u;
-                oppSquareBitboards[sq] = ULONG_OPERATIONS.SetBitToOne(u2, sq + 8);
+                oppSquareBitboards[sq] = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(u2, sq + 16), sq + 8);
             }
 
             for (int k = 0; k < 64; k++)

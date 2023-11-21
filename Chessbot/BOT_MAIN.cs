@@ -10,7 +10,8 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+            _ = new BoardManager("8/8/8/2k5/8/8/7p/4K3 b - - 2 1");
+            //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
         }
     }
 
@@ -121,7 +122,7 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4503599627370496ul));
 
             //Console.WriteLine(CreateFenString());
-            int tPerft = MinimaxRoot(5);
+            int tPerft = MinimaxRoot(2);
             //for (int p = 0; p < 1; p++)
             //{
             //    int tPerft = MinimaxRoot(6);
@@ -621,6 +622,12 @@ namespace ChessBot
                         whiteCastleRightKingSide = false;
                     }
                 }
+                else if (curMove.isPromotion)
+                {
+                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
+                }
                 else if (curMove.isEnPassant)
                 {
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
@@ -659,10 +666,10 @@ namespace ChessBot
                     }
                 }
 
-                allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
-
                 pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
                 pieceTypeArray[tStartPos] = 0;
+
+                allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
 
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
@@ -806,6 +813,12 @@ namespace ChessBot
                         zobristKey ^= blackKingSideRochadeRightHash;
                         blackCastleRightKingSide = false;
                     }
+                }
+                else if (curMove.isPromotion)
+                {
+                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
+                    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
                 }
                 else if (curMove.isEnPassant)
                 {

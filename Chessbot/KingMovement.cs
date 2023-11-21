@@ -56,8 +56,8 @@ namespace ChessBot
                 if (b2 && b3) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare + 7); tAdjacentSquares.Add(pSquare + 7); }
                 if (b1 && b3) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare + 9); tAdjacentSquares.Add(pSquare + 9); }
                 if (b3) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare + 8); tAdjacentSquares.Add(pSquare + 8); }
-                if (b2 && b4) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare - 7); tAdjacentSquares.Add(pSquare - 7); }
-                if (b1 && b4) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare - 9); tAdjacentSquares.Add(pSquare - 9); }
+                if (b1 && b4) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare - 7); tAdjacentSquares.Add(pSquare - 7); }
+                if (b2 && b4) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare - 9); tAdjacentSquares.Add(pSquare - 9); }
                 if (b4) { tu = ULONG_OPERATIONS.SetBitToOne(tu, pSquare - 8); tAdjacentSquares.Add(pSquare - 8); }
             }
             kingMasks[pSquare] = tu;

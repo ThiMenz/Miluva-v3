@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 1 1");
+            _ = new BoardManager("8/8/3p4/1Pp4r/1K2Rpk1/8/4P1P1/8 w - c6 0 3");
             //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
             //8/8/8/2k5/8/8/7p/4K3 b - - 2 1
         }
@@ -123,7 +123,7 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4503599627370496ul));
 
             //Console.WriteLine(CreateFenString());
-            int tPerft = MinimaxRoot(4);
+            int tPerft = MinimaxRoot(1);
             //for (int p = 0; p < 1; p++)
             //{
             //    int tPerft = MinimaxRoot(6);
@@ -396,7 +396,6 @@ namespace ChessBot
 
             oppAttkBitboard = oppDiagonalSliderVision | oppStraightSliderVision | oppStaticPieceVision;
             int curCheckCount = ULONG_OPERATIONS.TrippleIsBitOne(oppDiagonalSliderVision, oppStaticPieceVision, oppStraightSliderVision, blackKingSquare);
-
             if (curCheckCount == 0)
             {
                 if (blackCastleRightKingSide && ((allPieceBitboard | oppAttkBitboard) & BLACK_KING_ROCHADE) == 0ul) pMoveList.Add(mBLACK_KING_ROCHADE);
@@ -542,7 +541,7 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
 
             List<Move> moveOptionList = new List<Move>();
-            GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
+            GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(50, 34, 1), ref moveOptionList);
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -566,6 +565,8 @@ namespace ChessBot
 
                 fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
                 zobristKey = tZobristKey ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
+
+                if (tPieceType == 1) fiftyMoveRuleCounter = 0;
 
                 if (tPieceType == 6) // König Moves
                 {
@@ -628,6 +629,18 @@ namespace ChessBot
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
                     blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
                     pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
                 }
                 else if (curMove.isEnPassant)
                 {
@@ -635,7 +648,6 @@ namespace ChessBot
                     blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.enPassantOption);
                     zobristKey ^= pieceHashesBlack[curMove.enPassantOption, 1];
                     pieceTypeArray[curMove.enPassantOption] = 0;
-                    fiftyMoveRuleCounter = 0;
                 }
                 else // Captures
                 {
@@ -675,17 +687,28 @@ namespace ChessBot
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
                 #endregion
+                    //Console.WriteLine(curMove);
+                    //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0)
+                    //{
+                    //    //Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
+                    //    //Console.WriteLine(curMove);
+                    //    //Console.WriteLine(CreateFenString());
+                    //}
 
-                //Console.WriteLine(curMove);
-                //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0)
-                //{
-                //    //Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
-                //    //Console.WriteLine(curMove);
-                //    //Console.WriteLine(CreateFenString());
-                //}
+                Console.WriteLine(curMove);
+                    //Console.WriteLine(CreateFenString());
+
                 tMoveLine[pDepth] = curMove;
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                int t;
+                tC += t = MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
                 tMoveLine[pDepth] = null;
+
+
+
+                if (pDepth == 2)
+                {
+                    Console.WriteLine(CreateFenString() + "\n" + t);
+                }
 
                 #region UndoMove()
 
@@ -717,10 +740,10 @@ namespace ChessBot
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
 
-            if (pDepth == 3)
-            {
-                Console.WriteLine(CreateFenString() + "\n" + tC);
-            }
+            //if (pDepth == 1)
+            //{
+            //    Console.WriteLine(CreateFenString() + "\n" + tC);
+            //}
 
             return tC;
         }
@@ -767,6 +790,8 @@ namespace ChessBot
 
                 fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
                 zobristKey = tZobristKey ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
+
+                if (tPieceType == 1) fiftyMoveRuleCounter = 0;
 
                 if (tPieceType == 6) // König Moves
                 {
@@ -829,6 +854,17 @@ namespace ChessBot
                     whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
                     pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
                     zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
                 }
                 else if (curMove.isEnPassant)
                 {
@@ -880,10 +916,20 @@ namespace ChessBot
 
                 #endregion
 
+
+                //Console.WriteLine(curMove);
+                //Console.WriteLine(CreateFenString());
+                int t = 0;
                 //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0) Console.WriteLine(CreateFenString());
                 tMoveLine[pDepth] = curMove;
-                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                tC += t = MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
                 tMoveLine[pDepth] = null;
+
+                if (pDepth == 2)
+                {
+                    Console.WriteLine(CreateFenString() + "\n" + t);
+                }
+                //Console.WriteLine(t);
 
                 #region UndoMove()
 
@@ -913,6 +959,7 @@ namespace ChessBot
             whitePieceBitboard = tWPB;
             blackPieceBitboard = tBPB;
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
+
             return tC;
         }
 
@@ -1442,4 +1489,534 @@ r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
 80075
 r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
 75881
+ */
+
+
+
+/*
+ * r3k2r/p1ppqpb1/bn2pnpB/3PN3/1p2P3/2N2Q2/PPP1BPpP/1R2K2R w Kkq - 1 2
+2015
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPP1BPpP/1RB1K2R w Kkq - 1 2
+2065
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R1BK2R w Kkq - 1 2
+1870
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R2KB1R w Kkq - 1 2
+2490
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NB1Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
+2122
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1pB1P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
+2168
+r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
+2161
+r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 0 2
+2021
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1P/PPPBBPp1/1R2K2R w Kkq - 1 2
+2026
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P2P/2N2Q2/PPPBBPp1/1R2K2R w Kkq h3 1 2
+2071
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/Np2P3/5Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+2339
+r3k2r/p1ppqpb1/bn2pnp1/1N1PN3/1p2P3/5Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+2290
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q2/PPPBBPpP/1R1NK2R w Kkq - 1 2
+2202
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1Q1/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
+2294
+r3k2r/p1ppqpb1/bn2pnp1/3PN2Q/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
+2213
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N5/PPPBBPQP/1R2K2R w Kkq - 0 2
+2177
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PQ2/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
+2153
+r3k2r/p1ppqpb1/bn2pnp1/3PNQ2/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
+2426
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N3Q1/PPPBBPpP/1R2K2R w Kkq - 1 2
+2393
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N4Q/PPPBBPpP/1R2K2R w Kkq - 1 2
+2366
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1Q3/PPPBBPpP/1R2K2R w Kkq - 1 2
+2199
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R w Kkq - 1 2
+2017
+r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 0 2
+2175
+r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+2065
+r3k2r/p1ppqpb1/bn2Pnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
+2295
+r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+2106
+r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P3/2NN1Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+1831
+r3k2r/p1ppqpb1/bn2pnp1/3P4/1pN1P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+1927
+r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
+1958
+r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
+2062
+r3k2r/p1pNqpb1/bn2pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
+2177
+r3k2r/p1ppqNb1/bn2pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
+2137
+ * 
+ */
+
+
+
+/*
+ * 
+ * r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
+2
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
+2
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
+1
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
+1
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+44
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+41
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
+38
+r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+41
+r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+45
+r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+44
+r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
+44
+r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+42
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
+41
+r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
+42
+ */
+
+
+/*
+ * 
+ * 
+ * [König] 60 -> 62 /ROCHADE/
+r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+[König] 60 -> 58 /ROCHADE/
+2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+[Bauer] 14 -> 6 /Springer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
+[Bauer] 14 -> 6 /Läufer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
+[Bauer] 14 -> 6 /Turm-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
+[Bauer] 14 -> 6 /Dame-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
+[Bauer] 14 -> 7 /CAPTURE/ /Springer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2n b Kkq - 2 3
+[Bauer] 14 -> 7 /CAPTURE/ /Läufer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2b b Kkq - 2 3
+[Bauer] 14 -> 7 /CAPTURE/ /Turm-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
+[Bauer] 14 -> 7 /CAPTURE/ /Dame-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
+[Bauer] 25 -> 17
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Bauer] 25 -> 18 /CAPTURE/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Läufer] 40 -> 49
+r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 40 -> 58
+r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 40 -> 33
+r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 40 -> 26
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 40 -> 19 /CAPTURE/
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Springer] 41 -> 58
+r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 41 -> 24
+r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 41 -> 26
+r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 41 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Bauer] 44 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Springer] 45 -> 55
+r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 45 -> 62
+r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 45 -> 30
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 45 -> 39
+r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Springer] 45 -> 28 /CAPTURE/
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Springer] 45 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+[Bauer] 46 -> 38
+r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Bauer] 50 -> 42
+r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Bauer] 50 -> 34 [EP = 42]
+r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
+[Bauer] 51 -> 43
+r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Dame] 52 -> 61
+r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Dame] 52 -> 43
+r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Dame] 52 -> 34
+r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Dame] 52 -> 59
+r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 54 -> 47
+r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Läufer] 54 -> 61
+r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+[Turm] 56 -> 57
+1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+[Turm] 56 -> 58
+2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+[Turm] 56 -> 59
+3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+[König] 60 -> 61
+r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+[König] 60 -> 59
+r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+[Turm] 63 -> 55
+r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 47
+r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 39
+r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 31
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 23
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 62
+r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 61
+r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+[Turm] 63 -> 15 /CAPTURE/
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
+ * 
+ */
+
+
+/*
+ * 
+ * [König] 60 -> 62 /ROCHADE/
+r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+[König] 60 -> 58 /ROCHADE/
+2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+[Bauer] 14 -> 6 /Springer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
+43
+[Bauer] 14 -> 6 /Läufer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
+43
+[Bauer] 14 -> 6 /Turm-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
+2
+[Bauer] 14 -> 6 /Dame-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
+2
+[Bauer] 14 -> 7 /CAPTURE/ /Springer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2n b Kkq - 2 3
+43
+[Bauer] 14 -> 7 /CAPTURE/ /Läufer-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2b b Kkq - 2 3
+43
+[Bauer] 14 -> 7 /CAPTURE/ /Turm-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
+1
+[Bauer] 14 -> 7 /CAPTURE/ /Dame-PROMOTION/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
+1
+[Bauer] 25 -> 17
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+44
+[Bauer] 25 -> 18 /CAPTURE/
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+[Läufer] 40 -> 49
+r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Läufer] 40 -> 58
+r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Läufer] 40 -> 33
+r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Läufer] 40 -> 26
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+41
+[Läufer] 40 -> 19 /CAPTURE/
+r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
+38
+[Springer] 41 -> 58
+r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Springer] 41 -> 24
+r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Springer] 41 -> 26
+r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+41
+[Springer] 41 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+[Bauer] 44 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+[Springer] 45 -> 55
+r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Springer] 45 -> 62
+r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Springer] 45 -> 30
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Springer] 45 -> 39
+r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Springer] 45 -> 28 /CAPTURE/
+r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+45
+[Springer] 45 -> 35 /CAPTURE/
+r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
+44
+[Bauer] 46 -> 38
+r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Bauer] 50 -> 42
+r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+44
+[Bauer] 50 -> 34 [EP = 42]
+r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
+44
+[Bauer] 51 -> 43
+r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Dame] 52 -> 61
+r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Dame] 52 -> 43
+r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+42
+[Dame] 52 -> 34
+r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Dame] 52 -> 59
+r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Läufer] 54 -> 47
+r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Läufer] 54 -> 61
+r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
+43
+[Turm] 56 -> 57
+1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+[Turm] 56 -> 58
+2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+[Turm] 56 -> 59
+3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
+43
+[König] 60 -> 61
+r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+[König] 60 -> 59
+r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
+43
+[Turm] 63 -> 55
+r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+[Turm] 63 -> 47
+r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+[Turm] 63 -> 39
+r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+[Turm] 63 -> 31
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+42
+[Turm] 63 -> 23
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
+41
+[Turm] 63 -> 62
+r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+[Turm] 63 -> 61
+r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
+43
+[Turm] 63 -> 15 /CAPTURE/
+r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
+42
+ * 
+ */
+
+
+
+/*
+ * 
+ * 8/2p5/3p4/KP5r/4Rpk1/4P3/6P1/8 w - - 0 2
+281
+8/2p5/3p4/KP5r/4Rpk1/6P1/4P3/8 w - - 0 2
+300
+8/2p5/3p4/KP2R2r/5pk1/8/4P1P1/8 w - - 3 2
+270
+8/2p5/3pR3/KP5r/5pk1/8/4P1P1/8 w - - 3 2
+321
+8/2p1R3/3p4/KP5r/5pk1/8/4P1P1/8 w - - 3 2
+342
+4R3/2p5/3p4/KP5r/5pk1/8/4P1P1/8 w - - 3 2
+378
+8/2p5/3p4/KP5r/5pk1/4R3/4P1P1/8 w - - 3 2
+324
+8/2p5/3p4/KP5r/3R1pk1/8/4P1P1/8 w - - 3 2
+320
+8/2p5/3p4/KP5r/2R2pk1/8/4P1P1/8 w - - 3 2
+336
+8/2p5/3p4/KP5r/1R3pk1/8/4P1P1/8 w - - 3 2
+267
+8/2p5/3p4/KP5r/R4pk1/8/4P1P1/8 w - - 3 2
+264
+8/2p5/3p4/KP5r/5Rk1/8/4P1P1/8 w - - 0 2
+48
+8/2p5/K2p4/1P5r/4Rpk1/8/4P1P1/8 w - - 3 2
+322
+8/2p5/3p4/1P5r/1K2Rpk1/8/4P1P1/8 w - - 3 2
+313
+8/2p5/3p4/1P5r/K3Rpk1/8/4P1P1/8 w - - 3 2
+316
+ * 
+ */
+
+
+/*
+ * 
+ * 
+ * 8/2p5/3p4/1P5r/1K2Rp1k/8/4P1P1/8 b - - 4 3
+18
+8/2p5/3p4/1P3k1r/1K2Rp2/8/4P1P1/8 b - - 4 3
+18
+8/2p5/3p4/1P4kr/1K2Rp2/8/4P1P1/8 b - - 4 3
+18
+8/2p5/3p4/1P5r/1K2Rp2/6k1/4P1P1/8 b - - 4 3
+16
+8/2p5/3p3r/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+8/2p4r/3p4/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+7r/2p5/3p4/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+8/2p5/3p4/1P6/1K2Rpkr/8/4P1P1/8 b - - 4 3
+17
+8/2p5/3p4/1P6/1K2Rpk1/7r/4P1P1/8 b - - 4 3
+15
+8/2p5/3p4/1P6/1K2Rpk1/8/4P1Pr/8 b - - 4 3
+17
+8/2p5/3p4/1P6/1K2Rpk1/8/4P1P1/7r b - - 4 3
+17
+8/2p5/3p4/1P4r1/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+8/2p5/3p4/1P3r2/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+8/2p5/3p4/1P2r3/1K2Rpk1/8/4P1P1/8 b - - 4 3
+14
+8/2p5/3p4/1P1r4/1K2Rpk1/8/4P1P1/8 b - - 4 3
+17
+8/2p5/3p4/1Pr5/1K2Rpk1/8/4P1P1/8 b - - 4 3
+15
+8/2p5/3p4/1r6/1K2Rpk1/8/4P1P1/8 b - - 0 3
+5
+8/2p5/8/1P1p3r/1K2Rpk1/8/4P1P1/8 b - - 0 3
+17
+8/8/2pp4/1P5r/1K2Rpk1/8/4P1P1/8 b - - 0 3
+18
+8/8/3p4/1Pp4r/1K2Rpk1/8/4P1P1/8 b - c6 0 3
+6
+ * 
  */

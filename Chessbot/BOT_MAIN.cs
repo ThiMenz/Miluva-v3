@@ -110,36 +110,72 @@ namespace ChessBot
             Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.WriteLine("[DONE]\n\n");
 
-            //LoadFenString("rnb1kb1r/ppppqBpp/5n2/4p3/3PP3/4QN2/PPP2PPP/RNBK3R b - - 0 6");
-            //tempTest = zobristKey;
             LoadFenString(fen);
 
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(2310359833064709192));
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(2107775));
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4769031049176344816));
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(11667243342067991040));
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(squareConnectivesPrecalculationRayArray[61 << 6 | 25]));
-            Console.WriteLine(rayCollidingSquareCalculations[61][ULONG_OPERATIONS.SetBitsToOne(0ul, 16, 25)]);
-            Console.WriteLine(pieceTypeAbilities[3, squareConnectivesPrecalculationArray[61 << 6 | 25]]);
+            int testitest = 16;
 
             Stopwatch sw = Stopwatch.StartNew();
 
             curSearchZobristKeyLine = new ulong[1];
 
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(squareConnectivesPrecalculationRayArray[4023]));
-
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4503599627370496ul));
-
-            //Console.WriteLine(CreateFenString());
-            int tPerft = MinimaxRoot(6);
-            //for (int p = 0; p < 1; p++)
-            //{
-            //    int tPerft = MinimaxRoot(6);
-            //    //Array.Copy(i234, i235, 64);
-            //    //MinimaxWhite(0);
-            //    //MinimaxBlack(0);
-            //    //LeafCheckingPieceCheck(44, 45, 5);
-            //}
+            int tPerft = 100_000_000;
+            //tPerft = MinimaxRoot(5);
+            for (int p = 0; p < 100_000_000; p++)
+            {
+                //if (tPerft == 1)
+                //{
+                //
+                //}
+                //else if (tPerft == 2)
+                //{
+                //
+                //}
+                //else if (tPerft == 3)
+                //{
+                //
+                //}
+                switch(testitest)
+                {
+                    case 1:
+                        break;
+                    case 2:
+                        break;
+                    case 3:
+                        break;
+                    case 4:
+                        break;
+                    case 5:
+                        break;
+                    case 6:
+                        break;
+                    case 7:
+                        break;
+                    case 8:
+                        break;
+                    case 9:
+                        break;
+                    case 10:
+                        break;
+                    case 11:
+                        break;
+                    case 12:
+                        break;
+                    case 13:
+                        break;
+                    case 14:
+                        break;
+                    case 15:
+                        break;
+                    case 16:
+                        break;
+                }
+            
+                //int tPerft = MinimaxRoot(6);
+                //Array.Copy(i234, i235, 64);
+                //MinimaxWhite(0);
+                //MinimaxBlack(0);
+                //LeafCheckingPieceCheck(44, 45, 5);
+            }
 
 
             //Console.WriteLine(CreateFenString());
@@ -152,27 +188,7 @@ namespace ChessBot
             Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * tPerft)) + " NpS");
         }
 
-        private string GetThreeDigitSeperatedInteger(int pInt)
-        {
-            string s = pInt.ToString(), r = s[0].ToString();
-            int t = s.Length % 3;
-
-            for (int i = 1; i < s.Length; i++) {
-                if (i % 3 == t) r += ".";
-                r += s[i];
-            }
-
-            s = "";
-
-            for (int i = 0; i < r.Length; i++)
-            {
-                s += r[i];
-            }
-
-            return s;
-        }
-
-        private Move[] tMoveLine = new Move[10];
+        #region | CHECK RECOGNITION |
 
         private int PreMinimaxCheckCheckWhite()
         {
@@ -264,6 +280,10 @@ namespace ChessBot
             if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, tPossibleAttackPiece) && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) return tPossibleAttackPiece;
             return -1;
         }
+
+        #endregion
+
+        #region | LEGAL MOVE GENERATION |
 
         private void GetLegalWhiteMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
@@ -577,6 +597,10 @@ namespace ChessBot
             else kingMovement.AddMoveOptionsToMoveList(blackKingSquare, oppAttkBitboard | blackPieceBitboard, ~oppAttkBitboard & whitePieceBitboard);
         }
 
+        #endregion
+
+        #region | MINIMAX FUNCTIONS |
+
         public int MinimaxRoot(int pDepth)
         {
             int baseLineLen = curSearchZobristKeyLine.Length;
@@ -608,9 +632,6 @@ namespace ChessBot
         {
             if (pDepth == 0) return 1;
 
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard));
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
-
             List<Move> moveOptionList = new List<Move>();
             GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
@@ -621,9 +642,6 @@ namespace ChessBot
             enPassantSquare = 65;
             happenedHalfMoves++;
             isWhiteToMove = true;
-
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tBPB));
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tAPB));
 
             int tC = 0;
 
@@ -758,28 +776,8 @@ namespace ChessBot
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
                 #endregion
-                    //Console.WriteLine(curMove);
-                    //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0)
-                    //{
-                    //    //Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
-                    //    //Console.WriteLine(curMove);
-                    //    //Console.WriteLine(CreateFenString());
-                    //}
 
-                //Console.WriteLine(curMove);
-                    //Console.WriteLine(CreateFenString());
-
-                tMoveLine[pDepth] = curMove;
-                //int t;
                 tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
-                tMoveLine[pDepth] = null;
-
-
-
-                //if (pDepth == 2)
-                //{
-                //    Console.WriteLine(CreateFenString() + "\n" + t);
-                //}
 
                 #region UndoMove()
 
@@ -810,12 +808,6 @@ namespace ChessBot
             blackPieceBitboard = tBPB;
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
-
-            //if (pDepth == 1)
-            //{
-            //    Console.WriteLine(CreateFenString() + "\n" + tC);
-            //}
-
             return tC;
         }
 
@@ -823,8 +815,7 @@ namespace ChessBot
         {
             if (pDepth == 0) return 1;
             List<Move> moveOptionList = new List<Move>();
-            int ttt;
-            GetLegalBlackMoves(ttt = LeafCheckingPieceCheckBlack(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
+            GetLegalBlackMoves(LeafCheckingPieceCheckBlack(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
             int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -839,22 +830,6 @@ namespace ChessBot
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
-                //if (curMove == null)
-                //{
-                //    return 0;
-                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tBPB));
-                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
-                //    Console.WriteLine(ttt);
-                //    for (int m2 = 0; m2 < molc; m2++) Console.WriteLine(moveOptionList[m2]);
-                //    //for (int i = 9; i >= 0; i--)
-                //    //{
-                //    //    Console.WriteLine(tMoveLine[i]);
-                //    //}
-                //    Console.WriteLine(CreateFenString());
-                //    Console.WriteLine(pDepth);
-                //    Console.WriteLine(pLastMoveStartPos + " -> " + pLastMoveEndPos + " (" + pLastMovePieceType + ")");
-                //    return 0;
-                //}
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos];
 
                 #region MakeMove()
@@ -982,25 +957,9 @@ namespace ChessBot
 
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
-                //if (repetitionDictionary.ContainsKey(zobristKey)) repetitionDictionary[zobristKey] += 1;
-                //else repetitionDictionary.Add(zobristKey, 1);
-
                 #endregion
 
-
-                //Console.WriteLine(curMove);
-                //Console.WriteLine(CreateFenString());
-                //int t = 0;
-                //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0) Console.WriteLine(CreateFenString());
-                tMoveLine[pDepth] = curMove;
                 tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
-                tMoveLine[pDepth] = null;
-
-                //if (pDepth == 2)
-                //{
-                //    Console.WriteLine(CreateFenString() + "\n" + t);
-                //}
-                //Console.WriteLine(t);
 
                 #region UndoMove()
 
@@ -1034,6 +993,10 @@ namespace ChessBot
             return tC;
         }
 
+        #endregion
+
+        #region | EVALUATION |
+
         private bool IsDrawByRepetition(int pPlyOfFirstPossibleRepeatedPosition)
         {
             int tC = 0;
@@ -1045,40 +1008,21 @@ namespace ChessBot
             return false;
         }
 
+        #endregion
 
-        private ulong[,] pieceHashesWhite = new ulong[64, 7], pieceHashesBlack = new ulong[64, 7];
-        private ulong blackTurnHash, whiteKingSideRochadeRightHash, whiteQueenSideRochadeRightHash, blackKingSideRochadeRightHash, blackQueenSideRochadeRightHash;
-        private ulong[] enPassantSquareHashes = new ulong[66];
-        private void InitZobrist()
-        {
-            Random rng = new Random(2344);
-            for (int sq = 0; sq < 64; sq++)
-            {
-                enPassantSquareHashes[sq] = ULONG_OPERATIONS.GetRandomULONG(rng);
-                for (int it = 1; it < 7; it++)
-                {
-                    pieceHashesWhite[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
-                    pieceHashesBlack[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
-                }
-            }
-            blackTurnHash = ULONG_OPERATIONS.GetRandomULONG(rng);
-            whiteKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
-            whiteQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
-            blackKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
-            blackQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
-        }
-
-        public void SetKnightMasks(ulong[] uls)
-        {
-            knightSquareBitboards = uls;
-        }
-
-        public void SetKingMasks(ulong[] uls)
-        {
-            kingSquareBitboards = uls;
-        }
+        #region | FEN MANAGEMENT |
 
         private char[] fenPieces = new char[7] { 'z', 'p', 'n', 'b', 'r', 'q', 'k' };
+        private string[] squareNames = new string[64] {
+            "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+            "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+            "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+            "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+            "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+            "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+            "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+            "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
+        };
 
         public string CreateFenString()
         {
@@ -1137,17 +1081,6 @@ namespace ChessBot
             //= (epstr[0] - 'a') + 8 * (epstr[1] - '1');
             return rFEN + fiftyMoveRuleCounter + " " + ((happenedHalfMoves - happenedHalfMoves % 2) / 2);
         }
-
-        private string[] squareNames = new string[64] {
-            "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-            "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-            "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-            "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-            "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-            "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-            "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-            "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
-        };
 
         public void LoadFenString(string fenStr)
         {
@@ -1231,7 +1164,41 @@ namespace ChessBot
             allPieceBitboard = whitePieceBitboard | blackPieceBitboard;
         }
 
+        #endregion
+
         #region | PRECALCULATIONS |
+
+        private ulong[,] pieceHashesWhite = new ulong[64, 7], pieceHashesBlack = new ulong[64, 7];
+        private ulong blackTurnHash, whiteKingSideRochadeRightHash, whiteQueenSideRochadeRightHash, blackKingSideRochadeRightHash, blackQueenSideRochadeRightHash;
+        private ulong[] enPassantSquareHashes = new ulong[66];
+        private void InitZobrist()
+        {
+            Random rng = new Random(2344);
+            for (int sq = 0; sq < 64; sq++)
+            {
+                enPassantSquareHashes[sq] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                for (int it = 1; it < 7; it++)
+                {
+                    pieceHashesWhite[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                    pieceHashesBlack[sq, it] = ULONG_OPERATIONS.GetRandomULONG(rng);
+                }
+            }
+            blackTurnHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            whiteKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            whiteQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            blackKingSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+            blackQueenSideRochadeRightHash = ULONG_OPERATIONS.GetRandomULONG(rng);
+        }
+
+        public void SetKnightMasks(ulong[] uls)
+        {
+            knightSquareBitboards = uls;
+        }
+
+        public void SetKingMasks(ulong[] uls)
+        {
+            kingSquareBitboards = uls;
+        }
 
         private void PawnAttackBitboards()
         {
@@ -1351,7 +1318,30 @@ namespace ChessBot
         }
 
         #endregion
+
+        #region | UTILITY |
+
+        private string GetThreeDigitSeperatedInteger(int pInt)
+        {
+            string s = pInt.ToString(), r = s[0].ToString();
+            int t = s.Length % 3;
+
+            for (int i = 1; i < s.Length; i++)
+            {
+                if (i % 3 == t) r += ".";
+                r += s[i];
+            }
+
+            s = "";
+            for (int i = 0; i < r.Length; i++) s += r[i];
+
+            return s;
+        }
+
+        #endregion
     }
+
+    #region | DATA CLASSES |
 
     public class Piece // Theoretisch ist dies Legacy; aber ich lasse es erstmals noch hier
     {
@@ -1471,623 +1461,6 @@ namespace ChessBot
             return s;
         }
     }
+
+    #endregion
 }
-
-/*
- * r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b K - 2 2
-84444
-2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b K - 2 2
-87068
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R b Kkq - 0 2
-94174
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pN2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-98333
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2p2Q1p/PPPBBPPP/1R2K2R b Kkq - 0 2
-95037
-r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-92224
-r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-79352
-r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-91311
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-87817
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb1Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-86863
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPBbPPP/1R2K2R b Kkq - 0 2
-74818
-r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-78031
-r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-86795
-r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-85466
-r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 0 2
-85713
-r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 0 2
-92922
-r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-91837
-r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-91970
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-97660
-r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-95779
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 0 2
-119483
-r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 0 2
-97648
-r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-86635
-r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-94025
-r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq c6 2 2
-87981
-r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-87007
-r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-83974
-r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-92015
-r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-104208
-r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-84275
-r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-90002
-r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 2 2
-82235
-1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kk - 2 2
-92948
-2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kk - 2 2
-86531
-3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kk - 2 2
-86620
-r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b K - 2 2
-83189
-r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b K - 2 2
-84920
-r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-84232
-r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-84150
-r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-90283
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-91599
-r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-80075
-r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kq - 2 2
-75881
- */
-
-
-
-/*
- * r3k2r/p1ppqpb1/bn2pnpB/3PN3/1p2P3/2N2Q2/PPP1BPpP/1R2K2R w Kkq - 1 2
-2015
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPP1BPpP/1RB1K2R w Kkq - 1 2
-2065
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R1BK2R w Kkq - 1 2
-1870
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R2KB1R w Kkq - 1 2
-2490
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NB1Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
-2122
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1pB1P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
-2168
-r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 1 2
-2161
-r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/1R2K2R w Kkq - 0 2
-2021
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1P/PPPBBPp1/1R2K2R w Kkq - 1 2
-2026
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P2P/2N2Q2/PPPBBPp1/1R2K2R w Kkq h3 1 2
-2071
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/Np2P3/5Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-2339
-r3k2r/p1ppqpb1/bn2pnp1/1N1PN3/1p2P3/5Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-2290
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q2/PPPBBPpP/1R1NK2R w Kkq - 1 2
-2202
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1Q1/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
-2294
-r3k2r/p1ppqpb1/bn2pnp1/3PN2Q/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
-2213
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N5/PPPBBPQP/1R2K2R w Kkq - 0 2
-2177
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PQ2/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
-2153
-r3k2r/p1ppqpb1/bn2pnp1/3PNQ2/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 1 2
-2426
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N3Q1/PPPBBPpP/1R2K2R w Kkq - 1 2
-2393
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N4Q/PPPBBPpP/1R2K2R w Kkq - 1 2
-2366
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1Q3/PPPBBPpP/1R2K2R w Kkq - 1 2
-2199
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R w Kkq - 1 2
-2017
-r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N5/PPPBBPpP/1R2K2R w Kkq - 0 2
-2175
-r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-2065
-r3k2r/p1ppqpb1/bn2Pnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
-2295
-r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-2106
-r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P3/2NN1Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-1831
-r3k2r/p1ppqpb1/bn2pnp1/3P4/1pN1P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-1927
-r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 1 2
-1958
-r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
-2062
-r3k2r/p1pNqpb1/bn2pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
-2177
-r3k2r/p1ppqNb1/bn2pnp1/3P4/1p2P3/2N2Q2/PPPBBPpP/1R2K2R w Kkq - 0 2
-2137
- * 
- */
-
-
-
-/*
- * 
- * r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
-2
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
-2
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
-1
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
-1
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-44
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-41
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
-38
-r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-41
-r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-45
-r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-44
-r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
-44
-r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-42
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
-41
-r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
-42
- */
-
-
-/*
- * 
- * 
- * [König] 60 -> 62 /ROCHADE/
-r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-[König] 60 -> 58 /ROCHADE/
-2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-[Bauer] 14 -> 6 /Springer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
-[Bauer] 14 -> 6 /Läufer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
-[Bauer] 14 -> 6 /Turm-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
-[Bauer] 14 -> 6 /Dame-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
-[Bauer] 14 -> 7 /CAPTURE/ /Springer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2n b Kkq - 2 3
-[Bauer] 14 -> 7 /CAPTURE/ /Läufer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2b b Kkq - 2 3
-[Bauer] 14 -> 7 /CAPTURE/ /Turm-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
-[Bauer] 14 -> 7 /CAPTURE/ /Dame-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
-[Bauer] 25 -> 17
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Bauer] 25 -> 18 /CAPTURE/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Läufer] 40 -> 49
-r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 40 -> 58
-r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 40 -> 33
-r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 40 -> 26
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 40 -> 19 /CAPTURE/
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Springer] 41 -> 58
-r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 41 -> 24
-r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 41 -> 26
-r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 41 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Bauer] 44 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Springer] 45 -> 55
-r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 45 -> 62
-r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 45 -> 30
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 45 -> 39
-r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Springer] 45 -> 28 /CAPTURE/
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Springer] 45 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-[Bauer] 46 -> 38
-r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Bauer] 50 -> 42
-r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Bauer] 50 -> 34 [EP = 42]
-r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
-[Bauer] 51 -> 43
-r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Dame] 52 -> 61
-r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Dame] 52 -> 43
-r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Dame] 52 -> 34
-r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Dame] 52 -> 59
-r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 54 -> 47
-r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Läufer] 54 -> 61
-r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-[Turm] 56 -> 57
-1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-[Turm] 56 -> 58
-2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-[Turm] 56 -> 59
-3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-[König] 60 -> 61
-r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-[König] 60 -> 59
-r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-[Turm] 63 -> 55
-r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 47
-r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 39
-r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 31
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 23
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 62
-r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 61
-r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-[Turm] 63 -> 15 /CAPTURE/
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
- * 
- */
-
-
-/*
- * 
- * [König] 60 -> 62 /ROCHADE/
-r4rk1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-[König] 60 -> 58 /ROCHADE/
-2kr3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-[Bauer] 14 -> 6 /Springer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1nR b Kkq - 2 3
-43
-[Bauer] 14 -> 6 /Läufer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1bR b Kkq - 2 3
-43
-[Bauer] 14 -> 6 /Turm-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1rR b Kkq - 2 3
-2
-[Bauer] 14 -> 6 /Dame-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K1qR b Kkq - 2 3
-2
-[Bauer] 14 -> 7 /CAPTURE/ /Springer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2n b Kkq - 2 3
-43
-[Bauer] 14 -> 7 /CAPTURE/ /Läufer-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2b b Kkq - 2 3
-43
-[Bauer] 14 -> 7 /CAPTURE/ /Turm-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2r b Kkq - 2 3
-1
-[Bauer] 14 -> 7 /CAPTURE/ /Dame-PROMOTION/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBP1P/1R2K2q b Kkq - 2 3
-1
-[Bauer] 25 -> 17
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/1pNQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-44
-[Bauer] 25 -> 18 /CAPTURE/
-r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/2pQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-[Läufer] 40 -> 49
-r3k2r/pbppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Läufer] 40 -> 58
-r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Läufer] 40 -> 33
-r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Läufer] 40 -> 26
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1pb1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-41
-[Läufer] 40 -> 19 /CAPTURE/
-r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2Nb4/PPPBBPpP/1R2K2R b Kkq - 0 3
-38
-[Springer] 41 -> 58
-r1n1k2r/p1ppqpb1/b3pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Springer] 41 -> 24
-r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Springer] 41 -> 26
-r3k2r/p1ppqpb1/b3pnp1/3PN3/1pn1P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-41
-[Springer] 41 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/b3pnp1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-[Bauer] 44 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/bn3np1/3pN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-[Springer] 45 -> 55
-r3k2r/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Springer] 45 -> 62
-r3k1nr/p1ppqpb1/bn2p1p1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Springer] 45 -> 30
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2P1n1/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Springer] 45 -> 39
-r3k2r/p1ppqpb1/bn2p1p1/3PN2n/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Springer] 45 -> 28 /CAPTURE/
-r3k2r/p1ppqpb1/bn2p1p1/3PN3/1p2n3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-45
-[Springer] 45 -> 35 /CAPTURE/
-r3k2r/p1ppqpb1/bn2p1p1/3nN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 0 3
-44
-[Bauer] 46 -> 38
-r3k2r/p1ppqpb1/bn2pn2/3PN1p1/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Bauer] 50 -> 42
-r3k2r/p2pqpb1/bnp1pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-44
-[Bauer] 50 -> 34 [EP = 42]
-r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq c6 2 3
-44
-[Bauer] 51 -> 43
-r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Dame] 52 -> 61
-r3kq1r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Dame] 52 -> 43
-r3k2r/p1pp1pb1/bn1qpnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-42
-[Dame] 52 -> 34
-r3k2r/p1pp1pb1/bn2pnp1/2qPN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Dame] 52 -> 59
-r2qk2r/p1pp1pb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Läufer] 54 -> 47
-r3k2r/p1ppqp2/bn2pnpb/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Läufer] 54 -> 61
-r3kb1r/p1ppqp2/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kkq - 2 3
-43
-[Turm] 56 -> 57
-1r2k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-[Turm] 56 -> 58
-2r1k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-[Turm] 56 -> 59
-3rk2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kk - 2 3
-43
-[König] 60 -> 61
-r4k1r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-[König] 60 -> 59
-r2k3r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b K - 2 3
-43
-[Turm] 63 -> 55
-r3k3/p1ppqpbr/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-[Turm] 63 -> 47
-r3k3/p1ppqpb1/bn2pnpr/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-[Turm] 63 -> 39
-r3k3/p1ppqpb1/bn2pnp1/3PN2r/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-[Turm] 63 -> 31
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P2r/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-42
-[Turm] 63 -> 23
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3r/PPPBBPpP/1R2K2R b Kq - 2 3
-41
-[Turm] 63 -> 62
-r3k1r1/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-[Turm] 63 -> 61
-r3kr2/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpP/1R2K2R b Kq - 2 3
-43
-[Turm] 63 -> 15 /CAPTURE/
-r3k3/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ4/PPPBBPpr/1R2K2R b Kq - 0 3
-42
- * 
- */
-
-
-
-/*
- * 
- * 8/2p5/3p4/KP5r/4Rpk1/4P3/6P1/8 w - - 0 2
-281
-8/2p5/3p4/KP5r/4Rpk1/6P1/4P3/8 w - - 0 2
-300
-8/2p5/3p4/KP2R2r/5pk1/8/4P1P1/8 w - - 3 2
-270
-8/2p5/3pR3/KP5r/5pk1/8/4P1P1/8 w - - 3 2
-321
-8/2p1R3/3p4/KP5r/5pk1/8/4P1P1/8 w - - 3 2
-342
-4R3/2p5/3p4/KP5r/5pk1/8/4P1P1/8 w - - 3 2
-378
-8/2p5/3p4/KP5r/5pk1/4R3/4P1P1/8 w - - 3 2
-324
-8/2p5/3p4/KP5r/3R1pk1/8/4P1P1/8 w - - 3 2
-320
-8/2p5/3p4/KP5r/2R2pk1/8/4P1P1/8 w - - 3 2
-336
-8/2p5/3p4/KP5r/1R3pk1/8/4P1P1/8 w - - 3 2
-267
-8/2p5/3p4/KP5r/R4pk1/8/4P1P1/8 w - - 3 2
-264
-8/2p5/3p4/KP5r/5Rk1/8/4P1P1/8 w - - 0 2
-48
-8/2p5/K2p4/1P5r/4Rpk1/8/4P1P1/8 w - - 3 2
-322
-8/2p5/3p4/1P5r/1K2Rpk1/8/4P1P1/8 w - - 3 2
-313
-8/2p5/3p4/1P5r/K3Rpk1/8/4P1P1/8 w - - 3 2
-316
- * 
- */
-
-
-/*
- * 
- * 
- * 8/2p5/3p4/1P5r/1K2Rp1k/8/4P1P1/8 b - - 4 3
-18
-8/2p5/3p4/1P3k1r/1K2Rp2/8/4P1P1/8 b - - 4 3
-18
-8/2p5/3p4/1P4kr/1K2Rp2/8/4P1P1/8 b - - 4 3
-18
-8/2p5/3p4/1P5r/1K2Rp2/6k1/4P1P1/8 b - - 4 3
-16
-8/2p5/3p3r/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-8/2p4r/3p4/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-7r/2p5/3p4/1P6/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-8/2p5/3p4/1P6/1K2Rpkr/8/4P1P1/8 b - - 4 3
-17
-8/2p5/3p4/1P6/1K2Rpk1/7r/4P1P1/8 b - - 4 3
-15
-8/2p5/3p4/1P6/1K2Rpk1/8/4P1Pr/8 b - - 4 3
-17
-8/2p5/3p4/1P6/1K2Rpk1/8/4P1P1/7r b - - 4 3
-17
-8/2p5/3p4/1P4r1/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-8/2p5/3p4/1P3r2/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-8/2p5/3p4/1P2r3/1K2Rpk1/8/4P1P1/8 b - - 4 3
-14
-8/2p5/3p4/1P1r4/1K2Rpk1/8/4P1P1/8 b - - 4 3
-17
-8/2p5/3p4/1Pr5/1K2Rpk1/8/4P1P1/8 b - - 4 3
-15
-8/2p5/3p4/1r6/1K2Rpk1/8/4P1P1/8 b - - 0 3
-5
-8/2p5/8/1P1p3r/1K2Rpk1/8/4P1P1/8 b - - 0 3
-17
-8/8/2pp4/1P5r/1K2Rpk1/8/4P1P1/8 b - - 0 3
-18
-8/8/3p4/1Pp4r/1K2Rpk1/8/4P1P1/8 b - c6 0 3
-6
- * 
- */

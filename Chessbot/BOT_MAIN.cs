@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("8/8/3p4/1Pp4r/1K2Rpk1/8/4P1P1/8 w - c6 0 3");
+            _ = new BoardManager("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
             //r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1
             //8/8/8/2k5/8/8/7p/4K3 b - - 2 1
         }
@@ -114,6 +114,14 @@ namespace ChessBot
             //tempTest = zobristKey;
             LoadFenString(fen);
 
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(2310359833064709192));
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(2107775));
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4769031049176344816));
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(11667243342067991040));
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(squareConnectivesPrecalculationRayArray[61 << 6 | 25]));
+            Console.WriteLine(rayCollidingSquareCalculations[61][ULONG_OPERATIONS.SetBitsToOne(0ul, 16, 25)]);
+            Console.WriteLine(pieceTypeAbilities[3, squareConnectivesPrecalculationArray[61 << 6 | 25]]);
+
             Stopwatch sw = Stopwatch.StartNew();
 
             curSearchZobristKeyLine = new ulong[1];
@@ -123,7 +131,7 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(4503599627370496ul));
 
             //Console.WriteLine(CreateFenString());
-            int tPerft = MinimaxRoot(1);
+            int tPerft = MinimaxRoot(6);
             //for (int p = 0; p < 1; p++)
             //{
             //    int tPerft = MinimaxRoot(6);
@@ -165,6 +173,56 @@ namespace ChessBot
         }
 
         private Move[] tMoveLine = new Move[10];
+
+        private int PreMinimaxCheckCheckWhite()
+        {
+            ulong bitShiftedKingPos = 1ul << whiteKingSquare;
+            for (int p = 0; p < 64; p++)
+            {
+                if (ULONG_OPERATIONS.IsBitZero(blackPieceBitboard, p)) continue;
+                int tPT;
+                switch (tPT = pieceTypeArray[p])
+                {
+                    case 1:
+                        if ((bitShiftedKingPos & blackPawnAttackSquareBitboards[p]) != 0ul) return p;
+                        break;
+                    case 2:
+                        if ((bitShiftedKingPos & knightSquareBitboards[p]) != 0ul) return p;
+                        break;
+                    case 6: break;
+                    default:
+                        if ((squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[whiteKingSquare << 6 | p]]) return p;
+                        break;
+                }
+            }
+
+            return -1;
+        }
+
+        private int PreMinimaxCheckCheckBlack()
+        {
+            ulong bitShiftedKingPos = 1ul << blackKingSquare;
+            for (int p = 0; p < 64; p++)
+            {
+                if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, p)) continue;
+                int tPT;
+                switch (tPT = pieceTypeArray[p])
+                {
+                    case 1:
+                        if ((bitShiftedKingPos & whitePawnAttackSquareBitboards[p]) != 0ul) return p;
+                        break;
+                    case 2:
+                        if ((bitShiftedKingPos & knightSquareBitboards[p]) != 0ul) return p;
+                        break;
+                    case 6: break;
+                    default:
+                        if ((squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[blackKingSquare << 6 | p]]) return p;
+                        break;
+                }
+            }
+
+            return -1;
+        }
 
         private int LeafCheckingPieceCheckWhite(int pStartPos, int pEndPos, int pPieceType)
         {
@@ -300,7 +358,7 @@ namespace ChessBot
             else if (curCheckCount == 1)
             {
                 ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | pCheckingPieceSquare];
-                if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) && enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul)
+                if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul && (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) || (pCheckingPieceSquare + 8 == enPassantSquare && pieceTypeArray[pCheckingPieceSquare] == 1)))
                 {
                     int shiftedKS = whiteKingSquare << 6, epM9 = enPassantSquare - 9, epM8 = epM9 + 1;
                     ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
@@ -356,7 +414,7 @@ namespace ChessBot
                 {
                     Move mm = pMoveList[m];
                     if (mm.pieceType == 6) tMoves.Add(pMoveList[m]);
-                    else if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, pMoveList[m].endPos)) tMoves.Add(pMoveList[m]);
+                    else if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, pMoveList[m].endPos) || mm.isEnPassant) tMoves.Add(pMoveList[m]);
                 }
                 pMoveList = tMoves;
             }
@@ -454,8 +512,9 @@ namespace ChessBot
             }
             else if (curCheckCount == 1)
             {
+                //pCheckingPieceSquare +- 8 == enPassantSquare && pieceTypeList[pCheckingPieceSquare] == 1
                 ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | pCheckingPieceSquare];
-                if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) && enPassantSquare != 65 && (blackPieceBitboard & whitePawnAttackSquareBitboards[enPassantSquare]) != 0ul)
+                if (enPassantSquare != 65 && (blackPieceBitboard & whitePawnAttackSquareBitboards[enPassantSquare]) != 0ul && (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, enPassantSquare) || (pCheckingPieceSquare - 8 == enPassantSquare && pieceTypeArray[pCheckingPieceSquare] == 1)))
                 {
                     int shiftedKS = blackKingSquare << 6, epM9 = enPassantSquare + 9, epM8 = epM9 - 1;
                     ulong tu = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(allPieceBitboard, epM8), enPassantSquare);
@@ -511,7 +570,7 @@ namespace ChessBot
                 {
                     Move mm = pMoveList[m];
                     if (mm.pieceType == 6) tMoves.Add(pMoveList[m]);
-                    else if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, pMoveList[m].endPos)) tMoves.Add(pMoveList[m]);
+                    else if (ULONG_OPERATIONS.IsBitOne(tCheckingPieceLine, pMoveList[m].endPos) || mm.isEnPassant) tMoves.Add(pMoveList[m]);
                 }
                 pMoveList = tMoves;
             }
@@ -525,10 +584,22 @@ namespace ChessBot
             for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
             curSearchZobristKeyLine = completeZobristHistory;
 
-            int perftScore = 0;
+            int perftScore = 0, tattk;
 
-            if (isWhiteToMove) perftScore = MinimaxWhite(pDepth, baseLineLen, whiteKingSquare, whiteKingSquare, 2);
-            else perftScore = MinimaxBlack(pDepth, baseLineLen, blackKingSquare, blackKingSquare, 2);
+            if (isWhiteToMove)
+            {
+                tattk = PreMinimaxCheckCheckWhite();
+                Console.WriteLine(tattk);
+                if (tattk == -1) perftScore = MinimaxWhite(pDepth, baseLineLen, whiteKingSquare, whiteKingSquare, 2);
+                else perftScore = MinimaxWhite(pDepth, baseLineLen, tattk, tattk, pieceTypeArray[tattk]);
+            }
+            else
+            {
+                tattk = PreMinimaxCheckCheckBlack();
+                Console.WriteLine(tattk);
+                if (tattk == -1) perftScore = MinimaxBlack(pDepth, baseLineLen, whiteKingSquare, whiteKingSquare, 2);
+                else perftScore = MinimaxBlack(pDepth, baseLineLen, tattk, tattk, pieceTypeArray[tattk]);
+            }
 
             return perftScore;
         }
@@ -541,7 +612,7 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(whitePieceBitboard));
 
             List<Move> moveOptionList = new List<Move>();
-            GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(50, 34, 1), ref moveOptionList);
+            GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -695,20 +766,20 @@ namespace ChessBot
                     //    //Console.WriteLine(CreateFenString());
                     //}
 
-                Console.WriteLine(curMove);
+                //Console.WriteLine(curMove);
                     //Console.WriteLine(CreateFenString());
 
                 tMoveLine[pDepth] = curMove;
-                int t;
-                tC += t = MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                //int t;
+                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
                 tMoveLine[pDepth] = null;
 
 
 
-                if (pDepth == 2)
-                {
-                    Console.WriteLine(CreateFenString() + "\n" + t);
-                }
+                //if (pDepth == 2)
+                //{
+                //    Console.WriteLine(CreateFenString() + "\n" + t);
+                //}
 
                 #region UndoMove()
 
@@ -919,16 +990,16 @@ namespace ChessBot
 
                 //Console.WriteLine(curMove);
                 //Console.WriteLine(CreateFenString());
-                int t = 0;
+                //int t = 0;
                 //if (ULONG_OPERATIONS.IsBitOne(allPieceBitboard, 0) && pieceTypeArray[0] == 0) Console.WriteLine(CreateFenString());
                 tMoveLine[pDepth] = curMove;
-                tC += t = MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
                 tMoveLine[pDepth] = null;
 
-                if (pDepth == 2)
-                {
-                    Console.WriteLine(CreateFenString() + "\n" + t);
-                }
+                //if (pDepth == 2)
+                //{
+                //    Console.WriteLine(CreateFenString() + "\n" + t);
+                //}
                 //Console.WriteLine(t);
 
                 #region UndoMove()

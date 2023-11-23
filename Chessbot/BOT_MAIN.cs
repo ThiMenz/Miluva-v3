@@ -107,79 +107,19 @@ namespace ChessBot
             Console.Write("[PRECALCS] Pawn Movement");
             whitePawnMovement = new WhitePawnMovement(this);
             blackPawnMovement = new BlackPawnMovement(this);
+            PrecalculateEnPassantMoves();
             Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
             Console.WriteLine("[DONE]\n\n");
 
             LoadFenString(fen);
 
-            int testitest = 16;
-
             Stopwatch sw = Stopwatch.StartNew();
 
             curSearchZobristKeyLine = new ulong[1];
 
-            int tPerft = 100_000_000;
-            //tPerft = MinimaxRoot(5);
-            for (int p = 0; p < 100_000_000; p++)
-            {
-                //if (tPerft == 1)
-                //{
-                //
-                //}
-                //else if (tPerft == 2)
-                //{
-                //
-                //}
-                //else if (tPerft == 3)
-                //{
-                //
-                //}
-                switch(testitest)
-                {
-                    case 1:
-                        break;
-                    case 2:
-                        break;
-                    case 3:
-                        break;
-                    case 4:
-                        break;
-                    case 5:
-                        break;
-                    case 6:
-                        break;
-                    case 7:
-                        break;
-                    case 8:
-                        break;
-                    case 9:
-                        break;
-                    case 10:
-                        break;
-                    case 11:
-                        break;
-                    case 12:
-                        break;
-                    case 13:
-                        break;
-                    case 14:
-                        break;
-                    case 15:
-                        break;
-                    case 16:
-                        break;
-                }
-            
-                //int tPerft = MinimaxRoot(6);
-                //Array.Copy(i234, i235, 64);
-                //MinimaxWhite(0);
-                //MinimaxBlack(0);
-                //LeafCheckingPieceCheck(44, 45, 5);
-            }
-
-
-            //Console.WriteLine(CreateFenString());
-
+            int tPerft = 0;
+            for (int p = 0; p < 10; p++)
+                tPerft += MinimaxRoot(5);
 
             sw.Stop();
             Console.WriteLine(GetThreeDigitSeperatedInteger(tPerft) + " Moves");
@@ -334,7 +274,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                                pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                                pMoveList.Add(whiteEnPassantMoves[epM9, enPassantSquare]);
                     }
                     epM9 += 2;
                     if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1 && enPassantSquare % 8 != 7)
@@ -342,7 +282,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                                pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                                pMoveList.Add(whiteEnPassantMoves[epM9, enPassantSquare]);
                     }
                 }
                 for (int p = 0; p < 64; p++)
@@ -388,7 +328,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                            pMoveList.Add(whiteEnPassantMoves[epM9, enPassantSquare]);
                     }
                     epM9 += 2;
                     if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
@@ -396,7 +336,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare - 8));
+                            pMoveList.Add(whiteEnPassantMoves[epM9, enPassantSquare]);
                     }
                 }
                 for (int p = 0; p < 64; p++)
@@ -489,7 +429,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare + 8));
+                            pMoveList.Add(blackEnPassantMoves[epM9, enPassantSquare]);
                     }
                     epM9 -= 2;
                     if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, epM9) && pieceTypeArray[epM9] == 1 && enPassantSquare % 8 != 0)
@@ -497,7 +437,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare + 8));
+                            pMoveList.Add(blackEnPassantMoves[epM9, enPassantSquare]);
                     }
                 }
                 for (int p = 0; p < 64; p++)
@@ -544,7 +484,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare + 8));
+                            pMoveList.Add(blackEnPassantMoves[epM9, enPassantSquare]);
                     }
                     epM9 -= 2;
                     if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, epM9) && pieceTypeArray[epM9] == 1)
@@ -552,7 +492,7 @@ namespace ChessBot
                         int possibleAttacker1 = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[shiftedKS | epM9] & ULONG_OPERATIONS.SetBitToZero(tu, epM9)];
                         if (!(ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker1) && pieceTypeAbilities[pieceTypeArray[possibleAttacker1], squareConnectivesPrecalculationArray[shiftedKS | epM9]] ||
                             ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, possibleAttacker2) && pieceTypeAbilities[pieceTypeArray[possibleAttacker2], squareConnectivesPrecalculationArray[shiftedKS | epM8]]))
-                            pMoveList.Add(new Move(false, epM9, enPassantSquare, enPassantSquare + 8));
+                            pMoveList.Add(blackEnPassantMoves[epM9, enPassantSquare]);
                     }
                 }
                 for (int p = 0; p < 64; p++)
@@ -614,33 +554,32 @@ namespace ChessBot
             {
                 tattk = PreMinimaxCheckCheckWhite();
                 Console.WriteLine(tattk);
-                if (tattk == -1) perftScore = MinimaxWhite(pDepth, baseLineLen, whiteKingSquare, whiteKingSquare, 2);
-                else perftScore = MinimaxWhite(pDepth, baseLineLen, tattk, tattk, pieceTypeArray[tattk]);
+                if (tattk == -1) perftScore = MinimaxWhite(pDepth, baseLineLen, tattk);
+                else perftScore = MinimaxWhite(pDepth, baseLineLen, tattk);
             }
             else
             {
                 tattk = PreMinimaxCheckCheckBlack();
                 Console.WriteLine(tattk);
-                if (tattk == -1) perftScore = MinimaxBlack(pDepth, baseLineLen, whiteKingSquare, whiteKingSquare, 2);
-                else perftScore = MinimaxBlack(pDepth, baseLineLen, tattk, tattk, pieceTypeArray[tattk]);
+                if (tattk == -1) perftScore = MinimaxBlack(pDepth, baseLineLen, tattk);
+                else perftScore = MinimaxBlack(pDepth, baseLineLen, tattk);
             }
 
             return perftScore;
         }
 
-        private int MinimaxWhite(int pDepth, int pRepetitionHistoryPly, int pLastMoveStartPos, int pLastMoveEndPos, int pLastMovePieceType)
+        private int MinimaxWhite(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if (pDepth == 0) return 1;
 
             List<Move> moveOptionList = new List<Move>();
-            GetLegalWhiteMoves(LeafCheckingPieceCheckWhite(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
+            GetLegalWhiteMoves(pCheckingSquare, ref moveOptionList);
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
             enPassantSquare = 65;
-            happenedHalfMoves++;
             isWhiteToMove = true;
 
             int tC = 0;
@@ -648,161 +587,352 @@ namespace ChessBot
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
-                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos];
+                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = 0;
 
                 #region MakeMove()
 
                 fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
+                whitePieceBitboard = tWPB ^ curMove.ownPieceBitboardXOR;
+                pieceTypeArray[tEndPos] = tPieceType;
+                pieceTypeArray[tStartPos] = 0;
                 zobristKey = tZobristKey ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
-
-                if (tPieceType == 1) fiftyMoveRuleCounter = 0;
-
-                if (tPieceType == 6) // König Moves
+                switch (curMove.moveTypeID)
                 {
-                    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
-                    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
-                    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
-
-                    if (curMove.isStandard)
-                    {
-                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                    case 0: // Standard-Standard-Move
                         blackPieceBitboard = tBPB;
-                    }
-                    else if (curMove.isCapture)
-                    {
-                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
-                        blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                        break;
+                    case 1: // Standard-Pawn-Move
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB;
+                        break;
+                    case 2: // Standard-Knight-Move
+                        blackPieceBitboard = tBPB;
+                        break;
+                    case 3: // Standard-King-Move
+                        whiteKingSquare = tEndPos;
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        blackPieceBitboard = tBPB;
+                        break;
+                    case 4: // Standard-Rook-Move
+                        blackPieceBitboard = tBPB;
+                        if (whiteCastleRightQueenSide && tStartPos == 0) {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        } else if (whiteCastleRightKingSide && tStartPos == 7) {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
+                    case 5: // Standard-Pawn-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
                         zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
-
-                        if (blackCastleRightQueenSide && tEndPos == 56)
-                        {
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
                             zobristKey ^= blackQueenSideRochadeRightHash;
                             blackCastleRightQueenSide = false;
-                        }
-                        else if (blackCastleRightKingSide && tEndPos == 63)
-                        {
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        break;
+                    case 6: // Standard-Knight-Capture
                         fiftyMoveRuleCounter = 0;
-                    }
-                    else // Rochade
-                    {
-                        //Console.WriteLine(curMove);
-                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), whiteKingSquare = tEndPos);
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
+                    case 7: // Standard-King-Capture
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[whiteKingSquare = tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
+                    case 8: // Standard-Rook-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tStartPos == 0) {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tStartPos == 7) {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
+                    case 9: // Standard-Standard-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
+                    case 10: // Double-Pawn-Move
+                        zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                        blackPieceBitboard = tBPB;
+                        fiftyMoveRuleCounter = 0;
+                        break;
+                    case 11: // Rochade
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        whiteKingSquare = tEndPos;
                         blackPieceBitboard = tBPB;
                         pieceTypeArray[curMove.rochadeEndPos] = 4;
                         pieceTypeArray[curMove.rochadeStartPos] = 0;
                         zobristKey ^= pieceHashesWhite[curMove.rochadeStartPos, 4] ^ pieceHashesWhite[curMove.rochadeEndPos, 4];
-                    }
+                        break;
+                    case 12: // En-Passant
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[curMove.enPassantOption] = 0;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        break;
+                    case 13: // Standard-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        break;
+                    case 14: // Capture-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56) {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        } else if (blackCastleRightKingSide && tEndPos == 63) {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
                 }
-                else if (curMove.isStandard) 
-                {
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
-                    blackPieceBitboard = tBPB;
-                    zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
-
-                    if (whiteCastleRightQueenSide && tStartPos == 0)
-                    {
-                        zobristKey ^= whiteQueenSideRochadeRightHash;
-                        whiteCastleRightQueenSide = false;
-                    }
-                    else if (whiteCastleRightKingSide && tStartPos == 7)
-                    {
-                        zobristKey ^= whiteKingSideRochadeRightHash;
-                        whiteCastleRightKingSide = false;
-                    }
-                }
-                else if (curMove.isPromotion)
-                {
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
-                    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
-                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
-
-                    if (blackCastleRightQueenSide && tEndPos == 56)
-                    {
-                        zobristKey ^= blackQueenSideRochadeRightHash;
-                        blackCastleRightQueenSide = false;
-                    }
-                    else if (blackCastleRightKingSide && tEndPos == 63)
-                    {
-                        zobristKey ^= blackKingSideRochadeRightHash;
-                        blackCastleRightKingSide = false;
-                    }
-                }
-                else if (curMove.isEnPassant)
-                {
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.enPassantOption);
-                    zobristKey ^= pieceHashesBlack[curMove.enPassantOption, 1];
-                    pieceTypeArray[curMove.enPassantOption] = 0;
-                }
-                else // Captures
-                {
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
-                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
-                    fiftyMoveRuleCounter = 0;
-
-                    if (whiteCastleRightQueenSide && tStartPos == 0)
-                    {
-                        zobristKey ^= whiteQueenSideRochadeRightHash;
-                        whiteCastleRightQueenSide = false;
-                    }
-                    else if (whiteCastleRightKingSide && tStartPos == 7)
-                    {
-                        zobristKey ^= whiteKingSideRochadeRightHash;
-                        whiteCastleRightKingSide = false;
-                    }
-
-                    if (blackCastleRightQueenSide && tEndPos == 56)
-                    {
-                        zobristKey ^= blackQueenSideRochadeRightHash;
-                        blackCastleRightQueenSide = false;
-                    }
-                    else if (blackCastleRightKingSide && tEndPos == 63)
-                    {
-                        zobristKey ^= blackKingSideRochadeRightHash;
-                        blackCastleRightKingSide = false;
-                    }
-                }
-
-                pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
-                pieceTypeArray[tStartPos] = 0;
 
                 allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
-
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
+
+
+                //fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
+                //zobristKey = tZobristKey ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
+                //
+                //if (tPieceType == 1) fiftyMoveRuleCounter = 0;
+                //
+                //if (tPieceType == 6) // König Moves
+                //{
+                //    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                //    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                //    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                //
+                //    if (curMove.isStandard)
+                //    {
+                //        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                //        blackPieceBitboard = tBPB;
+                //    }
+                //    else if (curMove.isCapture)
+                //    {
+                //        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), whiteKingSquare = tEndPos);
+                //        blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                //        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                //
+                //        if (blackCastleRightQueenSide && tEndPos == 56)
+                //        {
+                //            zobristKey ^= blackQueenSideRochadeRightHash;
+                //            blackCastleRightQueenSide = false;
+                //        }
+                //        else if (blackCastleRightKingSide && tEndPos == 63)
+                //        {
+                //            zobristKey ^= blackKingSideRochadeRightHash;
+                //            blackCastleRightKingSide = false;
+                //        }
+                //        fiftyMoveRuleCounter = 0;
+                //    }
+                //    else // Rochade
+                //    {
+                //        //Console.WriteLine(curMove);
+                //        whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), whiteKingSquare = tEndPos);
+                //        blackPieceBitboard = tBPB;
+                //        pieceTypeArray[curMove.rochadeEndPos] = 4;
+                //        pieceTypeArray[curMove.rochadeStartPos] = 0;
+                //        zobristKey ^= pieceHashesWhite[curMove.rochadeStartPos, 4] ^ pieceHashesWhite[curMove.rochadeEndPos, 4];
+                //    }
+                //}
+                //else if (curMove.isStandard) 
+                //{
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                //    blackPieceBitboard = tBPB;
+                //    zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                //
+                //    if (whiteCastleRightQueenSide && tStartPos == 0)
+                //    {
+                //        zobristKey ^= whiteQueenSideRochadeRightHash;
+                //        whiteCastleRightQueenSide = false;
+                //    }
+                //    else if (whiteCastleRightKingSide && tStartPos == 7)
+                //    {
+                //        zobristKey ^= whiteKingSideRochadeRightHash;
+                //        whiteCastleRightKingSide = false;
+                //    }
+                //}
+                //else if (curMove.isPromotion)
+                //{
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                //    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
+                //    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                //
+                //    if (blackCastleRightQueenSide && tEndPos == 56)
+                //    {
+                //        zobristKey ^= blackQueenSideRochadeRightHash;
+                //        blackCastleRightQueenSide = false;
+                //    }
+                //    else if (blackCastleRightKingSide && tEndPos == 63)
+                //    {
+                //        zobristKey ^= blackKingSideRochadeRightHash;
+                //        blackCastleRightKingSide = false;
+                //    }
+                //}
+                //else if (curMove.isEnPassant)
+                //{
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.enPassantOption);
+                //    zobristKey ^= pieceHashesBlack[curMove.enPassantOption, 1];
+                //    pieceTypeArray[curMove.enPassantOption] = 0;
+                //}
+                //else // Captures
+                //{
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tWPB, tStartPos), tEndPos);
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToZero(tBPB, tEndPos);
+                //    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                //    fiftyMoveRuleCounter = 0;
+                //
+                //    if (whiteCastleRightQueenSide && tStartPos == 0)
+                //    {
+                //        zobristKey ^= whiteQueenSideRochadeRightHash;
+                //        whiteCastleRightQueenSide = false;
+                //    }
+                //    else if (whiteCastleRightKingSide && tStartPos == 7)
+                //    {
+                //        zobristKey ^= whiteKingSideRochadeRightHash;
+                //        whiteCastleRightKingSide = false;
+                //    }
+                //
+                //    if (blackCastleRightQueenSide && tEndPos == 56)
+                //    {
+                //        zobristKey ^= blackQueenSideRochadeRightHash;
+                //        blackCastleRightQueenSide = false;
+                //    }
+                //    else if (blackCastleRightKingSide && tEndPos == 63)
+                //    {
+                //        zobristKey ^= blackKingSideRochadeRightHash;
+                //        blackCastleRightKingSide = false;
+                //    }
+                //}
+                //
+                //pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
+                //pieceTypeArray[tStartPos] = 0;
+                //
+                //allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                //
+                //curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
                 #endregion
 
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                //int t = 0;
+                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType));
+
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(curMove.ownPieceBitboardXOR));
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(curMove.oppPieceBitboardXOR));
+                //if (pDepth == 3)
+                //{
+                //    Console.WriteLine(CreateFenString());
+                //    Console.WriteLine(t);
+                //}
 
                 #region UndoMove()
 
+                pieceTypeArray[tEndPos] = tPTI;
+                pieceTypeArray[tStartPos] = tPieceType;
                 whiteCastleRightKingSide = tWKSCR;
                 whiteCastleRightQueenSide = tWQSCR;
                 blackCastleRightKingSide = tBKSCR;
                 blackCastleRightQueenSide = tBQSCR;
-                whiteKingSquare = tWhiteKingSquare;
-                pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos]; //tPieceType
-                pieceTypeArray[tEndPos] = tPTI;
-                enPassantSquare = 65;
-                if (curMove.isRochade)
+                switch (curMove.moveTypeID)
                 {
-                    pieceTypeArray[curMove.rochadeStartPos] = 4;
-                    pieceTypeArray[curMove.rochadeEndPos] = 0;
+                    case 3: // Standard-King-Move
+                        whiteKingSquare = tWhiteKingSquare;
+                        break;
+                    case 7: // Standard-King-Capture
+                        whiteKingSquare = tWhiteKingSquare;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        enPassantSquare = 65;
+                        break;
+                    case 11: // Rochade
+                        whiteKingSquare = tWhiteKingSquare;
+                        pieceTypeArray[curMove.rochadeStartPos] = 4;
+                        pieceTypeArray[curMove.rochadeEndPos] = 0;
+                        break;
+                    case 12: // En-Passant
+                        pieceTypeArray[curMove.enPassantOption] = 1;
+                        break;
+                    case 13: // Standard-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                    case 14: // Capture-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
                 }
-                else if (curMove.isPromotion) pieceTypeArray[tStartPos] = 1;
-                else if (curMove.isEnPassant) pieceTypeArray[curMove.enPassantOption] = 1;
+
+                //whiteCastleRightKingSide = tWKSCR;
+                //whiteCastleRightQueenSide = tWQSCR;
+                //blackCastleRightKingSide = tBKSCR;
+                //blackCastleRightQueenSide = tBQSCR;
+                //whiteKingSquare = tWhiteKingSquare;
+                //pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos]; //tPieceType
+                //pieceTypeArray[tEndPos] = tPTI;
+                //enPassantSquare = 65;
+                //if (curMove.isRochade)
+                //{
+                //    pieceTypeArray[curMove.rochadeStartPos] = 4;
+                //    pieceTypeArray[curMove.rochadeEndPos] = 0;
+                //}
+                //else if (curMove.isPromotion) pieceTypeArray[tStartPos] = 1;
+                //else if (curMove.isEnPassant) pieceTypeArray[curMove.enPassantOption] = 1;
 
                 #endregion
             }
 
-            isWhiteToMove = false;
+            isWhiteToMove = true;
             zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
-            happenedHalfMoves--;
             allPieceBitboard = tAPB;
             whitePieceBitboard = tWPB;
             blackPieceBitboard = tBPB;
@@ -811,11 +941,11 @@ namespace ChessBot
             return tC;
         }
 
-        private int MinimaxBlack(int pDepth, int pRepetitionHistoryPly, int pLastMoveStartPos, int pLastMoveEndPos, int pLastMovePieceType)
+        private int MinimaxBlack(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if (pDepth == 0) return 1;
             List<Move> moveOptionList = new List<Move>();
-            GetLegalBlackMoves(LeafCheckingPieceCheckBlack(pLastMoveStartPos, pLastMoveEndPos, pLastMovePieceType), ref moveOptionList);
+            GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
             int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -830,32 +960,51 @@ namespace ChessBot
             for (int m = 0; m < molc; m++)
             {
                 Move curMove = moveOptionList[m];
-                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos];
+                int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = 0;
 
                 #region MakeMove()
 
                 fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
+                blackPieceBitboard = tBPB ^ curMove.ownPieceBitboardXOR;
+                pieceTypeArray[tEndPos] = tPieceType;
+                pieceTypeArray[tStartPos] = 0;
                 zobristKey = tZobristKey ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
-
-                if (tPieceType == 1) fiftyMoveRuleCounter = 0;
-
-                if (tPieceType == 6) // König Moves
+                switch (curMove.moveTypeID)
                 {
-                    if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
-                    if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
-                    blackCastleRightQueenSide = blackCastleRightKingSide = false;
-
-                    if (curMove.isStandard)
-                    {
-                        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), blackKingSquare = tEndPos);
+                    case 0: // Standard-Standard-Move
                         whitePieceBitboard = tWPB;
-                    }
-                    else if (curMove.isCapture)
-                    {
-                        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), blackKingSquare = tEndPos);
-                        whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
+                        break;
+                    case 1: // Standard-Pawn-Move
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB;
+                        break;
+                    case 2: // Standard-Knight-Move
+                        whitePieceBitboard = tWPB;
+                        break;
+                    case 3: // Standard-King-Move
+                        blackKingSquare = tEndPos;
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        whitePieceBitboard = tWPB;
+                        break;
+                    case 4: // Standard-Rook-Move
+                        whitePieceBitboard = tWPB;
+                        if (blackCastleRightQueenSide && tStartPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tStartPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        break;
+                    case 5: // Standard-Pawn-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
                         zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
-
                         if (whiteCastleRightQueenSide && tEndPos == 0)
                         {
                             zobristKey ^= whiteQueenSideRochadeRightHash;
@@ -866,125 +1015,315 @@ namespace ChessBot
                             zobristKey ^= whiteKingSideRochadeRightHash;
                             whiteCastleRightKingSide = false;
                         }
+                        break;
+                    case 6: // Standard-Knight-Capture
                         fiftyMoveRuleCounter = 0;
-                    }
-                    else // Rochade
-                    {
-                        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), blackKingSquare = tEndPos);
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
+                    case 7: // Standard-King-Capture
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[blackKingSquare = tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
+                    case 8: // Standard-Rook-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tStartPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tStartPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
+                    case 9: // Standard-Standard-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
+                    case 10: // Double-Pawn-Move
+                        zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                        whitePieceBitboard = tWPB;
+                        fiftyMoveRuleCounter = 0;
+                        break;
+                    case 11: // Rochade
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        blackKingSquare = tEndPos;
                         whitePieceBitboard = tWPB;
                         pieceTypeArray[curMove.rochadeEndPos] = 4;
                         pieceTypeArray[curMove.rochadeStartPos] = 0;
                         zobristKey ^= pieceHashesBlack[curMove.rochadeStartPos, 4] ^ pieceHashesBlack[curMove.rochadeEndPos, 4];
-                    }
-                }
-                else if (curMove.isStandard)
-                {
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
-                    whitePieceBitboard = tWPB;
-                    zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
-
-                    if (blackCastleRightQueenSide && tStartPos == 56)
-                    {
-                        zobristKey ^= blackQueenSideRochadeRightHash;
-                        blackCastleRightQueenSide = false;
-                    }
-                    else if (blackCastleRightKingSide && tStartPos == 63)
-                    {
-                        zobristKey ^= blackKingSideRochadeRightHash;
-                        blackCastleRightKingSide = false;
-                    }
-                }
-                else if (curMove.isPromotion)
-                {
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
-                    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
-                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
-
-                    if (whiteCastleRightQueenSide && tEndPos == 0)
-                    {
-                        zobristKey ^= whiteQueenSideRochadeRightHash;
-                        whiteCastleRightQueenSide = false;
-                    }
-                    else if (whiteCastleRightKingSide && tEndPos == 7)
-                    {
-                        zobristKey ^= whiteKingSideRochadeRightHash;
-                        whiteCastleRightKingSide = false;
-                    }
-                }
-                else if (curMove.isEnPassant)
-                {
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.enPassantOption);
-                    zobristKey ^= pieceHashesWhite[curMove.enPassantOption, 1];
-                    pieceTypeArray[curMove.enPassantOption] = 0;
-                    fiftyMoveRuleCounter = 0;
-                }
-                else // Captures
-                {
-                    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
-                    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
-                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
-                    fiftyMoveRuleCounter = 0;
-
-                    if (whiteCastleRightQueenSide && tEndPos == 0)
-                    {
-                        zobristKey ^= whiteQueenSideRochadeRightHash;
-                        whiteCastleRightQueenSide = false;
-                    }
-                    else if (whiteCastleRightKingSide && tEndPos == 7)
-                    {
-                        zobristKey ^= whiteKingSideRochadeRightHash;
-                        whiteCastleRightKingSide = false;
-                    }
-
-                    if (blackCastleRightQueenSide && tStartPos == 56)
-                    {
-                        zobristKey ^= blackQueenSideRochadeRightHash;
-                        blackCastleRightQueenSide = false;
-                    }
-                    else if (blackCastleRightKingSide && tStartPos == 63)
-                    {
-                        zobristKey ^= blackKingSideRochadeRightHash;
-                        blackCastleRightKingSide = false;
-                    }
+                        break;
+                    case 12: // En-Passant
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[curMove.enPassantOption] = 0;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        break;
+                    case 13: // Standard-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        break;
+                    case 14: // Capture-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        break;
                 }
 
                 allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
-
-                pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
-                pieceTypeArray[tStartPos] = 0;
-
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
+                //Console.WriteLine(curMove);
+                //Console.WriteLine(CreateFenString());
+                //fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
+                //zobristKey = tZobristKey ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
+                //
+                //if (tPieceType == 1) fiftyMoveRuleCounter = 0;
+                //
+                //if (tPieceType == 6) // König Moves
+                //{
+                //    if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                //    if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                //    blackCastleRightQueenSide = blackCastleRightKingSide = false;
+                //
+                //    if (curMove.isStandard)
+                //    {
+                //        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), blackKingSquare = tEndPos);
+                //        whitePieceBitboard = tWPB;
+                //    }
+                //    else if (curMove.isCapture)
+                //    {
+                //        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), blackKingSquare = tEndPos);
+                //        whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
+                //        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                //
+                //        if (whiteCastleRightQueenSide && tEndPos == 0)
+                //        {
+                //            zobristKey ^= whiteQueenSideRochadeRightHash;
+                //            whiteCastleRightQueenSide = false;
+                //        }
+                //        else if (whiteCastleRightKingSide && tEndPos == 7)
+                //        {
+                //            zobristKey ^= whiteKingSideRochadeRightHash;
+                //            whiteCastleRightKingSide = false;
+                //        }
+                //        fiftyMoveRuleCounter = 0;
+                //    }
+                //    else // Rochade
+                //    {
+                //        blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, curMove.rochadeStartPos), curMove.rochadeEndPos), tStartPos), blackKingSquare = tEndPos);
+                //        whitePieceBitboard = tWPB;
+                //        pieceTypeArray[curMove.rochadeEndPos] = 4;
+                //        pieceTypeArray[curMove.rochadeStartPos] = 0;
+                //        zobristKey ^= pieceHashesBlack[curMove.rochadeStartPos, 4] ^ pieceHashesBlack[curMove.rochadeEndPos, 4];
+                //    }
+                //}
+                //else if (curMove.isStandard)
+                //{
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                //    whitePieceBitboard = tWPB;
+                //    zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                //
+                //    if (blackCastleRightQueenSide && tStartPos == 56)
+                //    {
+                //        zobristKey ^= blackQueenSideRochadeRightHash;
+                //        blackCastleRightQueenSide = false;
+                //    }
+                //    else if (blackCastleRightKingSide && tStartPos == 63)
+                //    {
+                //        zobristKey ^= blackKingSideRochadeRightHash;
+                //        blackCastleRightKingSide = false;
+                //    }
+                //}
+                //else if (curMove.isPromotion)
+                //{
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
+                //    pieceTypeArray[tStartPos] = tPieceType = curMove.promotionType;
+                //    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                //
+                //    if (whiteCastleRightQueenSide && tEndPos == 0)
+                //    {
+                //        zobristKey ^= whiteQueenSideRochadeRightHash;
+                //        whiteCastleRightQueenSide = false;
+                //    }
+                //    else if (whiteCastleRightKingSide && tEndPos == 7)
+                //    {
+                //        zobristKey ^= whiteKingSideRochadeRightHash;
+                //        whiteCastleRightKingSide = false;
+                //    }
+                //}
+                //else if (curMove.isEnPassant)
+                //{
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, curMove.enPassantOption);
+                //    zobristKey ^= pieceHashesWhite[curMove.enPassantOption, 1];
+                //    pieceTypeArray[curMove.enPassantOption] = 0;
+                //    fiftyMoveRuleCounter = 0;
+                //}
+                //else // Captures
+                //{
+                //    blackPieceBitboard = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToZero(tBPB, tStartPos), tEndPos);
+                //    whitePieceBitboard = ULONG_OPERATIONS.SetBitToZero(tWPB, tEndPos);
+                //    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                //    fiftyMoveRuleCounter = 0;
+                //
+                //    if (whiteCastleRightQueenSide && tEndPos == 0)
+                //    {
+                //        zobristKey ^= whiteQueenSideRochadeRightHash;
+                //        whiteCastleRightQueenSide = false;
+                //    }
+                //    else if (whiteCastleRightKingSide && tEndPos == 7)
+                //    {
+                //        zobristKey ^= whiteKingSideRochadeRightHash;
+                //        whiteCastleRightKingSide = false;
+                //    }
+                //
+                //    if (blackCastleRightQueenSide && tStartPos == 56)
+                //    {
+                //        zobristKey ^= blackQueenSideRochadeRightHash;
+                //        blackCastleRightQueenSide = false;
+                //    }
+                //    else if (blackCastleRightKingSide && tStartPos == 63)
+                //    {
+                //        zobristKey ^= blackKingSideRochadeRightHash;
+                //        blackCastleRightKingSide = false;
+                //    }
+                //}
+                //
+                //allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                //
+                //pieceTypeArray[tEndPos] = pieceTypeArray[tStartPos];
+                //pieceTypeArray[tStartPos] = 0;
+                //
+                //curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
 
                 #endregion
 
-                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tStartPos, tEndPos, tPieceType);
+                //Console.WriteLine(CreateFenString());
+                //int t = 0;
+                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos = LeafCheckingPieceCheckWhite(tStartPos, tEndPos, tPieceType));
+
+                //Console.WriteLine(t);
 
                 #region UndoMove()
 
+                pieceTypeArray[tEndPos] = tPTI;
+                pieceTypeArray[tStartPos] = tPieceType;
                 whiteCastleRightKingSide = tWKSCR;
                 whiteCastleRightQueenSide = tWQSCR;
                 blackCastleRightKingSide = tBKSCR;
                 blackCastleRightQueenSide = tBQSCR;
-                blackKingSquare = tBlackKingSquare;
-                pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos];
-                pieceTypeArray[tEndPos] = tPTI;
-                enPassantSquare = 65;
-                if (curMove.isRochade)
+                switch (curMove.moveTypeID)
                 {
-                    pieceTypeArray[curMove.rochadeStartPos] = 4;
-                    pieceTypeArray[curMove.rochadeEndPos] = 0;
+                    case 3: // Standard-King-Move
+                        blackKingSquare = tBlackKingSquare;
+                        break;
+                    case 7: // Standard-King-Capture
+                        blackKingSquare = tBlackKingSquare;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        enPassantSquare = 65;
+                        break;
+                    case 11: // Rochade
+                        blackKingSquare = tBlackKingSquare;
+                        pieceTypeArray[curMove.rochadeStartPos] = 4;
+                        pieceTypeArray[curMove.rochadeEndPos] = 0;
+                        break;
+                    case 12: // En-Passant
+                        pieceTypeArray[curMove.enPassantOption] = 1;
+                        break;
+                    case 13: // Standard-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                    case 14: // Capture-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
                 }
-                else if (curMove.isPromotion) pieceTypeArray[tStartPos] = 1;
-                else if (curMove.isEnPassant) pieceTypeArray[curMove.enPassantOption] = 1;
+
+                //whiteCastleRightKingSide = tWKSCR;
+                //whiteCastleRightQueenSide = tWQSCR;
+                //blackCastleRightKingSide = tBKSCR;
+                //blackCastleRightQueenSide = tBQSCR;
+                //blackKingSquare = tBlackKingSquare;
+                //pieceTypeArray[tStartPos] = pieceTypeArray[tEndPos];
+                //pieceTypeArray[tEndPos] = tPTI;
+                //enPassantSquare = 65;
+                //if (curMove.isRochade)
+                //{
+                //    pieceTypeArray[curMove.rochadeStartPos] = 4;
+                //    pieceTypeArray[curMove.rochadeEndPos] = 0;
+                //}
+                //else if (curMove.isPromotion) pieceTypeArray[tStartPos] = 1;
+                //else if (curMove.isEnPassant) pieceTypeArray[curMove.enPassantOption] = 1;
 
                 #endregion
             }
 
-            isWhiteToMove = true;
+            isWhiteToMove = false;
             zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
-            happenedHalfMoves--;
             allPieceBitboard = tAPB;
             whitePieceBitboard = tWPB;
             blackPieceBitboard = tBPB;
@@ -1200,6 +1539,37 @@ namespace ChessBot
             kingSquareBitboards = uls;
         }
 
+        private Move[,] whiteEnPassantMoves = new Move[64, 64];
+        private Move[,] blackEnPassantMoves = new Move[64, 64];
+
+        private bool[] epValidationArray = new bool[64]
+        { false, false, false, false, false, false, false, false,
+          false, false, false, false, false, false, false, false,
+          true , true , true , true , true , true , true , true,
+          true , true , true , true , true , true , true , true,
+          true , true , true , true , true , true , true , true,
+          true , true , true , true , true , true , true , true,
+          false, false, false, false, false, false, false, false,
+          false, false, false, false, false, false, false, false
+        };
+
+        private void PrecalculateEnPassantMoves()
+        {
+            for (int i = 0; i < 64; i++)
+            {
+                if (!epValidationArray[i]) continue;
+                for (int j = 0; j < 64; j++)
+                {
+                    if (i == j) continue;
+                    if (Math.Abs(i - j) > 9) continue; 
+                    if (!epValidationArray[j]) continue;
+
+                    whiteEnPassantMoves[i, j] = new Move(false, i, j, j - 8);
+                    blackEnPassantMoves[i, j] = new Move(false, i, j, j + 8);
+                }
+            }
+        }
+
         private void PawnAttackBitboards()
         {
             for (int sq = 0; sq < 64; sq++)
@@ -1387,12 +1757,66 @@ namespace ChessBot
         public int pieceType { get; private set; }
         public int enPassantOption { get; private set; } = 65;
         public int promotionType { get; private set; } = 0;
+        public int moveTypeID { get; private set; } = 0;
         public bool isCapture { get; private set; } = false;
         public bool isSliderMove { get; private set; }
         public bool isEnPassant { get; private set; } = false;
         public bool isPromotion { get; private set; } = false;
         public bool isRochade { get; private set; } = false;
         public bool isStandard { get; private set; } = false;
+        public ulong ownPieceBitboardXOR { get; private set; } = 0ul;
+        public ulong oppPieceBitboardXOR { get; private set; } = 0ul;
+        //public ulong zobristHashXOR { get; private set; } = 0ul;
+
+        /* [0] Standard-Standard Move
+           [1] Standard-Pawn Move
+           [2] Standard-Knight Move
+           [3] Standard-King Move
+           [4] Standard-Rook Move
+           
+           [5] Standard-Pawn Capture
+           [6] Standard-Knight Capture
+           [7] Standard-King Capture
+           [8] Standard-Rook Capture
+           [9] Standard-Standard Capture
+           
+           [10] Double-Pawn-Move
+           [11] Rochade
+           [12] En-Passant
+           [13] Standard-Promotion
+           [14] Capture-Promotion                          */
+
+        public void PrecalculateMove()
+        {
+            if (isEnPassant) oppPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(0ul, enPassantOption);
+            else if (isCapture) oppPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(0ul, endPos);
+
+            ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(0ul, startPos), endPos);
+            if (isRochade) ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(ownPieceBitboardXOR, rochadeEndPos), rochadeStartPos);
+
+            switch(pieceType) {
+                case 1:
+                    if (isPromotion) moveTypeID = isCapture ? 14 : 13;
+                    else if (isEnPassant) moveTypeID = 12;
+                    else if (isCapture) moveTypeID = 5;
+                    else if (enPassantOption == 65) moveTypeID = 1;
+                    else moveTypeID = 10; break;
+                case 2:
+                    if (isCapture) moveTypeID = 6;
+                    else moveTypeID = 2; break;
+                case 4:
+                    bool b = startPos == 0 || startPos == 7 || startPos == 56 || startPos == 63 || endPos == 0 || endPos == 7 || endPos == 56 || endPos == 63;
+                    if (isCapture) moveTypeID = b ? 8 : 9;
+                    else moveTypeID = b ? 4 : 0; break;
+                case 6:
+                    if (isRochade) moveTypeID = 11;
+                    else if (isCapture) moveTypeID = 7;
+                    else moveTypeID = 3; break;
+                default:
+                    if (isCapture) moveTypeID = 9;
+                    else moveTypeID = 0; break;
+            }
+        }
 
         public Move(int pSP, int pEP, int pPT) //Standard Move
         {
@@ -1401,6 +1825,7 @@ namespace ChessBot
             pieceType = pPT;
             isStandard = true;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
+            PrecalculateMove();
         }
         public Move(int pSP, int pEP, int pRSP, int pREP) // Rochade
         {
@@ -1411,6 +1836,7 @@ namespace ChessBot
             isRochade = true;
             rochadeStartPos = pRSP;
             rochadeEndPos = pREP;
+            PrecalculateMove();
         }
         public Move(int pSP, int pEP, int pPT, bool pIC) // Capture
         {
@@ -1420,6 +1846,7 @@ namespace ChessBot
             isCapture = pIC;
             if (!isCapture) isStandard = true;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
+            PrecalculateMove();
         }
         public Move(int pSP, int pEP, int pPT, bool pIC, int enPassPar) // Bauer von Base Line zwei nach vorne
         {
@@ -1430,6 +1857,7 @@ namespace ChessBot
             isStandard = !pIC;
             enPassantOption = enPassPar;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
+            PrecalculateMove();
         }
         public Move(bool b, int pSP, int pEP, int pEPS) // En Passant (bool param einfach nur damit ich noch einen Konstruktur haben kann)
         {
@@ -1439,6 +1867,7 @@ namespace ChessBot
             isCapture = isEnPassant = true;
             enPassantOption = pEPS;
             isSliderMove = false;
+            PrecalculateMove();
         }
         public Move(int pSP, int pEP, int pPT, int promType, bool pIC) // Promotion
         {
@@ -1449,6 +1878,7 @@ namespace ChessBot
             isCapture = pIC;
             promotionType = promType;
             if (pPT == 3 || pPT == 4 || pPT == 5) isSliderMove = true;
+            PrecalculateMove();
         }
         public override string ToString()
         {

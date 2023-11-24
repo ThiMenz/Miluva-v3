@@ -58,12 +58,12 @@ namespace ChessBot
 
         public static bool IsBitOne(ulong u, int index)
         {
-            return ((u >> index) & 1ul) == 1ul;
+            return (u >> index & 1ul) == 1ul;
         }
 
         public static bool IsBitZero(ulong u, int index)
         {
-            return ((u >> index) & 1ul) == 0ul;
+            return (u >> index & 1ul) == 0ul;
         }
 
         public static ulong SetBitToOne(ulong u, int index)

@@ -118,7 +118,7 @@ namespace ChessBot
             curSearchZobristKeyLine = new ulong[1];
 
             int tPerft = 0;
-            for (int p = 0; p < 10; p++)
+            for (int p = 0; p < 1; p++)
                 tPerft += MinimaxRoot(5);
 
             sw.Stop();
@@ -600,13 +600,27 @@ namespace ChessBot
                 {
                     case 0: // Standard-Standard-Move
                         blackPieceBitboard = tBPB;
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 1: // Standard-Pawn-Move
                         fiftyMoveRuleCounter = 0;
                         blackPieceBitboard = tBPB;
+                        //if (ULONG_OPERATIONS.IsBitOne(blackPawnAttackSquareBitboards[tEndPos], whiteKingSquare)) tCheckPos = tEndPos;
+                        //else {
+                        //    int tI, tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard];
+                        //    if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, tPossibleAttackPiece) && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        //}
+
+                        if (ULONG_OPERATIONS.IsBitOne(whitePawnAttackSquareBitboards[tEndPos], blackKingSquare)) tCheckPos = tEndPos;
+                        else {
+                            int tI, tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard];
+                            if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, tPossibleAttackPiece) && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        }
+
                         break;
                     case 2: // Standard-Knight-Move
                         blackPieceBitboard = tBPB;
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 3: // Standard-King-Move
                         whiteKingSquare = tEndPos;
@@ -614,6 +628,7 @@ namespace ChessBot
                         if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
                         whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
                         blackPieceBitboard = tBPB;
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 4: // Standard-Rook-Move
                         blackPieceBitboard = tBPB;
@@ -624,6 +639,7 @@ namespace ChessBot
                             zobristKey ^= whiteKingSideRochadeRightHash;
                             whiteCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 5: // Standard-Pawn-Capture
                         fiftyMoveRuleCounter = 0;
@@ -636,6 +652,7 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 6: // Standard-Knight-Capture
                         fiftyMoveRuleCounter = 0;
@@ -648,6 +665,7 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 7: // Standard-King-Capture
                         if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
@@ -663,6 +681,7 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 8: // Standard-Rook-Capture
                         fiftyMoveRuleCounter = 0;
@@ -683,6 +702,7 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 9: // Standard-Standard-Capture
                         fiftyMoveRuleCounter = 0;
@@ -695,11 +715,13 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 10: // Double-Pawn-Move
                         zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
                         blackPieceBitboard = tBPB;
                         fiftyMoveRuleCounter = 0;
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 11: // Rochade
                         if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
@@ -710,17 +732,20 @@ namespace ChessBot
                         pieceTypeArray[curMove.rochadeEndPos] = 4;
                         pieceTypeArray[curMove.rochadeStartPos] = 0;
                         zobristKey ^= pieceHashesWhite[curMove.rochadeStartPos, 4] ^ pieceHashesWhite[curMove.rochadeEndPos, 4];
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 12: // En-Passant
                         fiftyMoveRuleCounter = 0;
                         blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
                         pieceTypeArray[curMove.enPassantOption] = 0;
                         zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 13: // Standard-Promotion
                         fiftyMoveRuleCounter = 0;
                         blackPieceBitboard = tBPB;
                         pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                     case 14: // Capture-Promotion
                         fiftyMoveRuleCounter = 0;
@@ -734,6 +759,7 @@ namespace ChessBot
                             zobristKey ^= blackKingSideRochadeRightHash;
                             blackCastleRightKingSide = false;
                         }
+                        tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType);
                         break;
                 }
 
@@ -867,7 +893,7 @@ namespace ChessBot
                 #endregion
 
                 //int t = 0;
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos = LeafCheckingPieceCheckBlack(tStartPos, tEndPos, tPieceType));
+                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(curMove.ownPieceBitboardXOR));
                 //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(curMove.oppPieceBitboardXOR));

@@ -29,10 +29,10 @@ namespace ChessBot
             boardManager.moveOptionList.AddRange(trpc.classicMoves);
 
             // Auch wenn etwas unschön, diese repetitive Code Struktur macht die Methode merkbar schneller
-            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove1);
-            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove2);
-            if (((opposingSideBitboard >> trpc.possibleCapture3) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove3);
-            if (((opposingSideBitboard >> trpc.possibleCapture4) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove4);
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
+            if (((opposingSideBitboard >> trpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove3);
+            if (((opposingSideBitboard >> trpc.possibleCapture4) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove4);
         }
 
         public void AddMoveOptionsToMoveList(int startSquare, int ownKingPosFilter, ulong opposingSideBitboard, ulong allPieceBitboard)
@@ -40,8 +40,8 @@ namespace ChessBot
             BishopPreCalcsKingPin trpc = precalculatedMoves[startSquare][allPieceBitboard & bishopMasks[startSquare]].classicMovesOnKingPin[ownKingPosFilter];
             boardManager.moveOptionList.AddRange(trpc.moves);
 
-            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove1);
-            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove2);
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
         }
 
         public ulong GetVisionMask(int square, ulong allPieceBitboard)

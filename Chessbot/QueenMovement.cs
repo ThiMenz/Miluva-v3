@@ -38,18 +38,18 @@ namespace ChessBot
             BishopPreCalcs tbpc = precalculatedMovesDiagonal[startSquare][allPieceBitboard & diagonalMasks[startSquare]];
             boardManager.moveOptionList.AddRange(tbpc.classicMoves);
 
-            if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove1);
-            if (((opposingSideBitboard >> tbpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove2);
-            if (((opposingSideBitboard >> tbpc.possibleCapture3) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove3);
-            if (((opposingSideBitboard >> tbpc.possibleCapture4) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove4);
+            if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove1);
+            if (((opposingSideBitboard >> tbpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove2);
+            if (((opposingSideBitboard >> tbpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove3);
+            if (((opposingSideBitboard >> tbpc.possibleCapture4) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove4);
 
             RookPreCalcs trpc = precalculatedMovesStraigth[startSquare][allPieceBitboard & straightMasks[startSquare]];
             boardManager.moveOptionList.AddRange(trpc.classicMoves);
 
-            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove1);
-            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove2);
-            if (((opposingSideBitboard >> trpc.possibleCapture3) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove3);
-            if (((opposingSideBitboard >> trpc.possibleCapture4) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove4);
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
+            if (((opposingSideBitboard >> trpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove3);
+            if (((opposingSideBitboard >> trpc.possibleCapture4) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove4);
         }
 
         public void AddMoveOptionsToMoveList(int startSquare, int ownKingPosFilter, ulong opposingSideBitboard, ulong allPieceBitboard)
@@ -59,14 +59,14 @@ namespace ChessBot
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(allPieceBitboard & diagonalMasks[startSquare]));
             boardManager.moveOptionList.AddRange(tbpc.moves);
 
-            if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove1);
-            if (((opposingSideBitboard >> tbpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(tbpc.captureMove2);
+            if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove1);
+            if (((opposingSideBitboard >> tbpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove2);
 
             RookPreCalcsKingPin trpc = precalculatedMovesStraigth[startSquare][allPieceBitboard & straightMasks[startSquare]].classicMovesOnKingPin[ownKingPosFilter];
             boardManager.moveOptionList.AddRange(trpc.moves);
 
-            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove1);
-            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1ul) == 1ul) boardManager.moveOptionList.Add(trpc.captureMove2);
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
         }
 
         public void AddPrecalculationFromDiaDict(int square, ulong apb, int t)

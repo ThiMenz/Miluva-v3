@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("4k2r/1P4P1/8/3Pp3/2R5/3B1N2/3P4/4K2R w Kk e6 0 1");
+            _ = new BoardManager("4k2r/1P4P1/1N6/3Pp3/1BR5/8/3P4/4K1R1 w k e6 0 1");
         }
     }
 
@@ -106,10 +106,15 @@ namespace ChessBot
 
             #endregion
 
+            Console.WriteLine(Evaluate(-1));
+            Console.WriteLine(zobristKey);
+
             Stopwatch sw = Stopwatch.StartNew();
             int tPerft = 0;
-            tPerft += MinimaxRoot(5);
+            tPerft += MinimaxRoot(1);
             sw.Stop();
+
+            Console.WriteLine(transpositionTable[zobristKey]);
 
             Console.WriteLine(GetThreeDigitSeperatedInteger(tPerft) + " Moves");
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
@@ -1153,11 +1158,14 @@ namespace ChessBot
 
         #region | MINIMAX FUNCTIONS |
 
+        private const int WHITE_CHECKMATE_VAL = 100000, BLACK_CHECKMATE_VAL = -100000, CHECK_EXTENSION_LENGTH = -3;
+        private readonly Move NULL_MOVE = new Move(0, 0, 0);
+
         public int MinimaxRoot(int pDepth)
         {
             int baseLineLen = 0;
             if (curSearchZobristKeyLine != null) baseLineLen = curSearchZobristKeyLine.Length;
-            ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth];
+            ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth - CHECK_EXTENSION_LENGTH + 1];
             for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
             curSearchZobristKeyLine = completeZobristHistory;
 
@@ -1183,19 +1191,18 @@ namespace ChessBot
 
         private int MinimaxWhite(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
-            if (pDepth == 0) return 1;
+            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
 
             List<Move> moveOptionList = new List<Move>();
+            Move bestMove = NULL_MOVE;
             GetLegalWhiteMoves(pCheckingSquare, ref moveOptionList);
-            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pDepth;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
             enPassantSquare = 65;
             isWhiteToMove = true;
-
-            int tC = 0;
 
             for (int m = 0; m < molc; m++)
             {
@@ -1422,7 +1429,12 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                int tEval = MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                if (tEval > curEval)
+                {
+                    bestMove = curMove;
+                    curEval = tEval;
+                }
 
                 #region UndoMove()
 
@@ -1469,23 +1481,25 @@ namespace ChessBot
             blackPieceBitboard = tBPB;
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
-            return tC;
+            if (molc == 0 && pCheckingSquare == 0) curEval = 0;
+            if (!transpositionTable.ContainsKey(zobristKey)) transpositionTable.Add(zobristKey, bestMove);
+
+            return curEval;
         }
 
         private int MinimaxBlack(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
-            if (pDepth == 0) return 1;
+            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
             List<Move> moveOptionList = new List<Move>();
+            Move bestMove = NULL_MOVE;
             GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
-            int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
+            int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = WHITE_CHECKMATE_VAL - pDepth;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
 
             enPassantSquare = 65;
             isWhiteToMove = false;
-
-            int tC = 0;
 
             for (int m = 0; m < molc; m++)
             {
@@ -1713,7 +1727,12 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                int tEval = MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                if (tEval < curEval)
+                {
+                    bestMove = curMove;
+                    curEval = tEval;
+                }
 
                 #region UndoMove()
 
@@ -1760,7 +1779,10 @@ namespace ChessBot
             blackPieceBitboard = tBPB;
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
-            return tC;
+            if (molc == 0 && pCheckingSquare == 0) curEval = 0;
+            if (!transpositionTable.ContainsKey(zobristKey)) transpositionTable.Add(zobristKey, bestMove);
+
+            return curEval;
         }
 
         private int MinimaxWhite2(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
@@ -2903,6 +2925,23 @@ namespace ChessBot
         #endregion
 
         #region | EVALUATION |
+
+        private Dictionary<ulong, Move> transpositionTable = new Dictionary<ulong, Move>();
+        private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
+
+        private int Evaluate(int pPlyOfFirstPossibleRepeatedPosition)
+        {
+            if (fiftyMoveRuleCounter > 99 || IsDrawByRepetition(pPlyOfFirstPossibleRepeatedPosition)) return 0;
+
+            int tEval = 0;
+
+            for (int p = 0; p < 64; p++)
+            {
+                tEval += pieceEvals[pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)];
+            }
+
+            return tEval;
+        }
 
         private bool IsDrawByRepetition(int pPlyOfFirstPossibleRepeatedPosition)
         {

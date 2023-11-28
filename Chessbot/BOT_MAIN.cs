@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("4k2r/1P4P1/1N6/3Pp3/1BR5/8/3P4/4K1R1 w k e6 0 1");
+            _ = new BoardManager("1B5n/1p6/1N2kP1p/3RN1PB/6K1/8/8/8 w - - 0 1");
         }
     }
 
@@ -111,10 +111,14 @@ namespace ChessBot
 
             Stopwatch sw = Stopwatch.StartNew();
             int tPerft = 0;
-            tPerft += MinimaxRoot(1);
+
+            tPerft += MinimaxRoot(5);
+
             sw.Stop();
 
             Console.WriteLine(transpositionTable[zobristKey]);
+            Console.WriteLine(evalCount);
+
 
             Console.WriteLine(GetThreeDigitSeperatedInteger(tPerft) + " Moves");
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
@@ -1158,7 +1162,7 @@ namespace ChessBot
 
         #region | MINIMAX FUNCTIONS |
 
-        private const int WHITE_CHECKMATE_VAL = 100000, BLACK_CHECKMATE_VAL = -100000, CHECK_EXTENSION_LENGTH = -3;
+        private const int WHITE_CHECKMATE_VAL = 100000, BLACK_CHECKMATE_VAL = -100000, CHECK_EXTENSION_LENGTH = 1;
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
 
         public int MinimaxRoot(int pDepth)
@@ -1175,21 +1179,21 @@ namespace ChessBot
             {
                 tattk = PreMinimaxCheckCheckWhite();
                 Console.WriteLine(tattk);
-                if (tattk == -1) perftScore = MinimaxWhite(pDepth, baseLineLen, tattk);
-                else perftScore = MinimaxWhite(pDepth, baseLineLen, tattk);
+                if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
             }
             else
             {
                 tattk = PreMinimaxCheckCheckBlack();
                 Console.WriteLine(tattk);
-                if (tattk == -1) perftScore = MinimaxBlack(pDepth, baseLineLen, tattk);
-                else perftScore = MinimaxBlack(pDepth, baseLineLen, tattk);
+                if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
             }
 
             return perftScore;
         }
 
-        private int MinimaxWhite(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
+        private int MinimaxWhite(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
 
@@ -1429,12 +1433,7 @@ namespace ChessBot
 
                 #endregion
 
-                int tEval = MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
-                if (tEval > curEval)
-                {
-                    bestMove = curMove;
-                    curEval = tEval;
-                }
+                int tEval = MinimaxBlack(pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -1472,6 +1471,14 @@ namespace ChessBot
                 }
 
                 #endregion
+
+                if (tEval > curEval)
+                {
+                    bestMove = curMove;
+                    curEval = tEval;
+                }
+                if (pAlpha < curEval) pAlpha = curEval;
+                if (curEval >= pBeta) break;
             }
 
             isWhiteToMove = true;
@@ -1487,7 +1494,7 @@ namespace ChessBot
             return curEval;
         }
 
-        private int MinimaxBlack(int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
+        private int MinimaxBlack(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
             List<Move> moveOptionList = new List<Move>();
@@ -1727,12 +1734,7 @@ namespace ChessBot
 
                 #endregion
 
-                int tEval = MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
-                if (tEval < curEval)
-                {
-                    bestMove = curMove;
-                    curEval = tEval;
-                }
+                int tEval = MinimaxWhite(pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -1770,6 +1772,14 @@ namespace ChessBot
                 }
 
                 #endregion
+
+                if (tEval < curEval)
+                {
+                    bestMove = curMove;
+                    curEval = tEval;
+                }
+                if (pBeta > curEval) pBeta = curEval;
+                if (curEval <= pAlpha) break;
             }
 
             isWhiteToMove = false;
@@ -2025,7 +2035,7 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                tC += MinimaxBlack2(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -2315,7 +2325,7 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                tC += MinimaxWhite2(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -2582,7 +2592,7 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxBlack(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                tC += MinimaxBlack3(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -2872,7 +2882,7 @@ namespace ChessBot
 
                 #endregion
 
-                tC += MinimaxWhite(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
+                tC += MinimaxWhite3(pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos);
 
                 #region UndoMove()
 
@@ -2929,8 +2939,11 @@ namespace ChessBot
         private Dictionary<ulong, Move> transpositionTable = new Dictionary<ulong, Move>();
         private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
 
+        private int evalCount = 0;
+
         private int Evaluate(int pPlyOfFirstPossibleRepeatedPosition)
         {
+            evalCount++;
             if (fiftyMoveRuleCounter > 99 || IsDrawByRepetition(pPlyOfFirstPossibleRepeatedPosition)) return 0;
 
             int tEval = 0;

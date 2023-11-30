@@ -10,7 +10,7 @@ namespace ChessBot
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("1B5n/1p6/1N2kP1p/3RN1PB/6K1/8/8/8 w - - 0 1");
+            _ = new BoardManager("2kr3r/ppp1qppp/2n1bn2/2bpp1B1/2B1P3/RQNP1N2/PPP2PPP/5RK1 w k - 0 1");
         }
     }
 
@@ -106,23 +106,27 @@ namespace ChessBot
 
             #endregion
 
-            Console.WriteLine(Evaluate(-1));
-            Console.WriteLine(zobristKey);
-
             Stopwatch sw = Stopwatch.StartNew();
             int tPerft = 0;
+            evalCount = 0;
 
-            tPerft += MinimaxRoot(5);
+            for (int i = 1; i < 99; i++)
+            {
+                tPerft = MinimaxRoot(i);
+                Console.WriteLine("Depth = " + i + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations in " + sw.ElapsedMilliseconds + "ms");
+                if (sw.ElapsedMilliseconds > 2500) break;
+            }
 
             sw.Stop();
 
             Console.WriteLine(transpositionTable[zobristKey]);
-            Console.WriteLine(evalCount);
+            Console.WriteLine(zobristKey);
 
+            Console.WriteLine(evalCount + " EvalCount");
+            Console.WriteLine("Eval = " + tPerft);
 
-            Console.WriteLine(GetThreeDigitSeperatedInteger(tPerft) + " Moves");
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
-            Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * tPerft)) + " NpS");
+            Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * evalCount)) + " NpS");
         }
 
         #region | CHECK RECOGNITION |
@@ -1178,14 +1182,12 @@ namespace ChessBot
             if (isWhiteToMove)
             {
                 tattk = PreMinimaxCheckCheckWhite();
-                Console.WriteLine(tattk);
                 if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
                 else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
             }
             else
             {
                 tattk = PreMinimaxCheckCheckBlack();
-                Console.WriteLine(tattk);
                 if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
                 else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
             }
@@ -1197,20 +1199,40 @@ namespace ChessBot
         {
             if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
 
+            #region NodePrep()
+
             List<Move> moveOptionList = new List<Move>();
             Move bestMove = NULL_MOVE;
             GetLegalWhiteMoves(pCheckingSquare, ref moveOptionList);
-            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pDepth;
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL - pDepth;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
-
             enPassantSquare = 65;
             isWhiteToMove = true;
 
+            #endregion
+
+            #region MoveSort()
+
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            transpositionTable.TryGetValue(zobristKey, out Move? pvNodeMove);
             for (int m = 0; m < molc; m++)
             {
+                moveSortingArrayIndexes[m] = m;
                 Move curMove = moveOptionList[m];
+                if (curMove.isCapture) moveSortingArray[m] = -10;
+                else if (curMove == pvNodeMove) moveSortingArray[m] = -100;
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+            #endregion
+
+            for (int m = 0; m < molc; m++)
+            {
+                Move curMove = moveOptionList[moveSortingArrayIndexes[m]];
+
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
                 #region MakeMove()
@@ -1489,7 +1511,9 @@ namespace ChessBot
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
             if (molc == 0 && pCheckingSquare == 0) curEval = 0;
+
             if (!transpositionTable.ContainsKey(zobristKey)) transpositionTable.Add(zobristKey, bestMove);
+            else transpositionTable[zobristKey] = bestMove;
 
             return curEval;
         }
@@ -1497,20 +1521,40 @@ namespace ChessBot
         private int MinimaxBlack(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
+
+            #region NodePrep()
+
             List<Move> moveOptionList = new List<Move>();
             Move bestMove = NULL_MOVE;
             GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
-            int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = WHITE_CHECKMATE_VAL - pDepth;
+            int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = WHITE_CHECKMATE_VAL + pDepth;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             ulong tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
-
             enPassantSquare = 65;
             isWhiteToMove = false;
 
+            #endregion
+
+            #region MoveSort()
+
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            transpositionTable.TryGetValue(zobristKey, out Move? pvNodeMove);
             for (int m = 0; m < molc; m++)
             {
+                moveSortingArrayIndexes[m] = m;
                 Move curMove = moveOptionList[m];
+                if (curMove.isCapture) moveSortingArray[m] = -10;
+                else if (curMove == pvNodeMove) moveSortingArray[m] = -100;
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+            #endregion
+
+            for (int m = 0; m < molc; m++)
+            {
+                Move curMove = moveOptionList[moveSortingArrayIndexes[m]];
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
                 #region MakeMove()
@@ -1790,7 +1834,9 @@ namespace ChessBot
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
             if (molc == 0 && pCheckingSquare == 0) curEval = 0;
+
             if (!transpositionTable.ContainsKey(zobristKey)) transpositionTable.Add(zobristKey, bestMove);
+            else transpositionTable[zobristKey] = bestMove;
 
             return curEval;
         }
@@ -2962,7 +3008,11 @@ namespace ChessBot
             for (int i = pPlyOfFirstPossibleRepeatedPosition; i >= 0; i -= 2)
             {
                 if (curSearchZobristKeyLine[i] == zobristKey)
-                    if (++tC == 2) return true;
+                    if (++tC == 2)
+                    {
+                        Console.WriteLine("!!!!");
+                        return true;
+                    }
             }
             return false;
         }

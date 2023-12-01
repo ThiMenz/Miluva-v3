@@ -1197,7 +1197,8 @@ namespace ChessBot
 
         private int MinimaxWhite(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
-            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
+            if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
+            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
 
             #region NodePrep()
 
@@ -1520,7 +1521,8 @@ namespace ChessBot
 
         private int MinimaxBlack(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
-            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate(pRepetitionHistoryPly - 4);
+            if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
+            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
 
             #region NodePrep()
 
@@ -2983,20 +2985,178 @@ namespace ChessBot
         #region | EVALUATION |
 
         private Dictionary<ulong, Move> transpositionTable = new Dictionary<ulong, Move>();
+
         private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
+        private int[,] piecePositionEvals = new int[14, 64] {
+
+          { // White - Nichts
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Pawns
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 40, 40, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Knights
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Bishops
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Rooks 
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Queens
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // White - Kings
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Nichts
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Pawns
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Knights
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Bishops
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Rook
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Queens
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          },
+
+          { // Black - Kings
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+          }
+        };
 
         private int evalCount = 0;
 
-        private int Evaluate(int pPlyOfFirstPossibleRepeatedPosition)
+        private int Evaluate()
         {
             evalCount++;
-            if (fiftyMoveRuleCounter > 99 || IsDrawByRepetition(pPlyOfFirstPossibleRepeatedPosition)) return 0;
+            if (fiftyMoveRuleCounter > 99) return 0;
 
-            int tEval = 0;
+            int tEval = 0, tPT;
 
             for (int p = 0; p < 64; p++)
             {
-                tEval += pieceEvals[pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)];
+                tEval += pieceEvals[tPT = (pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1))]
+                    + piecePositionEvals[tPT, p];
             }
 
             return tEval;
@@ -3008,11 +3168,7 @@ namespace ChessBot
             for (int i = pPlyOfFirstPossibleRepeatedPosition; i >= 0; i -= 2)
             {
                 if (curSearchZobristKeyLine[i] == zobristKey)
-                    if (++tC == 2)
-                    {
-                        Console.WriteLine("!!!!");
-                        return true;
-                    }
+                    if (++tC == 2) return true;
             }
             return false;
         }

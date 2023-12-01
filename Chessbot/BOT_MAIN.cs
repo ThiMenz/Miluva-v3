@@ -7,10 +7,13 @@ namespace ChessBot
     public static class BOT_MAIN
     {
         public readonly static string[] FIGURE_TO_ID_LIST = new string[] { "Nichts", "Bauer", "Springer", "Läufer", "Turm", "Dame", "König" };
+
+        public static BoardManager boardManager;
+
         public static void Main(string[] args)
         {
             ULONG_OPERATIONS.SetUpCountingArray();
-            _ = new BoardManager("2kr3r/ppp1qppp/2n1bn2/2bpp1B1/2B1P3/RQNP1N2/PPP2PPP/5RK1 w k - 0 1");
+            boardManager = new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         }
     }
 
@@ -55,11 +58,19 @@ namespace ChessBot
 
         private ulong[] curSearchZobristKeyLine; //Die History muss bis zum letzten Capture, PawnMove, der letzten Rochade gehen oder dem Spielbeginn gehen
 
+        private Stopwatch globalTimer = Stopwatch.StartNew();
+
         public BoardManager(string fen)
         {
             #region | SETUP |
 
             Stopwatch setupStopwatch = Stopwatch.StartNew();
+
+            for (int i = 0; i < 33; i++)
+                for (int j = 0; j < 14; j++)
+                    piecePositionEvals[i,j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            MinimaxRoot(1L); // Minimax Preloader
 
             Console.Write("[PRECALCS] Zobrist Hashing");
             InitZobrist();
@@ -107,23 +118,36 @@ namespace ChessBot
             #endregion
 
             Stopwatch sw = Stopwatch.StartNew();
-            int tPerft = 0;
             evalCount = 0;
 
-            for (int i = 1; i < 99; i++)
+            int tGS;
+            do
             {
-                tPerft = MinimaxRoot(i);
-                Console.WriteLine("Depth = " + i + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations in " + sw.ElapsedMilliseconds + "ms");
-                if (sw.ElapsedMilliseconds > 2500) break;
-            }
+                MinimaxRoot(166_666L);
+                Console.WriteLine(transpositionTable[zobristKey]);
+                Console.WriteLine(zobristKey);
+                PlainMakeMove(transpositionTable[zobristKey]);
+                tGS = GameState(isWhiteToMove);
+                Console.WriteLine(CreateFenString());
+                transpositionTable.Clear();
+            } while (tGS == 3);
+
+            //for (int i = 1; i < 99; i++)
+            //{
+            //    tPerft = MinimaxRoot(i);
+            //    Console.WriteLine("Depth = " + i + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations in " + sw.ElapsedMilliseconds + "ms");
+            //    if (sw.ElapsedMilliseconds > 2500) break;
+            //}
 
             sw.Stop();
 
-            Console.WriteLine(transpositionTable[zobristKey]);
+            //Console.WriteLine(transpositionTable[zobristKey]);
             Console.WriteLine(zobristKey);
 
+            //PlainMakeMove(transpositionTable[zobristKey]);
+            //Console.WriteLine(CreateFenString());
+
             Console.WriteLine(evalCount + " EvalCount");
-            Console.WriteLine("Eval = " + tPerft);
 
             Console.WriteLine(sw.ElapsedMilliseconds + "ms");
             Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * evalCount)) + " NpS");
@@ -1164,33 +1188,445 @@ namespace ChessBot
 
         #endregion
 
+        #region | PLAIN MAKE MOVE |
+
+        public void PlainMakeMove(Move pMove)
+        {
+            if (isWhiteToMove) WhiteMakeMove(pMove);
+            else BlackMakeMove(pMove);
+        }
+
+        public void WhiteMakeMove(Move pMove)
+        {
+            int tEndPos = pMove.endPos, tStartPos = pMove.startPos, tPieceType = pMove.pieceType, tPTI = pieceTypeArray[tEndPos];
+
+            fiftyMoveRuleCounter++;
+            whitePieceBitboard ^= pMove.ownPieceBitboardXOR;
+            pieceTypeArray[tEndPos] = tPieceType;
+            pieceTypeArray[tStartPos] = 0;
+            zobristKey ^= blackTurnHash ^ enPassantSquareHashes[enPassantSquare] ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
+            enPassantSquare = 65;
+            isWhiteToMove = false;
+
+            switch (pMove.moveTypeID)
+            {
+                case 0: // Standard-Standard-Move
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 1: // Standard-Pawn-Move
+                    fiftyMoveRuleCounter = 0;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 2: // Standard-Knight-Move
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 3: // Standard-King-Move
+                    whiteKingSquare = tEndPos;
+                    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 4: // Standard-Rook-Move
+                    if (whiteCastleRightQueenSide && tStartPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tStartPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 5: // Standard-Pawn-Capture
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 6: // Standard-Knight-Capture
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 7: // Standard-King-Capture
+                    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesBlack[whiteKingSquare = tEndPos, tPTI];
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 8: // Standard-Rook-Capture
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tStartPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tStartPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 9: // Standard-Standard-Capture
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 10: // Double-Pawn-Move
+                    zobristKey ^= enPassantSquareHashes[enPassantSquare = pMove.enPassantOption];
+                    fiftyMoveRuleCounter = 0;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 11: // Rochade
+                    if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                    if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                    whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                    whiteKingSquare = tEndPos;
+                    pieceTypeArray[pMove.rochadeEndPos] = 4;
+                    pieceTypeArray[pMove.rochadeStartPos] = 0;
+                    zobristKey ^= pieceHashesWhite[pMove.rochadeStartPos, 4] ^ pieceHashesWhite[pMove.rochadeEndPos, 4];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 12: // En-Passant
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    pieceTypeArray[pMove.enPassantOption] = 0;
+                    zobristKey ^= pieceHashesBlack[pMove.enPassantOption, 1];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 13: // Standard-Promotion
+                    fiftyMoveRuleCounter = 0;
+                    pieceTypeArray[tEndPos] = tPieceType = pMove.promotionType;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    zobristKey ^= pieceHashesWhite[tEndPos, 1] ^ pieceHashesWhite[tEndPos, pMove.promotionType];
+                    break;
+                case 14: // Capture-Promotion
+                    fiftyMoveRuleCounter = 0;
+                    blackPieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    pieceTypeArray[tEndPos] = tPieceType = pMove.promotionType;
+                    zobristKey ^= pieceHashesBlack[tEndPos, tPTI] ^ pieceHashesWhite[tEndPos, 1] ^ pieceHashesWhite[tEndPos, pMove.promotionType];
+                    if (blackCastleRightQueenSide && tEndPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tEndPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+            }
+
+            if (pMove.isCapture || tPieceType == 1)
+            {
+                curSearchZobristKeyLine = Array.Empty<ulong>();
+                return;
+            }
+            ulong[] u = new ulong[(tPTI = curSearchZobristKeyLine.Length) + 1];
+            for (int i = tPTI; i-- > 0;) u[i] = curSearchZobristKeyLine[i];
+            u[tPTI] = zobristKey;
+            curSearchZobristKeyLine = u;
+        }
+
+        public void BlackMakeMove(Move pMove)
+        {
+            int tEndPos = pMove.endPos, tStartPos = pMove.startPos, tPieceType = pMove.pieceType, tPTI = pieceTypeArray[tEndPos];
+
+            fiftyMoveRuleCounter++;
+            blackPieceBitboard ^= pMove.ownPieceBitboardXOR;
+            pieceTypeArray[tEndPos] = tPieceType;
+            pieceTypeArray[tStartPos] = 0;
+            zobristKey ^= blackTurnHash ^ enPassantSquareHashes[enPassantSquare] ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
+            enPassantSquare = 65;
+            isWhiteToMove = true;
+            switch (pMove.moveTypeID)
+            {
+                case 0: // Standard-Standard-Move
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 1: // Standard-Pawn-Move
+                    fiftyMoveRuleCounter = 0;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 2: // Standard-Knight-Move
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 3: // Standard-King-Move
+                    blackKingSquare = tEndPos;
+                    if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                    if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                    blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 4: // Standard-Rook-Move
+                    if (blackCastleRightQueenSide && tStartPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tStartPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 5: // Standard-Pawn-Capture
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 6: // Standard-Knight-Capture
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 7: // Standard-King-Capture
+                    if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                    if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                    blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesWhite[blackKingSquare = tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 8: // Standard-Rook-Capture
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                    if (blackCastleRightQueenSide && tStartPos == 56)
+                    {
+                        zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightQueenSide = false;
+                    }
+                    else if (blackCastleRightKingSide && tStartPos == 63)
+                    {
+                        zobristKey ^= blackKingSideRochadeRightHash;
+                        blackCastleRightKingSide = false;
+                    }
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 9: // Standard-Standard-Capture
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 10: // Double-Pawn-Move
+                    zobristKey ^= enPassantSquareHashes[enPassantSquare = pMove.enPassantOption];
+                    fiftyMoveRuleCounter = 0;
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 11: // Rochade
+                    if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                    if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                    blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                    blackKingSquare = tEndPos;
+                    pieceTypeArray[pMove.rochadeEndPos] = 4;
+                    pieceTypeArray[pMove.rochadeStartPos] = 0;
+                    zobristKey ^= pieceHashesBlack[pMove.rochadeStartPos, 4] ^ pieceHashesBlack[pMove.rochadeEndPos, 4];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 12: // En-Passant
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    pieceTypeArray[pMove.enPassantOption] = 0;
+                    zobristKey ^= pieceHashesWhite[pMove.enPassantOption, 1];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 13: // Standard-Promotion
+                    fiftyMoveRuleCounter = 0;
+                    pieceTypeArray[tEndPos] = tPieceType = pMove.promotionType;
+                    zobristKey ^= pieceHashesBlack[tEndPos, 1] ^ pieceHashesBlack[tEndPos, pMove.promotionType];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+                case 14: // Capture-Promotion
+                    fiftyMoveRuleCounter = 0;
+                    whitePieceBitboard ^= pMove.oppPieceBitboardXOR;
+                    pieceTypeArray[tEndPos] = tPieceType = pMove.promotionType;
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                    if (whiteCastleRightQueenSide && tEndPos == 0)
+                    {
+                        zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = false;
+                    }
+                    else if (whiteCastleRightKingSide && tEndPos == 7)
+                    {
+                        zobristKey ^= whiteKingSideRochadeRightHash;
+                        whiteCastleRightKingSide = false;
+                    }
+                    zobristKey ^= pieceHashesWhite[tEndPos, tPTI] ^ pieceHashesBlack[tEndPos, 1] ^ pieceHashesBlack[tEndPos, pMove.promotionType];
+                    allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                    break;
+            }
+
+            if (pMove.isCapture || tPieceType == 1)
+            {
+                curSearchZobristKeyLine = Array.Empty<ulong>();
+                return;
+            }
+            ulong[] u = new ulong[(tPTI = curSearchZobristKeyLine.Length) + 1];
+            for (int i = tPTI; i-- > 0;) u[i] = curSearchZobristKeyLine[i];
+            u[tPTI] = zobristKey;
+            curSearchZobristKeyLine = u;
+        }
+
+        #endregion
+
         #region | MINIMAX FUNCTIONS |
 
         private const int WHITE_CHECKMATE_VAL = 100000, BLACK_CHECKMATE_VAL = -100000, CHECK_EXTENSION_LENGTH = 1;
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
 
-        public int MinimaxRoot(int pDepth)
+        public int MinimaxRoot(long pTime)
         {
             int baseLineLen = 0;
-            if (curSearchZobristKeyLine != null) baseLineLen = curSearchZobristKeyLine.Length;
-            ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth - CHECK_EXTENSION_LENGTH + 1];
-            for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
-            curSearchZobristKeyLine = completeZobristHistory;
+            long tTimestamp = globalTimer.ElapsedTicks + pTime;
 
-            int perftScore = 0, tattk;
+            ulong[] tZobristKeyLine = Array.Empty<ulong>();
+            if (curSearchZobristKeyLine != null) {
+                baseLineLen = curSearchZobristKeyLine.Length;
+                tZobristKeyLine = new ulong[baseLineLen];
+                Array.Copy(curSearchZobristKeyLine, tZobristKeyLine, baseLineLen);
+            }
 
-            if (isWhiteToMove)
-            {
-                tattk = PreMinimaxCheckCheckWhite();
-                if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-                else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-            }
-            else
-            {
-                tattk = PreMinimaxCheckCheckBlack();
-                if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-                else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-            }
+            int perftScore, tattk = (isWhiteToMove) ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
+
+            do {
+                ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth - CHECK_EXTENSION_LENGTH + 1];
+                for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
+                curSearchZobristKeyLine = completeZobristHistory;
+
+                if (isWhiteToMove)
+                {
+                    if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                    else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                }
+                else
+                {
+                    if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                    else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                }
+                //Console.WriteLine("Depth = " + pDepth + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations with " + (tTimestamp - globalTimer.ElapsedTicks) + " ticks left");
+                pDepth++; 
+            } while (globalTimer.ElapsedTicks < tTimestamp);
+
+            curSearchZobristKeyLine = tZobristKeyLine;
 
             return perftScore;
         }
@@ -2987,162 +3423,8 @@ namespace ChessBot
         private Dictionary<ulong, Move> transpositionTable = new Dictionary<ulong, Move>();
 
         private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
-        private int[,] piecePositionEvals = new int[14, 64] {
-
-          { // White - Nichts
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Pawns
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 40, 40, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Knights
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Bishops
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Rooks 
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Queens
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // White - Kings
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Nichts
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Pawns
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Knights
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Bishops
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Rook
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Queens
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          },
-
-          { // Black - Kings
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0
-          }
-        };
+        private int[,,] pawnPositionTable = new int[32, 6, 64];
+        private int[,][] piecePositionEvals = new int[33, 14][];
 
         private int evalCount = 0;
 
@@ -3151,15 +3433,38 @@ namespace ChessBot
             evalCount++;
             if (fiftyMoveRuleCounter > 99) return 0;
 
-            int tEval = 0, tPT;
+            int tEval = 0, tPT, pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard);
 
             for (int p = 0; p < 64; p++)
             {
                 tEval += pieceEvals[tPT = (pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1))]
-                    + piecePositionEvals[tPT, p];
+                    + piecePositionEvals[pieceCount, tPT][p];
             }
 
             return tEval;
+        }
+
+        private int GameState(bool pWhiteKingCouldBeAttacked)
+        {
+            if (IsDrawByRepetition(curSearchZobristKeyLine.Length - 5) || fiftyMoveRuleCounter > 99) return 0;
+
+            int t;
+            List<Move> tMoves = new List<Move>();
+
+            if (pWhiteKingCouldBeAttacked)
+            {
+                GetLegalWhiteMoves(t = PreMinimaxCheckCheckWhite(), ref tMoves);
+                if (t == 0) return tMoves.Count == 0 ? 0 : 3;
+                else if (tMoves.Count == 0) return -1;
+            }
+            else
+            {
+                GetLegalBlackMoves(t = PreMinimaxCheckCheckBlack(), ref tMoves);
+                if (t == 0) return tMoves.Count == 0 ? 0 : 3;
+                else if (tMoves.Count == 0) return 1;
+            }
+
+            return 3;
         }
 
         private bool IsDrawByRepetition(int pPlyOfFirstPossibleRepeatedPosition)
@@ -3171,6 +3476,40 @@ namespace ChessBot
                     if (++tC == 2) return true;
             }
             return false;
+        }
+
+        #endregion
+
+        #region | REINFORCEMENT LEARNING |
+
+        public void InitReLeAgent(int[,][] pEvalPositionValues)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                int ip1 = i + 1;
+                piecePositionEvals[ip1, 7] = piecePositionEvals[ip1, 0] = Array.Empty<int>();
+                piecePositionEvals[ip1, 8] = SwapArrayViewingSide(piecePositionEvals[ip1, 1] = pEvalPositionValues[i, 0]);
+                piecePositionEvals[ip1, 9] = SwapArrayViewingSide(piecePositionEvals[ip1, 2] = pEvalPositionValues[i, 1]);
+                piecePositionEvals[ip1, 10] = SwapArrayViewingSide(piecePositionEvals[ip1, 3] = pEvalPositionValues[i, 2]);
+                piecePositionEvals[ip1, 11] = SwapArrayViewingSide(piecePositionEvals[ip1, 4] = pEvalPositionValues[i, 3]);
+                piecePositionEvals[ip1, 12] = SwapArrayViewingSide(piecePositionEvals[ip1, 5] = pEvalPositionValues[i, 4]);
+                piecePositionEvals[ip1, 13] = SwapArrayViewingSide(piecePositionEvals[ip1, 6] = pEvalPositionValues[i, 5]);
+            }
+        }
+
+        private int[] SwapArrayViewingSide(int[] pArr)
+        {
+            return new int[64]
+            { 
+                pArr[56], pArr[57], pArr[58], pArr[59], pArr[60], pArr[61], pArr[62], pArr[63],
+                pArr[48], pArr[49], pArr[50], pArr[51], pArr[52], pArr[53], pArr[54], pArr[55],
+                pArr[40], pArr[41], pArr[42], pArr[43], pArr[44], pArr[45], pArr[46], pArr[47],
+                pArr[32], pArr[33], pArr[34], pArr[35], pArr[36], pArr[37], pArr[38], pArr[39],
+                pArr[24], pArr[25], pArr[26], pArr[27], pArr[28], pArr[29], pArr[30], pArr[31],
+                pArr[16], pArr[17], pArr[18], pArr[19], pArr[20], pArr[21], pArr[22], pArr[23],
+                pArr[8],   pArr[9], pArr[10], pArr[11], pArr[12], pArr[13], pArr[14], pArr[15],
+                pArr[0],   pArr[1],  pArr[2],  pArr[3],  pArr[4],  pArr[5],  pArr[6],  pArr[7]
+            };
         }
 
         #endregion
@@ -3614,6 +3953,215 @@ namespace ChessBot
 
         #endregion
     }
+
+    #region | REINFORCEMENT LEARNING |
+
+    public static class ReLe_AI_VARS
+    {
+        public const double MUTATION_PROPABILITY = 0.01;
+
+        public const int GENERATION_SIZE = 56;
+        public const int GENERATION_SURVIVORS = 7; //n^2-n = spots
+
+        public const int GENERATION_GOAL_COUNT = 15; //n^2-n = spots
+    }
+
+    public class ReLe_AIHandler
+    {
+        private System.Random rng = new System.Random();
+        private ReLe_AIGeneration curGen;
+
+        public ReLe_AIHandler()
+        {
+            for (int i = 0; i < 32; i++)
+                for (int j = 0; j < 6; j++)
+                    ReLe_AIEvaluator.oppAIValues[i,j] = new int[64] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+            curGen = new ReLe_AIGeneration(rng);
+            for (int i = 0; i < ReLe_AI_VARS.GENERATION_GOAL_COUNT; i++)
+            {
+                ReLe_AIInstance[] topPerformingAIs = curGen.GetTopAIInstances();
+                Console.WriteLine("\n- - - { Generation " + (i + 1) + ": } - - -\n\n");
+                foreach (ReLe_AIInstance instance in topPerformingAIs) Console.WriteLine(instance.ToString());
+                curGen = new ReLe_AIGeneration(rng, topPerformingAIs);
+            }
+        }
+    }
+
+    public class ReLe_AIGeneration
+    {
+        public ReLe_AIInstance[] generationInstances = new ReLe_AIInstance[ReLe_AI_VARS.GENERATION_SIZE];
+        private double[] generationInstanceEvaluations = new double[ReLe_AI_VARS.GENERATION_SIZE];
+
+        //Create Generation Randomly
+        public ReLe_AIGeneration(System.Random rng)
+        {
+            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
+            {
+                generationInstances[i] = new ReLe_AIInstance(rng);
+            }
+        }
+
+        //Create Generation based on best previous results
+        public ReLe_AIGeneration(System.Random rng, ReLe_AIInstance[] topInstancesOfLastGeneration) //Length needs to be optimally equal to the square root of the generation size
+        {
+            int a = 0;
+            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SURVIVORS; i++)
+            {
+                for (int j = 0; j < ReLe_AI_VARS.GENERATION_SURVIVORS; j++)
+                {
+                    if (j == i) continue;
+
+                    generationInstances[a] = CombineTwoAIInstances(topInstancesOfLastGeneration[i], topInstancesOfLastGeneration[j], rng);
+                    ++a;
+                }
+            }
+
+            for (int i = a; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
+            {
+                generationInstances[i] = new ReLe_AIInstance(rng);
+            }
+        }
+
+        private ReLe_AIInstance CombineTwoAIInstances(ReLe_AIInstance ai1, ReLe_AIInstance ai2, System.Random rng)
+        {
+            int[,][] tempDigitArray = new int[32, 6][];
+            for (int i = 0; i < 32; i++)
+            {
+                for (int j = 0; j < 6; j++)
+                {
+                    tempDigitArray[i, j] = new int[64];
+                    for (int k = 0; k < 64; k++)
+                    {
+                        //Mutations
+                        if (rng.NextDouble() < ReLe_AI_VARS.MUTATION_PROPABILITY)
+                        {
+                            tempDigitArray[i, j][k] = Math.Clamp(tempDigitArray[i, j][k] + rng.Next(-20, 20), 0, 150);
+                            continue;
+                        }
+
+                        //Combination
+                        tempDigitArray[i, j][k] = (rng.NextDouble() < 0.5) ? ai1.digitArray[i, j][k] : ai2.digitArray[i, j][k];
+                    }
+                }
+            }
+            return new ReLe_AIInstance(tempDigitArray);
+        }
+
+        public ReLe_AIInstance[] GetTopAIInstances()
+        {
+            //Evaluate every single instance
+            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
+            {
+                generationInstanceEvaluations[i] = ReLe_AIEvaluator.EvaluateAIInstance(generationInstances[i]);
+            }
+
+            //Sort all instances by the evaluation theyve gotten 
+            Array.Sort(generationInstanceEvaluations, generationInstances);
+
+            //Create the array with the length definited in the static var class
+            ReLe_AIInstance[] returnInstances = new ReLe_AIInstance[ReLe_AI_VARS.GENERATION_SURVIVORS];
+            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SURVIVORS; i++)
+            {
+                returnInstances[i] = generationInstances[i];
+            }
+            return returnInstances;
+        }
+    }
+
+    public static class ReLe_AIEvaluator
+    {
+        public static int[,][] oppAIValues = new int[32, 6][];
+
+        private static string[] fens = new string[10] {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r1bq1rk1/pp3ppp/2n1p3/3n4/1b1P4/2N2N2/PP2BPPP/R1BQ1RK1 w - - 0 10",
+            "rn1q1rk1/pp2b1pp/3pbn2/4p3/8/1N1BB3/PPPN1PPP/R2Q1RK1 w - - 8 11",
+            "1rbq1rk1/p3ppbp/3p1np1/2pP4/1nP5/RP3NP1/1BQNPPBP/4K2R w K - 1 13",
+            "r1b2rk1/pppp1pp1/2n2q1p/8/1bP5/2N2N2/PP2PPPP/R2QKB1R w KQ - 0 9",
+            "r2q1rk1/bppb1pp1/p2p2np/2PPp3/1P2P1n1/P3BN2/2Q1BPPP/RN3RK1 w - - 2 15",
+            "rnbq1rk1/pp2b1pp/2p2n2/3p1p2/4p3/3PP1PP/PPPNNPB1/R1BQ1RK1 w - - 5 9",
+            "rnbqk2r/5ppp/p2bpn2/1p6/2BP4/7P/PP2NPP1/RNBQ1RK1 w kq - 0 10",
+            "rn2kb1r/1bqp1ppp/p3pn2/1p6/3NP3/2P1BB2/PP3PPP/RN1QK2R w KQkq - 6 9",
+            "r1b1k2r/pp2bp1p/1qn1p3/2ppPp2/5P2/2PP1N1P/PP4P1/RNBQ1RK1 w kq - 1 11"
+        };
+
+        public static double EvaluateAIInstance(ReLe_AIInstance ai)
+        {
+            //MISSING
+
+
+            for (int i = 0; i < 10; i++)
+            {
+                BOT_MAIN.boardManager.LoadFenString(fens[i]);
+
+
+                BOT_MAIN.boardManager.InitReLeAgent(ai.digitArray);
+                BOT_MAIN.boardManager.InitReLeAgent(oppAIValues);
+            }
+            //int length = ai.digitArray.Length;
+            //double eval = 1000d;
+            //for (int i = 0; i < length; i++)
+            //{
+            //    eval -= ai.digitArray[i];
+            //}
+            //ai.SetEvaluationResults(eval);
+            //return eval;
+            return 0;
+        }
+    }
+
+    public class ReLe_AIInstance
+    {
+        public int[,][] digitArray { private set; get; } = new int[32, 6][];
+
+
+        private double evalResult;
+
+        public ReLe_AIInstance(System.Random rng)
+        {
+            for (int i = 0; i < 32; i++) 
+                for (int j = 0; j < 6; j++)
+                    digitArray[i,j] = Get64IntArray(rng);
+        }
+
+        private int[] Get64IntArray(System.Random rng)
+        {
+            return new int[64] {
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
+                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151)
+            };
+        }
+
+        public ReLe_AIInstance(int[,][] pDigitArray)
+        {
+            SetCharToDigitList(pDigitArray);
+        }
+
+        public void SetCharToDigitList(int[,][] digitRefArr)
+        {
+            digitArray = digitRefArr;
+        }
+
+        public void SetEvaluationResults(double eval)
+        {
+            evalResult = eval;
+        }
+
+        public override string ToString()
+        {
+            string s = "";
+            s += "Result: " + evalResult;
+            return s;
+        }
+    }
+
+    #endregion
 
     #region | DATA CLASSES |
 

@@ -117,40 +117,51 @@ namespace ChessBot
 
             #endregion
 
-            Stopwatch sw = Stopwatch.StartNew();
-            evalCount = 0;
+            ReLe_AIEvaluator.boardManager = this;
+            _ = new ReLe_AIHandler();
 
-            int tGS;
-            do
-            {
-                MinimaxRoot(166_666L);
-                Console.WriteLine(transpositionTable[zobristKey]);
-                Console.WriteLine(zobristKey);
-                PlainMakeMove(transpositionTable[zobristKey]);
-                tGS = GameState(isWhiteToMove);
-                Console.WriteLine(CreateFenString());
-                transpositionTable.Clear();
-            } while (tGS == 3);
-
-            //for (int i = 1; i < 99; i++)
-            //{
-            //    tPerft = MinimaxRoot(i);
-            //    Console.WriteLine("Depth = " + i + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations in " + sw.ElapsedMilliseconds + "ms");
-            //    if (sw.ElapsedMilliseconds > 2500) break;
-            //}
-
-            sw.Stop();
-
+            //LoadFenString("5k2/2r1bn1Q/p1n5/4p1r1/5qN1/3R4/P7/2q2RK1 b - - 0 9");
+            //Console.WriteLine(zobristKey);
+            //LoadFenString("r1bq1rk1/pp3ppp/2n1p3/3n4/1b1PN3/5N2/PP2BPPP/R1BQ1RK1 w - - 1 10");
+            //Console.WriteLine(PreMinimaxCheckCheckWhite());
+            //MinimaxRoot(1_000_000L);
             //Console.WriteLine(transpositionTable[zobristKey]);
-            Console.WriteLine(zobristKey);
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | 0]));
 
-            //PlainMakeMove(transpositionTable[zobristKey]);
-            //Console.WriteLine(CreateFenString());
-
-            Console.WriteLine(evalCount + " EvalCount");
-
-            Console.WriteLine(sw.ElapsedMilliseconds + "ms");
-            Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * evalCount)) + " NpS");
+            //Stopwatch sw = Stopwatch.StartNew();
+            //evalCount = 0;
+            //
+            //int tGS;
+            //do
+            //{
+            //    MinimaxRoot(166_666L);
+            //    Console.WriteLine(transpositionTable[zobristKey]);
+            //    Console.WriteLine(zobristKey);
+            //    PlainMakeMove(transpositionTable[zobristKey]);
+            //    tGS = GameState(isWhiteToMove);
+            //    Console.WriteLine(CreateFenString());
+            //    transpositionTable.Clear();
+            //} while (tGS == 3);
+            //
+            ////for (int i = 1; i < 99; i++)
+            ////{
+            ////    tPerft = MinimaxRoot(i);
+            ////    Console.WriteLine("Depth = " + i + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations in " + sw.ElapsedMilliseconds + "ms");
+            ////    if (sw.ElapsedMilliseconds > 2500) break;
+            ////}
+            //
+            //sw.Stop();
+            //
+            ////Console.WriteLine(transpositionTable[zobristKey]);
+            //Console.WriteLine(zobristKey);
+            //
+            ////PlainMakeMove(transpositionTable[zobristKey]);
+            ////Console.WriteLine(CreateFenString());
+            //
+            //Console.WriteLine(evalCount + " EvalCount");
+            //
+            //Console.WriteLine(sw.ElapsedMilliseconds + "ms");
+            //Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * evalCount)) + " NpS");
         }
 
         #region | CHECK RECOGNITION |
@@ -342,6 +353,7 @@ namespace ChessBot
             }
             else if (curCheckCount == 1)
             {
+                //Console.WriteLine(CreateFenString());
                 ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | pCheckingPieceSquare];
                 if (enPassantSquare != 65 && (whitePieceBitboard & blackPawnAttackSquareBitboards[enPassantSquare]) != 0ul && (((int)(tCheckingPieceLine >> enPassantSquare) & 1) == 1 || (pCheckingPieceSquare + 8 == enPassantSquare && pieceTypeArray[pCheckingPieceSquare] == 1)))
                 {
@@ -498,6 +510,7 @@ namespace ChessBot
             else if (curCheckCount == 1)
             {
                 //pCheckingPieceSquare +- 8 == enPassantSquare && pieceTypeList[pCheckingPieceSquare] == 1
+                //Console.WriteLine(CreateFenString());
                 ulong tCheckingPieceLine = squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | pCheckingPieceSquare];
                 if (enPassantSquare != 65 && (blackPieceBitboard & whitePawnAttackSquareBitboards[enPassantSquare]) != 0ul && (((int)(tCheckingPieceLine >> enPassantSquare) & 1) == 1 || (pCheckingPieceSquare - 8 == enPassantSquare && pieceTypeArray[pCheckingPieceSquare] == 1)))
                 {
@@ -1614,13 +1627,13 @@ namespace ChessBot
 
                 if (isWhiteToMove)
                 {
-                    if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-                    else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                    if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk);
+                    else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk);
                 }
                 else
                 {
-                    if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
-                    else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 10, WHITE_CHECKMATE_VAL + 10, pDepth, baseLineLen, tattk);
+                    if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk);
+                    else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk);
                 }
                 //Console.WriteLine("Depth = " + pDepth + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations with " + (tTimestamp - globalTimer.ElapsedTicks) + " ticks left");
                 pDepth++; 
@@ -1634,7 +1647,7 @@ namespace ChessBot
         private int MinimaxWhite(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
-            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
+            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
 
             #region NodePrep()
 
@@ -1958,7 +1971,7 @@ namespace ChessBot
         private int MinimaxBlack(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare)
         {
             if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
-            if ((pDepth <= 0 && pCheckingSquare == 0) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
+            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return Evaluate();
 
             #region NodePrep()
 
@@ -3454,13 +3467,15 @@ namespace ChessBot
             if (pWhiteKingCouldBeAttacked)
             {
                 GetLegalWhiteMoves(t = PreMinimaxCheckCheckWhite(), ref tMoves);
-                if (t == 0) return tMoves.Count == 0 ? 0 : 3;
+                //Console.WriteLine(t);
+                if (t == -1) return tMoves.Count == 0 ? 0 : 3;
                 else if (tMoves.Count == 0) return -1;
             }
             else
             {
                 GetLegalBlackMoves(t = PreMinimaxCheckCheckBlack(), ref tMoves);
-                if (t == 0) return tMoves.Count == 0 ? 0 : 3;
+                //Console.WriteLine(t);
+                if (t == -1) return tMoves.Count == 0 ? 0 : 3;
                 else if (tMoves.Count == 0) return 1;
             }
 
@@ -3482,19 +3497,48 @@ namespace ChessBot
 
         #region | REINFORCEMENT LEARNING |
 
-        public void InitReLeAgent(int[,][] pEvalPositionValues)
+        private const int RELE_MAX_MOVE_COUNT_PER_GAME = 500;
+
+        public double ReLePlayGame(int[,][] pEvalPositionValuesWhite, int[,][] pEvalPositionValuesBlack, long thinkingTimePerMove)
         {
+            int[,][] processedValuesWhite = InitReLeAgent(pEvalPositionValuesWhite), processedValuesBlack = InitReLeAgent(pEvalPositionValuesBlack);
+            int tGS, mc = 0;
+
+            do {
+                if (IsDrawByRepetition(curSearchZobristKeyLine.Length - 5)) return 0d;
+                piecePositionEvals = isWhiteToMove ? processedValuesWhite : processedValuesBlack;
+                MinimaxRoot(thinkingTimePerMove);
+                //Console.WriteLine(transpositionTable[zobristKey]);
+                //Console.WriteLine(CreateFenString());
+                PlainMakeMove(transpositionTable[zobristKey]);
+                //Console.WriteLine(CreateFenString());
+                tGS = GameState(isWhiteToMove);
+                //Console.WriteLine("Gamestate: " + tGS);
+                transpositionTable.Clear();
+                if (tGS != 3) break;
+            } while (mc++ < RELE_MAX_MOVE_COUNT_PER_GAME);
+
+            if (tGS == 3 || tGS == 0) return 0d;
+            else if (tGS == 1) return 0.1d * (double)(RELE_MAX_MOVE_COUNT_PER_GAME - mc);
+            return 0.1d * (double)(-RELE_MAX_MOVE_COUNT_PER_GAME + mc);
+
+        }
+
+        public int[,][] InitReLeAgent(int[,][] pEvalPositionValues)
+        {
+            int[,][] processedValues = new int[33, 14][];
             for (int i = 0; i < 32; i++)
             {
                 int ip1 = i + 1;
-                piecePositionEvals[ip1, 7] = piecePositionEvals[ip1, 0] = Array.Empty<int>();
-                piecePositionEvals[ip1, 8] = SwapArrayViewingSide(piecePositionEvals[ip1, 1] = pEvalPositionValues[i, 0]);
-                piecePositionEvals[ip1, 9] = SwapArrayViewingSide(piecePositionEvals[ip1, 2] = pEvalPositionValues[i, 1]);
-                piecePositionEvals[ip1, 10] = SwapArrayViewingSide(piecePositionEvals[ip1, 3] = pEvalPositionValues[i, 2]);
-                piecePositionEvals[ip1, 11] = SwapArrayViewingSide(piecePositionEvals[ip1, 4] = pEvalPositionValues[i, 3]);
-                piecePositionEvals[ip1, 12] = SwapArrayViewingSide(piecePositionEvals[ip1, 5] = pEvalPositionValues[i, 4]);
-                piecePositionEvals[ip1, 13] = SwapArrayViewingSide(piecePositionEvals[ip1, 6] = pEvalPositionValues[i, 5]);
+                processedValues[ip1, 7] = processedValues[ip1, 0] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+                processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = pEvalPositionValues[i, 0]);
+                processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = pEvalPositionValues[i, 1]);
+                processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = pEvalPositionValues[i, 2]);
+                processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = pEvalPositionValues[i, 3]);
+                processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = pEvalPositionValues[i, 4]);
+                processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = pEvalPositionValues[i, 5]);
             }
+            return processedValues;
         }
 
         private int[] SwapArrayViewingSide(int[] pArr)
@@ -3810,6 +3854,7 @@ namespace ChessBot
                         {
                             t = 2;
                             t2 = -2;
+                            if (square == 0 && square2 == 63 || square == 63 && square2 == 0) Console.WriteLine("!");
                             while ((itSq += difSign * 9) % 8 != g && itSq < 64 && itSq > -1) { tRay = ULONG_OPERATIONS.SetBitToOne(tRay, itSq); tRayInts.Add(itSq); if (itSq == square2) { tExclRay = tRay; } }
                             if (ULONG_OPERATIONS.IsBitZero(tRay, square2))
                             {
@@ -3818,11 +3863,23 @@ namespace ChessBot
                             }
                         }
                     }
-                    //if (square == 62 && square2 == 55)
-                    //{
-                    //    Console.WriteLine(tRay);
-                    //    //Console.WriteLine(Console.WriteLine());
-                    //}
+
+                    if (square == 0 && square2 == 63)
+                    {
+                        t2 = t = 2;
+                        tRayInts.Clear();
+                        tExclRay = tRay = ULONG_OPERATIONS.SetBitsToOne(0ul, 9, 18, 27, 36, 45, 54, 63);
+                        tRayInts = new List<int>() { 9, 18, 27, 36, 45, 54, 63 };
+                    }
+                    else if (square2 == 0 && square == 63)
+                    {
+                        t = 2;
+                        tRayInts.Clear();
+                        t2 = -2;
+                        tExclRay = tRay = ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 9, 18, 27, 36, 45, 54);
+                        tRayInts = new List<int>() { 54, 45, 36, 27, 18, 9, 0 }; //0, 9, 18, 27, 36, 45, 54
+                    }
+
                     if (tRay != 0ul && !differentRays.Contains(tRay))
                     {
                         differentRays.Add(tRay);
@@ -3846,10 +3903,52 @@ namespace ChessBot
                     squareConnectivesPrecalculationArray[square << 6 | square2] = t;
                     squareConnectivesPrecalculationRayArray[square << 6 | square2] = tRay;
                     squareConnectivesCrossDirsPrecalculationArray[square << 6 | square2] = t2;
-                    squareConnectivesPrecalculationLineArray[square << 6 | square2] = ULONG_OPERATIONS.SetBitToOne(tExclRay, square2);
+                    if (t != 0) squareConnectivesPrecalculationLineArray[square << 6 | square2] = (square == 0 && square2 == 63 || square2 == 0 && square == 63) ? tExclRay : ULONG_OPERATIONS.SetBitToOne(tExclRay, square2);
                 }
                 differentRays.Clear();
             }
+
+            // Der folgende Code war zum Herausfinden von den zwei Spezial Line Cases: 0 -> 63 & 63 -> 0
+
+            /*ulong[] testArray = new ulong[4096];
+            for (int s = 0; s < 64; s++)
+            {
+                ulong u = 0ul;
+                for (int t = s + 9; t < 64 && t % 8 != 0; t += 9)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                for (int t = s - 9; t > -1 && t % 8 != 7; t -= 9)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                for (int t = s + 7; t < 64 && t % 8 != 7; t += 7)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                for (int t = s - 7; t > -1 && t % 8 != 0; t -= 7)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                int rsv = s - s % 8;
+                for (int t = s - 1; t % 8 != 7 && t > -1; t--)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                rsv += 8;
+                for (int t = s + 1; t != rsv; t++)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                for (int t = s + 8; t < 64; t += 8)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+                u = 0ul;
+                for (int t = s - 8; t > -1; t -= 8)
+                { u = ULONG_OPERATIONS.SetBitToOne(u, t); testArray[s << 6 | t] = u; }
+            }
+
+            for (int i = 0; i < 4096; i++)
+            {
+                if (testArray[i] == squareConnectivesPrecalculationLineArray[i]) continue;
+                Console.WriteLine((i >> 6) + " -> " + (i & 0b111111));
+                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(squareConnectivesPrecalculationLineArray[i]));
+                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(testArray[i]));
+                //break;
+            }*/
         }
 
         #endregion
@@ -3958,12 +4057,12 @@ namespace ChessBot
 
     public static class ReLe_AI_VARS
     {
-        public const double MUTATION_PROPABILITY = 0.01;
+        public const double MUTATION_PROPABILITY = 0.0001;
 
-        public const int GENERATION_SIZE = 56;
-        public const int GENERATION_SURVIVORS = 7; //n^2-n = spots
+        public const int GENERATION_SIZE = 12;
+        public const int GENERATION_SURVIVORS = 4; //n^2-n = spots
 
-        public const int GENERATION_GOAL_COUNT = 15; //n^2-n = spots
+        public const int GENERATION_GOAL_COUNT = 150; //n^2-n = spots
     }
 
     public class ReLe_AIHandler
@@ -3976,15 +4075,48 @@ namespace ChessBot
             for (int i = 0; i < 32; i++)
                 for (int j = 0; j < 6; j++)
                     ReLe_AIEvaluator.oppAIValues[i,j] = new int[64] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+            
             curGen = new ReLe_AIGeneration(rng);
             for (int i = 0; i < ReLe_AI_VARS.GENERATION_GOAL_COUNT; i++)
             {
                 ReLe_AIInstance[] topPerformingAIs = curGen.GetTopAIInstances();
                 Console.WriteLine("\n- - - { Generation " + (i + 1) + ": } - - -\n\n");
-                foreach (ReLe_AIInstance instance in topPerformingAIs) Console.WriteLine(instance.ToString());
+                foreach (ReLe_AIInstance instance in topPerformingAIs)
+                {
+                    Console.WriteLine(instance.ToString());
+                    Console.WriteLine(GetAIArrayValues(instance));    
+                }
                 curGen = new ReLe_AIGeneration(rng, topPerformingAIs);
             }
         }
+
+        private string GetAIArrayValues(ReLe_AIInstance pAI)
+        {
+            string r = "int[,][] ReLe_AI_RESULT_VALS = new int[32, 6][] {";
+            int[,][] tVals = pAI.digitArray;
+
+            for (int i = 0; i < 32; i++)
+            {
+                r += "\n{";
+                for (int j = 0; j < 5; j++)
+                {
+                    r += GetIntArray64LStringRepresentation(tVals[i, j]) + ", ";
+                }
+                r += GetIntArray64LStringRepresentation(tVals[i, 5]) + "\n},";
+            }
+
+            return r.Substring(0, r.Length - 1) + "};";
+        }
+
+        private string GetIntArray64LStringRepresentation(int[] p64LArr)
+        {
+            string r = "new int[64] { ";
+            for (int i = 0; i < 63; i++)
+            {
+                r += p64LArr[i] + ", ";
+            }
+            return r + p64LArr[63] + " }";
+        } 
     }
 
     public class ReLe_AIGeneration
@@ -4059,10 +4191,12 @@ namespace ChessBot
             Array.Sort(generationInstanceEvaluations, generationInstances);
 
             //Create the array with the length definited in the static var class
+
+            int tL = generationInstanceEvaluations.Length - 1;
             ReLe_AIInstance[] returnInstances = new ReLe_AIInstance[ReLe_AI_VARS.GENERATION_SURVIVORS];
             for (int i = 0; i < ReLe_AI_VARS.GENERATION_SURVIVORS; i++)
             {
-                returnInstances[i] = generationInstances[i];
+                returnInstances[i] = generationInstances[tL - i];
             }
             return returnInstances;
         }
@@ -4071,6 +4205,7 @@ namespace ChessBot
     public static class ReLe_AIEvaluator
     {
         public static int[,][] oppAIValues = new int[32, 6][];
+        public static BoardManager boardManager;
 
         private static string[] fens = new string[10] {
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -4087,26 +4222,19 @@ namespace ChessBot
 
         public static double EvaluateAIInstance(ReLe_AIInstance ai)
         {
-            //MISSING
-
+            double eval = 0d;
 
             for (int i = 0; i < 10; i++)
             {
-                BOT_MAIN.boardManager.LoadFenString(fens[i]);
-
-
-                BOT_MAIN.boardManager.InitReLeAgent(ai.digitArray);
-                BOT_MAIN.boardManager.InitReLeAgent(oppAIValues);
+                double t1, t2;
+                boardManager.LoadFenString(fens[i]);
+                eval += t1 = boardManager.ReLePlayGame(ai.digitArray, oppAIValues, 2_000L);
+                boardManager.LoadFenString(fens[i]);
+                eval -= t2 = boardManager.ReLePlayGame(oppAIValues, ai.digitArray, 2_000L);
+                Console.WriteLine(eval + "|" + t1 + " & " + t2);
             }
-            //int length = ai.digitArray.Length;
-            //double eval = 1000d;
-            //for (int i = 0; i < length; i++)
-            //{
-            //    eval -= ai.digitArray[i];
-            //}
-            //ai.SetEvaluationResults(eval);
-            //return eval;
-            return 0;
+            ai.SetEvaluationResults(eval);  
+            return eval;
         }
     }
 

@@ -3596,6 +3596,13 @@ namespace ChessBot
                 if (IsDrawByRepetition(curSearchZobristKeyLine.Length - 5)) return 0d;
                 piecePositionEvals = isWhiteToMove ? processedValuesWhite : processedValuesBlack;
                 MinimaxRoot(thinkingTimePerMove);
+
+                if (transpositionTable.Count == 0)
+                {
+                    Console.WriteLine("?!");
+                    return 0d;
+                }
+
                 //Console.WriteLine(transpositionTable[zobristKey]);
                 //Console.WriteLine(CreateFenString());
                 PlainMakeMove(transpositionTable[zobristKey]);
@@ -4161,6 +4168,8 @@ namespace ChessBot
 
         public ReLe_AIHandler()
         {
+            ReLe_AIEvaluator.fens = File.ReadAllLines(@"C:\Users\tpmen\Desktop\4 - Programming\41 - Unity & C#\MiluvaV3\Miluva-v3\Chessbot\FENS.txt");
+
             for (int i = 0; i < 32; i++)
                 for (int j = 0; j < 6; j++)
                     ReLe_AIEvaluator.oppAIValues[i,j] = new int[64] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
@@ -4212,7 +4221,7 @@ namespace ChessBot
 
         private static void AppendToText(string pText)
         {
-            File.AppendAllText(@"C:\Neuer Ordner\ReLeResults.txt", pText);
+            File.AppendAllText(@"C:\Users\tpmen\Desktop\ReLeResults.txt", pText);
         }
     }
 
@@ -4305,7 +4314,7 @@ namespace ChessBot
         public static int[,][] oppAIValues = new int[32, 6][];
         public static BoardManager boardManager;
 
-        private static string[] fens = new string[10] {
+        public static string[] fens = new string[10] {
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
             "r1bq1rk1/pp3ppp/2n1p3/3n4/1b1P4/2N2N2/PP2BPPP/R1BQ1RK1 w - - 0 10",
             "rn1q1rk1/pp2b1pp/3pbn2/4p3/8/1N1BB3/PPPN1PPP/R2Q1RK1 w - - 8 11",
@@ -4318,17 +4327,21 @@ namespace ChessBot
             "r1b1k2r/pp2bp1p/1qn1p3/2ppPp2/5P2/2PP1N1P/PP4P1/RNBQ1RK1 w kq - 1 11"
         };
 
+        private static Random evalRNG = new Random();
+
         public static double EvaluateAIInstance(ReLe_AIInstance ai)
         {
             double eval = 0d;
 
             for (int i = 0; i < 10; i++)
             {
-                double t1, t2;
-                boardManager.LoadFenString(fens[i]);
-                eval += t1 = boardManager.ReLePlayGame(ai.digitArray, oppAIValues, 500L);
-                boardManager.LoadFenString(fens[i]);
-                eval -= t2 = boardManager.ReLePlayGame(oppAIValues, ai.digitArray, 500L);
+                string gameFen = fens[evalRNG.Next(fens.Length)];
+
+                //double t1, t2;
+                boardManager.LoadFenString(gameFen);
+                eval += boardManager.ReLePlayGame(ai.digitArray, oppAIValues, 500L);
+                boardManager.LoadFenString(gameFen);
+                eval -= boardManager.ReLePlayGame(oppAIValues, ai.digitArray, 500L);
                 //Console.WriteLine(eval + "|" + t1 + " & " + t2);
             }
             ai.SetEvaluationResults(eval);  
@@ -4347,20 +4360,20 @@ namespace ChessBot
         {
             for (int i = 0; i < 32; i++) 
                 for (int j = 0; j < 6; j++)
-                    digitArray[i,j] = Get64IntArray(rng);
+                    digitArray[i,j] = Get64IntArray(rng, 40);
         }
 
-        private int[] Get64IntArray(System.Random rng)
+        private int[] Get64IntArray(System.Random rng, int pMax)
         {
             return new int[64] {
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151),
-                rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151), rng.Next(0, 151)
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
+                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax)
             };
         }
 

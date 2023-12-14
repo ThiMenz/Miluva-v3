@@ -4178,11 +4178,12 @@ namespace ChessBot
             for (int i = 0; i < ReLe_AI_VARS.GENERATION_GOAL_COUNT; i++)
             {
                 ReLe_AIInstance[] topPerformingAIs = curGen.GetTopAIInstances();
-                AppendToText("\n\n\n\n\n\n- - - { Generation " + (i + 1) + ": } - - -");
+                ClearTextFile();
+                AppendToText("- - - { Generation " + (i + 1) + ": } - - -\n\n");
                 foreach (ReLe_AIInstance instance in topPerformingAIs)
                 {
-                    AppendToText(instance.ToString());
-                    AppendToText(GetAIArrayValues(instance));
+                    AppendToText(instance.ToString() + "\n");
+                    AppendToText(GetAIArrayValues(instance) + "\n");
                     //Console.WriteLine(instance.ToString());
                     //Console.WriteLine(GetAIArrayValues(instance));
                 }
@@ -4198,12 +4199,12 @@ namespace ChessBot
 
             for (int i = 0; i < 32; i++)
             {
-                r += "\n{";
+                r += "{";
                 for (int j = 0; j < 5; j++)
                 {
-                    r += GetIntArray64LStringRepresentation(tVals[i, j]) + ", ";
+                    r += GetIntArray64LStringRepresentation(tVals[i, j]) + ",";
                 }
-                r += GetIntArray64LStringRepresentation(tVals[i, 5]) + "\n},";
+                r += GetIntArray64LStringRepresentation(tVals[i, 5]) + "},";
             }
 
             return r.Substring(0, r.Length - 1) + "};";
@@ -4211,17 +4212,22 @@ namespace ChessBot
 
         private string GetIntArray64LStringRepresentation(int[] p64LArr)
         {
-            string r = "new int[64] { ";
+            string r = "new int[64]{";
             for (int i = 0; i < 63; i++)
             {
-                r += p64LArr[i] + ", ";
+                r += p64LArr[i] + ",";
             }
-            return r + p64LArr[63] + " }";
+            return r + p64LArr[63] + "}";
         }
 
         private static void AppendToText(string pText)
         {
             File.AppendAllText(@"C:\Users\tpmen\Desktop\ReLeResults.txt", pText);
+        }
+
+        private static void ClearTextFile()
+        {
+            File.WriteAllText(@"C:\Users\tpmen\Desktop\ReLeResults.txt", "");
         }
     }
 

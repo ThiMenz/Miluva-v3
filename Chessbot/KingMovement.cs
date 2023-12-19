@@ -38,6 +38,12 @@ namespace ChessBot
             boardManager.moveOptionList.AddRange(preCalcMoves[pSquare][pAttkBBandOwnColorBB & tu][pOppColorBitboardAndNotAttkBB & tu]);
         }
 
+        public void AddMoveOptionsToMoveListOnlyCaptures(int pSquare, ulong pOppColorBitboardAndNotAttkBB)
+        {
+            ulong tu = kingMasks[pSquare];
+            boardManager.moveOptionList.AddRange(preCalcMoves[pSquare][tu & ~pOppColorBitboardAndNotAttkBB][pOppColorBitboardAndNotAttkBB & tu]);
+        }
+
         private void SingleSquarePrecalculations(int pSquare)
         {
             preCalcMoves[pSquare] = new Dictionary<ulong, Dictionary<ulong, List<Move>>>();

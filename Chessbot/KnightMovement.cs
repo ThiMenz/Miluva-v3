@@ -29,6 +29,11 @@ namespace ChessBot
             boardManager.moveOptionList.AddRange(capturePrecalcs[square][knightSquareBitboards[square] & oppPieceBitboard]);
         }
 
+        public void AddMovesToMoveOptionListOnlyCaptures(int square, ulong oppPieceBitboard)
+        {
+            boardManager.moveOptionList.AddRange(capturePrecalcs[square][knightSquareBitboards[square] & oppPieceBitboard]);
+        }
+
         private ushort[] maxOptions = new ushort[9] { 0, 0b1, 0b11, 0b111, 0b1111, 0b11111, 0b111111, 0b1111111, 0b11111111 };
 
         public void Precalculate()

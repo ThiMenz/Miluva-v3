@@ -41,6 +41,22 @@ namespace ChessBot
             if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
         }
 
+        public void AddMoveOptionsToMoveListOnlyCaptures(int startSquare, ulong opposingSideBitboard, ulong allPieceBitboard)
+        {
+            RookPreCalcs trpc = precalculatedMoves[startSquare][allPieceBitboard & rookMasks[startSquare]];
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
+            if (((opposingSideBitboard >> trpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove3);
+            if (((opposingSideBitboard >> trpc.possibleCapture4) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove4);
+        }
+
+        public void AddMoveOptionsToMoveListOnlyCaptures(int startSquare, int ownKingPosFilter, ulong opposingSideBitboard, ulong allPieceBitboard)
+        {
+            RookPreCalcsKingPin trpc = precalculatedMoves[startSquare][allPieceBitboard & rookMasks[startSquare]].classicMovesOnKingPin[ownKingPosFilter];
+            if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
+            if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
+        }
+
         public ulong GetVisionMask(int square, ulong allPieceBitboard)
         {
             return precalculatedMoves[square][allPieceBitboard & rookMasks[square]].visionBitboard;

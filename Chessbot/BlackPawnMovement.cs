@@ -20,6 +20,8 @@ namespace ChessBot
             Precalculate();
         }
 
+        // !! Die Bezeichnung von "whitePieceBitboard" / "blackPieceBitboard" ist in diesem Skript an sich falsch, da es das jeweils andere sein muss, eig muss es also z.B. "oppPieceBitboard" heißen
+
         public void AddMoveOptionsToMoveList(int square, ulong whitePieceBitboard, ulong blackPieceBitboard)
         {
             boardManager.moveOptionList.AddRange(movePrecalcs[square][whitePieceBitboard & squareBitboards[square] | blackPieceBitboard & oppSquareBitboards[square]]);
@@ -27,6 +29,15 @@ namespace ChessBot
         public void AddMoveOptionsToMoveList(int square, int pinKingSquare, ulong whitePieceBitboard, ulong blackPieceBitboard)
         {
             boardManager.moveOptionList.AddRange(pinMovePrecalcs[square][pinKingSquare][whitePieceBitboard & squareBitboards[square] | blackPieceBitboard & oppSquareBitboards[square]]);
+        }
+
+        public void AddMoveOptionsToMoveListOnlyCaptures(int square, ulong blackPieceBitboard)
+        {
+            boardManager.moveOptionList.AddRange(movePrecalcs[square][ulong.MaxValue & squareBitboards[square] | blackPieceBitboard & oppSquareBitboards[square]]);
+        }
+        public void AddMoveOptionsToMoveListOnlyCaptures(int square, int pinKingSquare, ulong blackPieceBitboard)
+        {
+            boardManager.moveOptionList.AddRange(pinMovePrecalcs[square][pinKingSquare][ulong.MaxValue & squareBitboards[square] | blackPieceBitboard & oppSquareBitboards[square]]);
         }
 
         private void Precalculate()

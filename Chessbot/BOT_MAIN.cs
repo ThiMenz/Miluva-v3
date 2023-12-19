@@ -77,6 +77,7 @@ namespace ChessBot
                 for (int j = 0; j < 14; j++)
                     piecePositionEvals[i,j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+            PrecalculateMultipliers();
             MinimaxRoot(1L); // Minimax Preloader
 
             Console.Write("[PRECALCS] Zobrist Hashing");
@@ -124,11 +125,11 @@ namespace ChessBot
 
             #endregion
 
-            ReLe_AIEvaluator.boardManager = this;
-            _ = new ReLe_AIHandler();
+            //ReLe_AIEvaluator.boardManager = this;
+            //_ = new ReLe_AIHandler();
 
-            //LoadFenString("1nb3rk/1p3p1p/4pb2/3pP3/1P6/3p4/R2N2p1/2B2BK1 b - - 0 11");
-            //MinimaxRoot(10_000_000L);
+            LoadFenString("r4k2/n2p2Q1/p1bq1b2/2p1p3/1p2P3/3P2P1/PPP3B1/1RBNQR1K b - - 0 10");
+            MinimaxRoot(1L);
             //Console.WriteLine(transpositionTable[zobristKey]);
             //Console.WriteLine(depths);
             //List<Move> tMove = new List<Move>();
@@ -2084,6 +2085,8 @@ namespace ChessBot
             {
                 moveSortingArrayIndexes[m] = m;
                 Move curMove = moveOptionList[m];
+                Console.WriteLine(curMove);
+                //Console.WriteLine(CreateFenString());
                 if (curMove.isCapture) moveSortingArray[m] = -10;
                 else if (curMove == pvNodeMove) moveSortingArray[m] = -100;
             }
@@ -3621,19 +3624,80 @@ namespace ChessBot
 
         public int[,][] InitReLeAgent(int[,][] pEvalPositionValues)
         {
+            //int[,][] processedValues = new int[33, 14][];
+            //for (int i = 0; i < 32; i++)
+            //{
+            //    int ip1 = i + 1;
+            //    processedValues[ip1, 7] = processedValues[ip1, 0] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            //    processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = pEvalPositionValues[i, 0]);
+            //    processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = pEvalPositionValues[i, 1]);
+            //    processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = pEvalPositionValues[i, 2]);
+            //    processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = pEvalPositionValues[i, 3]);
+            //    processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = pEvalPositionValues[i, 4]);
+            //    processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = pEvalPositionValues[i, 5]);
+            //}
+            return GetInterpolatedProcessedValues(pEvalPositionValues);
+        }
+
+        private double[] earlyGameMultipliers = new double[33];
+        private double[] middleGameMultipliers = new double[33];
+        private double[] lateGameMultipliers = new double[33];
+
+        private void PrecalculateMultipliers()
+        {
+            for (int i = 0; i < 33; i++)
+            {
+                earlyGameMultipliers[i] = MultiplierFunction(i, 32d);
+                middleGameMultipliers[i] = MultiplierFunction(i, 16d);
+                lateGameMultipliers[i] = MultiplierFunction(i, 0d);
+            }
+        }
+
+        private double MultiplierFunction(double pVal, double pXShift)
+        {
+            double d = Math.Exp(1d / 6d * (pVal - pXShift));
+            return 5 * (d / Math.Pow(d + 1, 2d));
+        }
+
+        private int[,][] GetInterpolatedProcessedValues(int[,][] pEvalPositionValues)
+        {
             int[,][] processedValues = new int[33, 14][];
             for (int i = 0; i < 32; i++)
             {
                 int ip1 = i + 1;
                 processedValues[ip1, 7] = processedValues[ip1, 0] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-                processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = pEvalPositionValues[i, 0]);
-                processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = pEvalPositionValues[i, 1]);
-                processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = pEvalPositionValues[i, 2]);
-                processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = pEvalPositionValues[i, 3]);
-                processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = pEvalPositionValues[i, 4]);
-                processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = pEvalPositionValues[i, 5]);
+
+                processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = MultiplyArraysWithVal(pEvalPositionValues[0, 0], pEvalPositionValues[1, 0], pEvalPositionValues[2, 0], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = MultiplyArraysWithVal(pEvalPositionValues[0, 1], pEvalPositionValues[1, 1], pEvalPositionValues[2, 1], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = MultiplyArraysWithVal(pEvalPositionValues[0, 2], pEvalPositionValues[1, 2], pEvalPositionValues[2, 2], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = MultiplyArraysWithVal(pEvalPositionValues[0, 3], pEvalPositionValues[1, 3], pEvalPositionValues[2, 3], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = MultiplyArraysWithVal(pEvalPositionValues[0, 4], pEvalPositionValues[1, 4], pEvalPositionValues[2, 4], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = MultiplyArraysWithVal(pEvalPositionValues[0, 5], pEvalPositionValues[1, 5], pEvalPositionValues[2, 5], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1])); 
+                
+                
+                
+                
+                //MultiplyArrayWithVal(aEarly[0], earlyGameMultipliers[ip1]) + MultiplyArrayWithVal(aEarly[0], earlyGameMultipliers[ip1]) + MultiplyArrayWithVal(aEarly[0], earlyGameMultipliers[ip1]);
+
+                //processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = pEvalPositionValues[i, 0]);
+                //processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = pEvalPositionValues[i, 1]);
+                //processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = pEvalPositionValues[i, 2]);
+                //processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = pEvalPositionValues[i, 3]);
+                //processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = pEvalPositionValues[i, 4]);
+                //processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = pEvalPositionValues[i, 5]);
             }
             return processedValues;
+        }
+
+        private int[] MultiplyArraysWithVal(int[] pArr1, int[] pArr2, int[] pArr3, double pVal1, double pVal2, double pVal3)
+        {
+            int tL = pArr1.Length;
+            int[] rArr = new int[tL];
+            for (int i = 0; i < tL; i++)
+            {
+                rArr[i] = (int)(pArr1[i] * pVal1 + pArr2[i] * pVal2 + pArr3[i] * pVal3);
+            }
+            return rArr;
         }
 
         private int[] SwapArrayViewingSide(int[] pArr)
@@ -4153,7 +4217,7 @@ namespace ChessBot
 
     public static class ReLe_AI_VARS
     {
-        public const double MUTATION_PROPABILITY = 0.001;
+        public const double MUTATION_PROPABILITY = 0.01;
 
         public const int GENERATION_SIZE = 12;
         public const int GENERATION_SURVIVORS = 4; //n^2-n = spots
@@ -4170,7 +4234,7 @@ namespace ChessBot
         {
             ReLe_AIEvaluator.fens = File.ReadAllLines(@"C:\Users\tpmen\Desktop\4 - Programming\41 - Unity & C#\MiluvaV3\Miluva-v3\Chessbot\FENS.txt");
 
-            for (int i = 0; i < 32; i++)
+            for (int i = 0; i < 3; i++)
                 for (int j = 0; j < 6; j++)
                     ReLe_AIEvaluator.oppAIValues[i,j] = new int[64] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
             
@@ -4194,10 +4258,10 @@ namespace ChessBot
 
         private string GetAIArrayValues(ReLe_AIInstance pAI)
         {
-            string r = "int[,][] ReLe_AI_RESULT_VALS = new int[32, 6][] {";
+            string r = "int[,][] ReLe_AI_RESULT_VALS = new int[3, 6][] {";
             int[,][] tVals = pAI.digitArray;
 
-            for (int i = 0; i < 32; i++)
+            for (int i = 0; i < 3; i++)
             {
                 r += "{";
                 for (int j = 0; j < 5; j++)
@@ -4268,8 +4332,8 @@ namespace ChessBot
 
         private ReLe_AIInstance CombineTwoAIInstances(ReLe_AIInstance ai1, ReLe_AIInstance ai2, System.Random rng)
         {
-            int[,][] tempDigitArray = new int[32, 6][];
-            for (int i = 0; i < 32; i++)
+            int[,][] tempDigitArray = new int[3, 6][];
+            for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 6; j++)
                 {
@@ -4285,7 +4349,7 @@ namespace ChessBot
 
                         //Combination
                         //tempDigitArray[i, j][k] = (rng.NextDouble() < 0.5) ? ai1.digitArray[i, j][k] : ai2.digitArray[i, j][k];
-                        tempDigitArray[i, j][k] = (ai1.digitArray[i, j][k] + ai2.digitArray[i, j][k]) / 2;
+                        tempDigitArray[i, j][k] = Math.Clamp((ai1.digitArray[i, j][k] + ai2.digitArray[i, j][k]) / 2 + rng.Next(-3, 3), 0, 150);
                     }
                 }
             }
@@ -4317,7 +4381,7 @@ namespace ChessBot
 
     public static class ReLe_AIEvaluator
     {
-        public static int[,][] oppAIValues = new int[32, 6][];
+        public static int[,][] oppAIValues = new int[3, 6][];
         public static BoardManager boardManager;
 
         public static string[] fens = new string[10] {
@@ -4357,14 +4421,14 @@ namespace ChessBot
 
     public class ReLe_AIInstance
     {
-        public int[,][] digitArray { private set; get; } = new int[32, 6][];
+        public int[,][] digitArray { private set; get; } = new int[3, 6][];
 
 
         private double evalResult;
 
         public ReLe_AIInstance(System.Random rng)
         {
-            for (int i = 0; i < 32; i++) 
+            for (int i = 0; i < 3; i++) 
                 for (int j = 0; j < 6; j++)
                     digitArray[i,j] = Get64IntArray(rng, 40);
         }

@@ -125,11 +125,13 @@ namespace ChessBot
 
             #endregion
 
+            PlayGameOnConsoleAgainstHuman("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", true);
+
             //ReLe_AIEvaluator.boardManager = this;
             //_ = new ReLe_AIHandler();
 
-            LoadFenString("r4k2/n2p2Q1/p1bq1b2/2p1p3/1p2P3/3P2P1/PPP3B1/1RBNQR1K b - - 0 10");
-            MinimaxRoot(1L);
+            //LoadFenString("r4k2/n2p2Q1/p1bq1b2/2p1p3/1p2P3/3P2P1/PPP3B1/1RBNQR1K b - - 0 10");
+            //MinimaxRoot(1L);
             //Console.WriteLine(transpositionTable[zobristKey]);
             //Console.WriteLine(depths);
             //List<Move> tMove = new List<Move>();
@@ -179,6 +181,40 @@ namespace ChessBot
             //
             //Console.WriteLine(sw.ElapsedMilliseconds + "ms");
             //Console.WriteLine(GetThreeDigitSeperatedInteger((int)((10_000_000d / (double)sw.ElapsedTicks) * evalCount)) + " NpS");
+        }
+
+        private void PlayGameOnConsoleAgainstHuman(string pStartFEN, bool pHumanPlaysWhite)
+        {
+            LoadFenString(pStartFEN);
+
+            if (pHumanPlaysWhite) {
+                var pVS = Console.ReadLine();
+                if (pVS == null) return;
+                Move tm = GetMoveOfString(pVS.ToString());
+                Console.WriteLine(tm);
+                PlainMakeMove(tm);
+            }
+
+            int tGState = 3;
+            while (tGState == 3) {
+                MinimaxRoot(10_000_000L);
+                Move tM = transpositionTable[zobristKey];
+                Console.WriteLine(tM);
+                Console.WriteLine(CreateFenString());
+                PlainMakeMove(tM);
+                tGState = GameState(pHumanPlaysWhite);
+                if (tGState != 3) break;
+                var pV = "";
+                tM = NULL_MOVE;
+                do {
+                    pV = Console.ReadLine();
+                    if (pV == null) continue;
+                    tM = GetMoveOfString(pV.ToString());
+                    Console.WriteLine(tM);
+                } while (tM == NULL_MOVE);
+                PlainMakeMove(tM);
+                tGState = GameState(!pHumanPlaysWhite);
+            }
         }
 
         #region | CHECK RECOGNITION |
@@ -1286,6 +1322,28 @@ namespace ChessBot
 
         #region | PLAIN MAKE MOVE |
 
+        public Move GetMoveOfString(string pMove)
+        {
+            string[] tSpl = pMove.Split(',');
+
+            int tSP = Convert.ToInt32(tSpl[0]), tEP = Convert.ToInt32(tSpl[1]), tPT = pieceTypeArray[tSP];
+            bool tIC = ULONG_OPERATIONS.IsBitOne(allPieceBitboard, tEP), tIEP = enPassantSquare == tEP && tPT == 1;
+
+            if (tSpl.Length == 3) return new Move(tSP, tEP, tPT, Convert.ToInt32(tSpl[2]), tIC);
+            if (tIEP) return new Move(true, tSP, tEP, isWhiteToMove ? tEP - 8 : tEP + 8);
+            if (tPT == 1 && Math.Abs(tSP - tEP) > 11) return new Move(tSP, tEP, 1, false, isWhiteToMove ? tSP + 8 : tSP - 8);
+            if (tPT == 6 && Math.Abs(tSP - tEP) == 2 || Math.Abs(tSP - tEP) == 3) {
+                if (isWhiteToMove) return tEP == 6 ? mWHITE_KING_ROCHADE : mWHITE_QUEEN_ROCHADE;
+                return tEP == 62 ? mBLACK_KING_ROCHADE : mBLACK_QUEEN_ROCHADE;
+            }
+            return new Move(tSP, tEP, tPT, tIC);
+        }
+
+        public void PlainMakeMove(string pMoveName)
+        {
+            PlainMakeMove(GetMoveOfString(pMoveName)); 
+        }
+
         public void PlainMakeMove(Move pMove)
         {
             lastMadeMove = pMove;
@@ -1692,6 +1750,7 @@ namespace ChessBot
 
         public int MinimaxRoot(long pTime)
         {
+            evalCount = 0;
             searches++;
             int baseLineLen = 0;
             long tTimestamp = globalTimer.ElapsedTicks + pTime;
@@ -1720,7 +1779,7 @@ namespace ChessBot
                     if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
                     else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
                 }
-                //Console.WriteLine("Depth = " + pDepth + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations with " + (tTimestamp - globalTimer.ElapsedTicks) + " ticks left");
+                Console.WriteLine("Depth = " + pDepth + " >> " + GetThreeDigitSeperatedInteger(evalCount) + " Evaluations with " + (tTimestamp - globalTimer.ElapsedTicks) + " ticks left");
                 pDepth++; 
             } while (globalTimer.ElapsedTicks < tTimestamp);
 
@@ -2085,7 +2144,7 @@ namespace ChessBot
             {
                 moveSortingArrayIndexes[m] = m;
                 Move curMove = moveOptionList[m];
-                Console.WriteLine(curMove);
+                //Console.WriteLine(curMove);
                 //Console.WriteLine(CreateFenString());
                 if (curMove.isCapture) moveSortingArray[m] = -10;
                 else if (curMove == pvNodeMove) moveSortingArray[m] = -100;

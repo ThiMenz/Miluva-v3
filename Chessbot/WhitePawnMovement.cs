@@ -3,6 +3,25 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_WHITEPAWNMOVEMENT
+    {
+        public static List<Dictionary<ulong, List<Move>>> MOVE_PRECALCULATIONS = new List<Dictionary<ulong, List<Move>>>();
+        public static List<List<Dictionary<ulong, List<Move>>>> PIN_MOVE_PRECALCULATIONS = new List<List<Dictionary<ulong, List<Move>>>>();
+        public static ulong[] SQUARE_BITBOARDS = new ulong[64];
+        public static ulong[] OPPSQUARE_BITBOARDS = new ulong[64];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(List<Dictionary<ulong, List<Move>>> pPCM, List<List<Dictionary<ulong, List<Move>>>> pPPCM, ulong[] pOwnB, ulong[] pOppB)
+        {
+            MOVE_PRECALCULATIONS = pPCM;
+            PIN_MOVE_PRECALCULATIONS = pPPCM;
+            SQUARE_BITBOARDS = pOwnB;
+            OPPSQUARE_BITBOARDS = pOppB;
+            PRECALCULATED = true;
+        }
+    }
+
     public class WhitePawnMovement
     {
         private const int PAWN_PIECE_ID = 1;
@@ -17,7 +36,18 @@ namespace ChessBot
         {
             boardManager = bM;
 
-            Precalculate();
+            if (STATIC_WHITEPAWNMOVEMENT.PRECALCULATED)
+            {
+                squareBitboards = STATIC_WHITEPAWNMOVEMENT.SQUARE_BITBOARDS;
+                oppSquareBitboards = STATIC_WHITEPAWNMOVEMENT.OPPSQUARE_BITBOARDS;
+                movePrecalcs = STATIC_WHITEPAWNMOVEMENT.MOVE_PRECALCULATIONS;
+                pinMovePrecalcs = STATIC_WHITEPAWNMOVEMENT.PIN_MOVE_PRECALCULATIONS;
+            }
+            else
+            {
+                Precalculate();
+                STATIC_WHITEPAWNMOVEMENT.SetPrecalcs(movePrecalcs, pinMovePrecalcs, squareBitboards, oppSquareBitboards);
+            }
         }
 
         public void AddMoveOptionsToMoveList(int square, ulong whitePieceBitboard, ulong blackPieceBitboard)

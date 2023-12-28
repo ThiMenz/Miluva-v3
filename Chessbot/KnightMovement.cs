@@ -3,6 +3,25 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_KNIGHTMOVEMENT
+    {
+        public static List<Dictionary<ulong, List<Move>>> NON_CAPTURE_PRECALCULATIONS = new List<Dictionary<ulong, List<Move>>>();
+        public static List<Dictionary<ulong, List<Move>>> CAPTURES_PRECALCULATIONS = new List<Dictionary<ulong, List<Move>>>();
+        public static ulong[] KNIGHT_SQUARE_BITBOARDS = new ulong[64];
+        public static int[][] KNIGHT_SQUARE_ARRAYS = new int[64][];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(List<Dictionary<ulong, List<Move>>> pCPC, List<Dictionary<ulong, List<Move>>> pNCPC, ulong[] pKSB, int[][] pKSArrys)
+        {
+            NON_CAPTURE_PRECALCULATIONS = pNCPC;
+            CAPTURES_PRECALCULATIONS = pCPC;
+            KNIGHT_SQUARE_BITBOARDS = pKSB;
+            KNIGHT_SQUARE_ARRAYS = pKSArrys;
+            PRECALCULATED = true;
+        }
+    }
+
     public class KnightMovement
     {
         private const int KNIGHT_PIECE_ID = 2;
@@ -18,8 +37,19 @@ namespace ChessBot
         public KnightMovement(BoardManager bM)
         {
             boardManager = bM;
-            GenerateSquareBitboards();
-            Precalculate();
+            if (STATIC_KNIGHTMOVEMENT.PRECALCULATED) 
+            {
+                capturePrecalcs = STATIC_KNIGHTMOVEMENT.CAPTURES_PRECALCULATIONS;
+                nonCapturePrecalcs = STATIC_KNIGHTMOVEMENT.NON_CAPTURE_PRECALCULATIONS;
+                knightSquareBitboards = STATIC_KNIGHTMOVEMENT.KNIGHT_SQUARE_BITBOARDS;
+                knightSquareArrays = STATIC_KNIGHTMOVEMENT.KNIGHT_SQUARE_ARRAYS;
+            }
+            else 
+            { 
+                GenerateSquareBitboards();
+                Precalculate();
+                STATIC_KNIGHTMOVEMENT.SetPrecalcs(capturePrecalcs, nonCapturePrecalcs, knightSquareBitboards, knightSquareArrays);
+            }
             boardManager.SetKnightMasks(knightSquareBitboards);
         }
 

@@ -3,6 +3,21 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_BISHOPMOVEMENT
+    {
+        public static List<Dictionary<ulong, BishopPreCalcs>> PRECALCULATED_MOVES = new List<Dictionary<ulong, BishopPreCalcs>>();
+        public static ulong[] BISHOP_MASKS = new ulong[64];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(List<Dictionary<ulong, BishopPreCalcs>> pPCM, ulong[] pBM)
+        {
+            PRECALCULATED_MOVES = pPCM;
+            BISHOP_MASKS = pBM;
+            PRECALCULATED = true;
+        }
+    }
+
     public class BishopMovement
     {
         private const int BISHOP_TILE_ID = 3, QUEEN_TILE_ID = 5;
@@ -17,7 +32,18 @@ namespace ChessBot
         {
             boardManager = pBM;
             queenMovement = pQM;
-            PreCalculateMoves();
+            if (STATIC_BISHOPMOVEMENT.PRECALCULATED)
+            {
+                precalculatedMoves = STATIC_BISHOPMOVEMENT.PRECALCULATED_MOVES;
+                bishopMasks = STATIC_BISHOPMOVEMENT.BISHOP_MASKS;
+                pQM.GetStatics();
+            }
+            else
+            {
+                PreCalculateMoves();
+                STATIC_BISHOPMOVEMENT.SetPrecalcs(precalculatedMoves, bishopMasks);
+                pQM.SetStatics();
+            }
 
             //List<Move> tM = precalculatedMoves[11][ULONG_OPERATIONS.SetBitsToOne(0ul, 32, 2, 4)].classicMoves;
             //foreach(Move m in tM) Console.WriteLine(m);

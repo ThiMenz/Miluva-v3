@@ -5,6 +5,21 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace ChessBot
 {
+    public static class STATIC_ROOKMOVEMENT
+    {
+        public static List<Dictionary<ulong, RookPreCalcs>> PRECALCULATED_MOVES = new List<Dictionary<ulong, RookPreCalcs>>();
+        public static ulong[] ROOK_MASKS = new ulong[64];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(List<Dictionary<ulong, RookPreCalcs>> pPCM, ulong[] pRM)
+        {
+            PRECALCULATED_MOVES = pPCM;
+            ROOK_MASKS = pRM;
+            PRECALCULATED = true;
+        }
+    }
+
     public class RookMovement
     {
         private const int ROOK_TILE_ID = 4, QUEEN_TILE_ID = 5;
@@ -19,7 +34,16 @@ namespace ChessBot
         {
             boardManager = pBM;
             queenMovement = pQM;
-            PreCalculateMoves();
+            if (STATIC_BISHOPMOVEMENT.PRECALCULATED)
+            {
+                precalculatedMoves = STATIC_ROOKMOVEMENT.PRECALCULATED_MOVES;
+                rookMasks = STATIC_ROOKMOVEMENT.ROOK_MASKS;
+            }
+            else
+            {
+                PreCalculateMoves();
+                STATIC_ROOKMOVEMENT.SetPrecalcs(precalculatedMoves, rookMasks);
+            }
         }
 
         public void AddMoveOptionsToMoveList(int startSquare, ulong opposingSideBitboard, ulong allPieceBitboard)

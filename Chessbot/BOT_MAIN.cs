@@ -1,30 +1,144 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Timers;
 
 #pragma warning disable CS8618
 #pragma warning disable CS8602
 #pragma warning disable CS8600
+#pragma warning disable CS8622
 
 namespace ChessBot
 {
+    public static class ENGINE_VALS
+    {
+        public const int BESTMOVE_SORT_VAL = -2_000_000_000;
+        public const int CAPTURE_SORT_VAL = -1_000_000_000;
+        public const int KILLERMOVE_SORT_VAL = -1000;
+
+        public const int CPU_CORES = 16;
+        public const int PARALLEL_BOARDS = 32;
+        public const int SELF_PLAY_THINK_TIME = 120_000;
+
+        public static readonly int[,] MVVLVA_TABLE = new int[7, 7] {
+            { 0, 0, 0, 0, 0, 0, 0 },  // Nichts
+            { 0, 1500, 1400, 1300, 1200, 1100, 1000 },  // Bauern
+            { 0, 3500, 3400, 3300, 3200, 3100, 3000 },  // Springer
+            { 0, 4500, 4400, 4300, 4200, 4100, 4000 },  // Läufer
+            { 0, 5500, 5400, 5300, 5200, 5100, 5000 },  // Türme
+            { 0, 9500, 9400, 9300, 9200, 9100, 9000 },  // Dame
+            { 0, 0, 0, 0, 0, 0, 0 }}; // König
+    }
+
     public static class BOT_MAIN
     {
         public readonly static string[] FIGURE_TO_ID_LIST = new string[] { "Nichts", "Bauer", "Springer", "Läufer", "Turm", "Dame", "König" };
 
-        public static BoardManager boardManager;
+        public static bool isFirstBoardManagerInitialized = false;
+        public static BoardManager[] boardManagers = new BoardManager[ENGINE_VALS.PARALLEL_BOARDS];
+
+        public static List<string> selfPlayGameStrings = new List<string>();
+        public static int gamesPlayed = 0;
+        public static int[] gamesPlayedResultArray = new int[3];
+        public static int movesPlayed = 0;
+        public static int depthsSearched = 0;
+        public static long evaluationsMade = 0;
+        public static int searchesFinished = 0;
+        public static int goalGameCount = 32;
 
         public static void Main(string[] args)
         {
             SQUARES.Init();
+            FEN_MANAGER.Init();
+            NuCRe.Init();
             ULONG_OPERATIONS.SetUpCountingArray();
-            boardManager = new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+            for (int i = 0; i < ENGINE_VALS.PARALLEL_BOARDS; i++)
+            {
+                boardManagers[i] = new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+                Console.Write((i + 1) + ", ");
+                isFirstBoardManagerInitialized = true;
+            }
+
+            Console.WriteLine("\n\n");
+
+            MEM_SelfPlay();
+        }
+
+        private static void MEM_SelfPlay()
+        {
+            Stopwatch sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < ENGINE_VALS.CPU_CORES; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(boardManagers[i].ThreadSelfPlay)
+                );
+            }
+
+            while (gamesPlayed < goalGameCount) Thread.Sleep(1000);
+
+            sw.Stop();
+
+            Console.WriteLine("Time in ms: " + GetThreeDigitSeperatedInteger((int)sw.ElapsedMilliseconds)
+            + " | Games Played: " + gamesPlayed + " | Moves Played: " + movesPlayed + " | Depths Searched: " + depthsSearched + " | Evaluations Made: " + evaluationsMade);
+
+            double ttime = (sw.ElapsedTicks / 10_000_000d);
+            double GpS = gamesPlayed / ttime;
+            double MpS = movesPlayed / ttime;
+            double MpG = movesPlayed / (double)gamesPlayed;
+            double EpSec = evaluationsMade / ttime;
+            double EpSrch = evaluationsMade / (double)searchesFinished;
+            double DpS = depthsSearched / (double)searchesFinished;
+            double DrawPrecentage = gamesPlayedResultArray[1] * 100d / gamesPlayed;
+            double WhiteWinPrecentage = gamesPlayedResultArray[2] * 100d / gamesPlayed;
+            double BlackWinPrecentage = gamesPlayedResultArray[0] * 100d / gamesPlayed;
+
+            Console.WriteLine("\n===\n");
+            Console.WriteLine(">>> Games Per Second: " + GpS);
+            Console.WriteLine(">>> Moves Per Second: " + MpS);
+            Console.WriteLine(">>> Moves Per Game: " + MpG);
+            Console.WriteLine(">>> Depths Per Search: " + DpS);
+            Console.WriteLine(">>> Evaluations Per Second: " + EpSec);
+            Console.WriteLine(">>> Evaluations Per Search: " + EpSrch);
+            Console.WriteLine("\n===\n");
+            Console.WriteLine(">>> White Win%: " + WhiteWinPrecentage);
+            Console.WriteLine(">>> Draw%: : " + DrawPrecentage);
+            Console.WriteLine(">>> Black Win%: " + BlackWinPrecentage);
+
+            string tPath = Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            File.WriteAllLines(tPath, selfPlayGameStrings.ToArray());
+        }
+
+        private static string GetThreeDigitSeperatedInteger(int pInt)
+        {
+            string s = pInt.ToString(), r = s[0].ToString();
+            int t = s.Length % 3;
+
+            for (int i = 1; i < s.Length; i++)
+            {
+                if (i % 3 == t) r += ".";
+                r += s[i];
+            }
+
+            s = "";
+            for (int i = 0; i < r.Length; i++) s += r[i];
+
+            return s;
         }
     }
 
     public class BoardManager
     {
+        #region | VARIABLES |
+
+        private bool debugSearchDepthResults = false;
+        private bool debugSortResults = false;
+
         private RookMovement rookMovement;
         private BishopMovement bishopMovement;
         private QueenMovement queenMovement;
@@ -34,8 +148,6 @@ namespace ChessBot
         private BlackPawnMovement blackPawnMovement;
         private Rays rays;
         public List<Move> moveOptionList;
-
-        private bool debugSearchDepthResults = false;
 
         private int[] pieceTypeArray = new int[64];
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
@@ -66,76 +178,201 @@ namespace ChessBot
 
         private ulong[] curSearchZobristKeyLine; //Die History muss bis zum letzten Capture, PawnMove, der letzten Rochade gehen oder dem Spielbeginn gehen
 
-        private Move[] debugMoveList = new Move[128];
+        //private Move[] debugMoveList = new Move[128];
 
         private Stopwatch globalTimer = Stopwatch.StartNew();
         private Move lastMadeMove;
         private int depths, searches;
 
+        private Random globalRandom = new Random();
+
+        #endregion
+
         public BoardManager(string fen)
         {
-            #region | SETUP |
+            Setup(fen);
+        }
 
+        #region | SETUP |
+
+        public void Setup(string pFen)
+        {
             Stopwatch setupStopwatch = Stopwatch.StartNew();
 
-            for (int i = 0; i < 33; i++)
-                for (int j = 0; j < 14; j++)
-                    piecePositionEvals[i,j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            //for (int i = 0; i < 33; i++)
+            //    for (int j = 0; j < 14; j++)
+            //        piecePositionEvals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
             PrecalculateMultipliers();
+            GetLowNoisePositionalEvaluation(globalRandom);
             MinimaxRoot(1L); // Minimax Preloader
 
-            Console.Write("[PRECALCS] Zobrist Hashing");
+            SetupConsoleWrite("[PRECALCS] Zobrist Hashing");
             InitZobrist();
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Knight Movement");
+            SetupConsoleWrite("[PRECALCS] Knight Movement");
             knightMovement = new KnightMovement(this);
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Square Connectives");
+            SetupConsoleWrite("[PRECALCS] Square Connectives");
             SquareConnectivesPrecalculations();
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Pawn Attack Bitboards");
+            SetupConsoleWrite("[PRECALCS] Pawn Attack Bitboards");
             PawnAttackBitboards();
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Rays");
+            SetupConsoleWrite("[PRECALCS] Rays");
             rays = new Rays();
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
             queenMovement = new QueenMovement(this);
-            Console.Write("[PRECALCS] Rook Movement");
+            SetupConsoleWrite("[PRECALCS] Rook Movement");
             rookMovement = new RookMovement(this, queenMovement);
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Bishop Movement");
+            SetupConsoleWrite("[PRECALCS] Bishop Movement");
             bishopMovement = new BishopMovement(this, queenMovement);
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] King Movement");
+            SetupConsoleWrite("[PRECALCS] King Movement");
             kingMovement = new KingMovement(this);
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
 
-            Console.Write("[PRECALCS] Pawn Movement");
+            SetupConsoleWrite("[PRECALCS] Pawn Movement");
             whitePawnMovement = new WhitePawnMovement(this);
             blackPawnMovement = new BlackPawnMovement(this);
             PrecalculateEnPassantMoves();
-            Console.WriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
-            Console.WriteLine("[DONE]\n\n");
+            SetupConsoleWriteLine(" (" + setupStopwatch.ElapsedTicks / 10_000_000d + "s)");
+            SetupConsoleWriteLine("[DONE]\n\n");
 
-            LoadFenString(fen);
+            LoadFenString(pFen);
             setupStopwatch.Stop();
-
-            #endregion
-
-            PlayGameOnConsoleAgainstHuman();
         }
+
+        private void SetupConsoleWriteLine(string pStr)
+        {
+            if (BOT_MAIN.isFirstBoardManagerInitialized) return;
+            Console.WriteLine(pStr);
+        }
+
+        private void SetupConsoleWrite(string pStr)
+        {
+            if (BOT_MAIN.isFirstBoardManagerInitialized) return;
+            Console.Write(pStr);
+        }
+
+        public void GetLowNoisePositionalEvaluation(System.Random rng)
+        {
+            int[,][] digitArray = new int[3, 6][];
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 6; j++)
+                    digitArray[i, j] = GetRand64IntArray(rng, -5, 6);
+            lowNoisePositionEvals1 = GetInterpolatedProcessedValues(digitArray);
+            int[,][] digitArray2 = new int[3, 6][];
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 6; j++)
+                    digitArray2[i, j] = GetRand64IntArray(rng, -5, 6);
+            lowNoisePositionEvals2 = GetInterpolatedProcessedValues(digitArray2);
+        }
+
+        private int[] GetRand64IntArray(System.Random rng, int pMin, int pMax)
+        {
+            return new int[64] {
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax),
+                rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax), rng.Next(pMin, pMax)
+            };
+        }
+
+        private string GetAIArrayValuesStringRepresentation(int[,][] pArr)
+        {
+            string r = "int[,][] ReLe_AI_RESULT_VALS = new int[3, 6][] {";
+
+            for (int i = 0; i < 3; i++)
+            {
+                r += "{";
+                for (int j = 0; j < 5; j++)
+                {
+                    r += GetIntArray64LStringRepresentation(pArr[i, j]) + ",";
+                }
+                r += GetIntArray64LStringRepresentation(pArr[i, 5]) + "},";
+            }
+
+            return r.Substring(0, r.Length - 1) + "};";
+        }
+
+        private string GetIntArray64LStringRepresentation(int[] p64LArr)
+        {
+            if (p64LArr == null) return "";
+            string r = "new int[64]{";
+            for (int i = 0; i < 63; i++)
+            {
+                r += p64LArr[i] + ",";
+            }
+            return r + p64LArr[63] + "}";
+        }
+
+        #endregion
 
         #region | PLAYING |
 
-        private void PlayGameOnConsoleAgainstHuman(string pStartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", bool pHumanPlaysWhite = true, long tickLimitForEngine = 10_000_000L)
+        private string[] gameResultStrings = new string[5]
+        {
+            "Black Has Won!",
+            "Draw!",
+            "White Has Won!",
+            "Non Existant Result!",
+            "Game is Ongoing!"
+        };
+        private int[,][] lowNoisePositionEvals1, lowNoisePositionEvals2;
+
+        public void ThreadSelfPlay(object obj)
+        {
+            try {
+                PlayGameAgainstItself(obj);
+            } catch(Exception tE) {
+                Console.WriteLine(tE.ToString());
+            }
+        }
+
+        public void PlayGameAgainstItself(object obj, string pStartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", long tickLimitForEngine = ENGINE_VALS.SELF_PLAY_THINK_TIME)
+        {
+            int ttGState; // Aktuell nicht wirklich benötigt, trotzdem manchmal gut nutzbar
+            while (BOT_MAIN.goalGameCount > BOT_MAIN.gamesPlayed) {
+                string tGameStr;
+                LoadFenString(tGameStr = FEN_MANAGER.GetRandomStartFEN());
+                tGameStr += ";";
+                int tGState = 3, tmc = 0;
+                bool lowNoiceDecider = globalRandom.NextDouble() < 0.5d;
+                while (tGState == 3)
+                {
+                    piecePositionEvals = lowNoiceDecider ? lowNoisePositionEvals1 : lowNoisePositionEvals2;
+                    MinimaxRoot(tickLimitForEngine);
+                    Move tM = transpositionTable[zobristKey].bestMove;
+                    PlainMakeMove(tM);
+                    tGameStr += NuCRe.GetNuCRe(tM.moveHash) + ",";
+                    BOT_MAIN.movesPlayed++;
+                    tGState = GameState(isWhiteToMove);
+                    lowNoiceDecider = !lowNoiceDecider;
+                    tmc++;
+                }
+                ttGState = tGState;
+                tGameStr += ttGState + 1;
+                Console.WriteLine(tGameStr);
+                BOT_MAIN.gamesPlayedResultArray[ttGState + 1]++;
+                BOT_MAIN.gamesPlayed++;
+                BOT_MAIN.selfPlayGameStrings.Add(tGameStr);
+            }
+        }
+
+        public void PlayGameOnConsoleAgainstHuman(string pStartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", bool pHumanPlaysWhite = true, long tickLimitForEngine = 10_000_000L)
         {
             debugSearchDepthResults = true; 
 
@@ -1094,12 +1331,23 @@ namespace ChessBot
 
         public Move GetMoveOfString(string pMove)
         {
+            int tSP, tEP;
+
             string[] tSpl = pMove.Split(',');
 
-            int tSP = Convert.ToInt32(tSpl[0]), tEP = Convert.ToInt32(tSpl[1]), tPT = pieceTypeArray[tSP];
+            if (Char.IsNumber(pMove[0]))
+            {
+                tSP = Convert.ToInt32(tSpl[0]);
+                tEP = Convert.ToInt32(tSpl[1]);
+            }
+            else
+            {
+                tSP = SQUARES.NumberNotation(tSpl[0]);
+                tEP = SQUARES.NumberNotation(tSpl[1]);
+            }
+                
+            int tPT = pieceTypeArray[tSP];
             bool tIC = ULONG_OPERATIONS.IsBitOne(allPieceBitboard, tEP), tIEP = enPassantSquare == tEP && tPT == 1;
-
-            Console.WriteLine(tPT);
 
             if (tSpl.Length == 3) return new Move(tSP, tEP, tPT, Convert.ToInt32(tSpl[2]), tIC);
             if (tIEP) return new Move(true, tSP, tEP, isWhiteToMove ? tEP - 8 : tEP + 8);
@@ -1513,7 +1761,7 @@ namespace ChessBot
             curSearchZobristKeyLine = u;
         }
 
-        public void WhiteUndoMove(Move pMove)
+        public void WhiteUndoMove(Move pMove) // MISSING 
         {
             //int tEndPos = pMove.endPos, tStartPos = pMove.startPos, tPieceType = pMove.pieceType, tPTI = pieceTypeArray[tEndPos];
             //
@@ -1722,15 +1970,22 @@ namespace ChessBot
             //        pieceTypeArray[tStartPos] = 1;
             //        break;
             //}
-        }
+        } 
 
         #endregion
 
         #region | MINIMAX FUNCTIONS |
 
         private const int WHITE_CHECKMATE_VAL = 100000, BLACK_CHECKMATE_VAL = -100000, CHECK_EXTENSION_LENGTH = -12, MAX_QUIESCENCE_TOTAL_LENGTH = -32;
+
+        private const int CAPTURE_SORT_VAL = ENGINE_VALS.CAPTURE_SORT_VAL;
+        private const int BESTMOVE_SORT_VAL = ENGINE_VALS.BESTMOVE_SORT_VAL;
+        private const int KILLERMOVE_SORT_VAL = ENGINE_VALS.KILLERMOVE_SORT_VAL;
+        private readonly int[,] MVVLVA_TABLE = ENGINE_VALS.MVVLVA_TABLE;
+
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
-        //private int curSearchDepth = 0, curSubSearchDepth = -1;
+
+        private int curSearchDepth = 0, curSubSearchDepth = -1;
 
         public int MinimaxRoot(long pTime)
         {
@@ -1738,6 +1993,8 @@ namespace ChessBot
             searches++;
             int baseLineLen = 0;
             long tTimestamp = globalTimer.ElapsedTicks + pTime;
+
+            ClearHeuristics();
 
             ulong[] tZobristKeyLine = Array.Empty<ulong>();
             if (curSearchZobristKeyLine != null) {
@@ -1749,33 +2006,35 @@ namespace ChessBot
             int perftScore, tattk = (isWhiteToMove) ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
 
             do {
-                //curSearchDepth = pDepth;
-                //curSubSearchDepth = pDepth - 1;
+                curSearchDepth = pDepth;
+                curSubSearchDepth = pDepth - 1;
                 ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth - CHECK_EXTENSION_LENGTH + 1];
                 for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
                 curSearchZobristKeyLine = completeZobristHistory;
 
                 if (isWhiteToMove)
                 {
-                    if (tattk == -1) perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
-                    else perftScore = MinimaxWhite(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
+                    if (tattk == -1) perftScore = MinimaxWhite(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
+                    else perftScore = MinimaxWhite(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
                 }
                 else
                 {
-                    if (tattk == -1) perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
-                    else perftScore = MinimaxBlack(BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
+                    if (tattk == -1) perftScore = MinimaxBlack(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
+                    else perftScore = MinimaxBlack(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
                 }
 
-                if (debugSearchDepthResults)
+                if (debugSearchDepthResults && pTime != 1L)
                 {
                     int tNpS = Convert.ToInt32((double)evalCount * 10_000_000d / (double)(pTime - tTimestamp + globalTimer.ElapsedTicks));
                     int tSearchEval = perftScore;
+                    int timeForSearchSoFar = (int)((pTime - tTimestamp + globalTimer.ElapsedTicks) / 10000d);
                     Move tBestMove = transpositionTable[zobristKey].bestMove;
 
                     Console.Write((tSearchEval >= 0 ? "+" : "") + tSearchEval);
                     Console.Write(" " + tBestMove + "  [");
                     Console.Write("Depth = " + pDepth + ", ");
                     Console.Write("Evals = " + GetThreeDigitSeperatedInteger(evalCount) + ", ");
+                    Console.Write("Time = " + GetThreeDigitSeperatedInteger(timeForSearchSoFar) + "ms, ");
                     Console.WriteLine("NpS = " + GetThreeDigitSeperatedInteger(tNpS) + "]");
                 }
 
@@ -1783,16 +2042,19 @@ namespace ChessBot
             } while (globalTimer.ElapsedTicks < tTimestamp);
 
             depths += pDepth - 1;
+            BOT_MAIN.depthsSearched += pDepth - 1;
+            BOT_MAIN.searchesFinished++;
+            BOT_MAIN.evaluationsMade += evalCount;
 
             curSearchZobristKeyLine = tZobristKeyLine;
 
             return perftScore;
         }
 
-        private int MinimaxWhite(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove)
+        private int MinimaxWhite(int pPly, int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove)
         {
             if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
-            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return QuiescenceWhite(pAlpha, pBeta, pDepth - 1, pCheckingSquare, pLastMove);
+            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return QuiescenceWhite(pPly, pAlpha, pBeta, pDepth - 1, pCheckingSquare, pLastMove);
 
             #region NodePrep()
 
@@ -1819,7 +2081,11 @@ namespace ChessBot
                 for (int m = 0; m < molc; m++)
                 {
                     moveSortingArrayIndexes[m] = m;
-                    if (moveOptionList[m].isCapture) moveSortingArray[m] = -100;
+                    Move curMove = moveOptionList[m];
+                    if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    //moveSortingArray[m] = 
                 }
             }
             else
@@ -1828,10 +2094,11 @@ namespace ChessBot
                 {
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
-                    if (curMove == transposEntry.bestMove) moveSortingArray[m] = -1000000;
-                    else if (curMove.isCapture) moveSortingArray[m] = -1000;
-
-                    moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
+                    if (curMove == transposEntry.bestMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
+                    else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    if (transposEntry.moveGenOrderedEvalLength > m) moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
 
@@ -1843,6 +2110,11 @@ namespace ChessBot
             {
                 int tActualIndex = moveSortingArrayIndexes[m];
                 Move curMove = moveOptionList[tActualIndex];
+
+                if (debugSortResults && pDepth == curSubSearchDepth)
+                {
+                    Console.WriteLine(moveSortingArray[m] + " | " + curMove);
+                }
 
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
@@ -2068,7 +2340,7 @@ namespace ChessBot
 
                 //debugMoveList[pDepth + 100] = curMove;
 
-                int tEval = MinimaxBlack(pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                int tEval = MinimaxBlack(pPly + 1, pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos, curMove);
                 thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
 
                 //if (curSearchDepth == pDepth) Console.WriteLine(tEval + " >> " + curMove);
@@ -2119,6 +2391,12 @@ namespace ChessBot
                 if (pAlpha < curEval) pAlpha = curEval;
                 if (curEval >= pBeta)
                 {
+                    if (!curMove.isCapture)
+                    {
+                        killerMoveHeuristic[curMove.moveHash] = true;
+                        if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
+                    }
+                    //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] += KILLERMOVE_SORT_VAL;
                     //if (pDepth >= curSubSearchDepth) Console.WriteLine("* Beta Cutoff");
                     break;
                 }
@@ -2139,7 +2417,7 @@ namespace ChessBot
             return curEval;
         }
 
-        private int QuiescenceWhite(int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove)
+        private int QuiescenceWhite(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove)
         {
             int standPat = Evaluate();
             if (standPat >= pBeta || pDepth < MAX_QUIESCENCE_TOTAL_LENGTH) return pBeta;
@@ -2328,7 +2606,7 @@ namespace ChessBot
 
                 //debugMoveList[pDepth + 100] = curMove;
 
-                int tEval = QuiescenceBlack(pAlpha, pBeta, pDepth - 1, tCheckPos, curMove);
+                int tEval = QuiescenceBlack(pPly + 1, pAlpha, pBeta, pDepth - 1, tCheckPos, curMove);
 
                 #region UndoMove()
 
@@ -2367,10 +2645,10 @@ namespace ChessBot
             return pAlpha;
         }
 
-        private int MinimaxBlack(int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove)
+        private int MinimaxBlack(int pPly, int pAlpha, int pBeta, int pDepth, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove)
         {
             if (IsDrawByRepetition(pRepetitionHistoryPly - 4)) return 0;
-            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return QuiescenceBlack(pAlpha, pBeta, pDepth - 1, pCheckingSquare, pLastMove);
+            if ((pDepth <= 0 && pCheckingSquare == -1) || pDepth < CHECK_EXTENSION_LENGTH) return QuiescenceBlack(pPly, pAlpha, pBeta, pDepth - 1, pCheckingSquare, pLastMove);
 
             #region NodePrep()
 
@@ -2397,7 +2675,11 @@ namespace ChessBot
                 for (int m = 0; m < molc; m++)
                 {
                     moveSortingArrayIndexes[m] = m;
-                    if (moveOptionList[m].isCapture) moveSortingArray[m] = -100;
+                    Move curMove = moveOptionList[m];
+                    if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    //moveSortingArray[m] = 
                 }
             }
             else
@@ -2406,10 +2688,11 @@ namespace ChessBot
                 {
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
-                    if (curMove == transposEntry.bestMove) moveSortingArray[m] = -1000000;
-                    else if (curMove.isCapture) moveSortingArray[m] = -1000;
-
-                    moveSortingArray[m] += transposEntry.moveGenOrderedEvals[m];
+                    if (curMove == transposEntry.bestMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
+                    else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    if (transposEntry.moveGenOrderedEvalLength > m) moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
 
@@ -2421,6 +2704,11 @@ namespace ChessBot
             {
                 int tActualIndex = moveSortingArrayIndexes[m];
                 Move curMove = moveOptionList[tActualIndex];
+
+                if (debugSortResults && pDepth == curSearchDepth)
+                {
+                    Console.WriteLine("=== " + moveSortingArray[m] + " | " + curMove);
+                }
 
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
@@ -2647,7 +2935,7 @@ namespace ChessBot
 
                 //debugMoveList[pDepth + 100] = curMove;
 
-                int tEval = MinimaxWhite(pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                int tEval = MinimaxWhite(pPly + 1, pAlpha, pBeta, pDepth - 1, pRepetitionHistoryPly + 1, tCheckPos, curMove);
                 thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
 
                 //if (curSearchDepth == pDepth) Console.WriteLine("=== " + tEval + " >> " + curMove);
@@ -2698,6 +2986,13 @@ namespace ChessBot
                 if (pBeta > curEval) pBeta = curEval;
                 if (curEval <= pAlpha)
                 {
+                    if (!curMove.isCapture)
+                    {
+                        killerMoveHeuristic[curMove.moveHash] = true;
+                        if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
+                    }
+                    //if (pDepth > 0) historyHeuristic[lastMadeMove.moveHash] += pDepth * pDepth;
+                    //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] += KILLERMOVE_SORT_VAL;
                     //if (pDepth >= curSubSearchDepth) Console.WriteLine("* Alpha Cutoff");
                     break;
                 }
@@ -2718,7 +3013,7 @@ namespace ChessBot
             return curEval;
         }
 
-        private int QuiescenceBlack(int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove)
+        private int QuiescenceBlack(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove)
         {
             int standPat = Evaluate();
             if (standPat <= pAlpha || pDepth < MAX_QUIESCENCE_TOTAL_LENGTH) return pAlpha;
@@ -2907,7 +3202,7 @@ namespace ChessBot
 
                 //debugMoveList[pDepth + 100] = curMove;
 
-                int tEval = QuiescenceWhite(pAlpha, pBeta, pDepth - 1, tCheckPos, curMove);
+                int tEval = QuiescenceWhite(pPly + 1, pAlpha, pBeta, pDepth - 1, tCheckPos, curMove);
 
                 #region UndoMove()
 
@@ -2948,12 +3243,28 @@ namespace ChessBot
 
         #endregion
 
+        #region | HEURISTICS |
+
+        private bool[] killerMoveHeuristic = new bool[262_144];
+        private int[] historyHeuristic = new int[262_144];
+
+        public void ClearHeuristics()
+        {
+            for (int i = 0; i < 262_144; i++)
+            {
+                killerMoveHeuristic[i] = false;
+                historyHeuristic[i] = 0;
+            }
+        }
+
+        #endregion
+
         #region | EVALUATION |
 
         private Dictionary<ulong, TranspositionEntry> transpositionTable = new Dictionary<ulong, TranspositionEntry>();
 
         private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
-        private int[,,] pawnPositionTable = new int[32, 6, 64];
+        //private int[,,] pawnPositionTable = new int[32, 6, 64];
         private int[,][] piecePositionEvals = new int[33, 14][];
 
         private int evalCount = 0;
@@ -2967,8 +3278,7 @@ namespace ChessBot
 
             for (int p = 0; p < 64; p++)
             {
-                tEval += pieceEvals[tPT = (pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1))]
-                    + piecePositionEvals[pieceCount, tPT][p];
+                tEval += pieceEvals[tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)] + piecePositionEvals[pieceCount, tPT][p];
             }
 
             return tEval;
@@ -3078,6 +3388,7 @@ namespace ChessBot
                 earlyGameMultipliers[i] = MultiplierFunction(i, 32d);
                 middleGameMultipliers[i] = MultiplierFunction(i, 16d);
                 lateGameMultipliers[i] = MultiplierFunction(i, 0d);
+                //Console.WriteLine(earlyGameMultipliers[i] + " | " + middleGameMultipliers[i] + " | " + lateGameMultipliers[i]);
             }
         }
 
@@ -3309,7 +3620,7 @@ namespace ChessBot
         private ulong[] enPassantSquareHashes = new ulong[66];
         private void InitZobrist()
         {
-            Random rng = new Random(2344);
+            Random rng = new Random(31415926);
             for (int sq = 0; sq < 64; sq++)
             {
                 enPassantSquareHashes[sq] = ULONG_OPERATIONS.GetRandomULONG(rng);
@@ -3911,17 +4222,88 @@ namespace ChessBot
 
     #endregion
 
+    #region | TLM_NuCRe |
+
+    public static class NuCRe
+    {
+        private static char[] NuCReChars = new char[256];
+        private static int[] NuCReInts = new int[375];
+
+        public static void Init()
+        {
+            for (int i = 33; i < 127; i++) NuCReChars[i - 33] = (char)i;
+            for (int i = 161; i < 323; i++) NuCReChars[i - 67] = (char)i;
+            NuCReChars[239] = 'œ';
+            NuCReChars[240] = 'Ŝ';
+            NuCReChars[245] = 'Ř';
+            NuCReChars[252] = 'Ŵ';
+            NuCReChars[253] = 'Ŷ';
+
+            int a = 0;
+            foreach (char c in NuCReChars) {
+                NuCReInts[c] = a;
+                a++;
+            }
+        }
+
+        public static int GetNumber(string pNuCReString)
+        {
+            int rV = 0;
+            for (int i = 0; i < 4 && i < pNuCReString.Length; i++) rV |= NuCReInts[pNuCReString[i]] << (i * 8);
+            return rV;
+        }
+
+        public static string GetNuCRe(int pNum)
+        {
+            if (pNum > -1)
+            {
+                if (pNum < 256) return "" + NuCReChars[pNum & 0xFF];
+                else if (pNum < 65536) return "" + NuCReChars[pNum & 0xFF] + NuCReChars[pNum >> 8 & 0xFF];
+                else if (pNum < 16777216) return "" + NuCReChars[pNum & 0xFF] + NuCReChars[pNum >> 8 & 0xFF] + NuCReChars[pNum >> 16 & 0xFF];
+                return "" + NuCReChars[pNum & 0xFF] + NuCReChars[pNum >> 8 & 0xFF] + NuCReChars[pNum >> 16 & 0xFF] + NuCReChars[pNum >> 32 & 0xFF];
+            }
+            return " ";
+        }
+    }
+
+    #endregion
+
+    #region | FENS |
+
+    public static class FEN_MANAGER
+    {
+        private static string[] fens;
+        private static Random fenRandom = new Random();
+
+        public static void Init()
+        {
+            //C: \Users\tpmen\Desktop\4 - Programming\41 - Unity & C#\MiluvaV3\Miluva-v3\Chessbot\FENS.txt \bin\Debug\net6.0
+            string tPath = Path.GetFullPath("FENS.txt").Replace(@"\\bin\\Debug\\net6.0", "");
+            tPath = tPath.Replace(@"\bin\Debug\net6.0", "");
+            fens = File.ReadAllLines(tPath);
+        }
+
+        public static string GetRandomStartFEN()
+        {
+            return fens[fenRandom.Next(0, fens.Length)];
+        }
+    }
+
+    #endregion
+
     #region | DATA CLASSES |
 
     public class TranspositionEntry
     {
         public Move bestMove;
         public int[] moveGenOrderedEvals;
+        public int moveGenOrderedEvalLength;
 
         public TranspositionEntry(Move pBestMove, int[] pMoveGenOrderedEvals)
         {
             bestMove = pBestMove;
             moveGenOrderedEvals = pMoveGenOrderedEvals;
+            moveGenOrderedEvalLength = moveGenOrderedEvals.Length;
         }
     }
 
@@ -3935,6 +4317,8 @@ namespace ChessBot
         public int enPassantOption { get; private set; } = 65;
         public int promotionType { get; private set; } = 0;
         public int moveTypeID { get; private set; } = 0;
+        public int moveHash { get; private set; }
+        public int MVVLVA_value { get; private set; } = 0;
         public bool isCapture { get; private set; } = false;
         public bool isSliderMove { get; private set; }
         public bool isEnPassant { get; private set; } = false;
@@ -3971,7 +4355,9 @@ namespace ChessBot
             ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(0ul, startPos), endPos);
             if (isRochade) ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(ownPieceBitboardXOR, rochadeEndPos), rochadeStartPos);
 
-            switch(pieceType) {
+            moveHash = startPos | (endPos << 6) | (pieceType << 12) | (promotionType << 15);
+
+            switch (pieceType) {
                 case 1:
                     if (isPromotion) moveTypeID = isCapture ? 14 : 13;
                     else if (isEnPassant) moveTypeID = 12;

@@ -3,6 +3,21 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_KINGMOVEMENT
+    {
+        public static Dictionary<ulong, Dictionary<ulong, List<Move>>>[] PRECALCULATED_MOVES = new Dictionary<ulong, Dictionary<ulong, List<Move>>>[64];
+        public static ulong[] KING_MASKS = new ulong[64];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(Dictionary<ulong, Dictionary<ulong, List<Move>>>[] pPCM, ulong[] pKM)
+        {
+            PRECALCULATED_MOVES = pPCM;
+            KING_MASKS = pKM;
+            PRECALCULATED = true;
+        }
+    }
+
     public class KingMovement
     {
         private static int KING_PIECE_ID = 6;
@@ -28,7 +43,17 @@ namespace ChessBot
         public KingMovement(BoardManager pBoardManager)
         {
             boardManager = pBoardManager;
-            for (int i = 0; i < 64; i++) SingleSquarePrecalculations(i);
+
+            if (STATIC_KINGMOVEMENT.PRECALCULATED)
+            {
+                preCalcMoves = STATIC_KINGMOVEMENT.PRECALCULATED_MOVES;
+                kingMasks = STATIC_KINGMOVEMENT.KING_MASKS;
+            }
+            else
+            {
+                for (int i = 0; i < 64; i++) SingleSquarePrecalculations(i);
+                STATIC_KINGMOVEMENT.SetPrecalcs(preCalcMoves, kingMasks);
+            }
             boardManager.SetKingMasks(kingMasks);
         }
 

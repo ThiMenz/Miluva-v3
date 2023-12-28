@@ -3,6 +3,25 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_QUEENMOVEMENT
+    {
+        public static List<Dictionary<ulong, BishopPreCalcs>> PRECALCULATED_MOVES_DIAGONAL = new List<Dictionary<ulong, BishopPreCalcs>>();
+        public static List<Dictionary<ulong, RookPreCalcs>> PRECALCULATED_MOVES_STRAIGHT = new List<Dictionary<ulong, RookPreCalcs>>();
+        public static ulong[] DIAGONAL_MASKS = new ulong[64];
+        public static ulong[] STRAIGHT_MASKS = new ulong[64];
+
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(List<Dictionary<ulong, BishopPreCalcs>> pPCM, List<Dictionary<ulong, RookPreCalcs>> pPCM2, ulong[] pBM, ulong[] pRM)
+        {
+            PRECALCULATED_MOVES_STRAIGHT = pPCM2;
+            STRAIGHT_MASKS = pRM;
+            PRECALCULATED_MOVES_DIAGONAL = pPCM;
+            DIAGONAL_MASKS = pBM;
+            PRECALCULATED = true;
+        }
+    }
+
     public class QueenMovement
     {
         private BoardManager boardManager;
@@ -25,6 +44,22 @@ namespace ChessBot
                 precalculatedMovesDiagonal.Add(new Dictionary<ulong, BishopPreCalcs>());
                 precalculatedMovesStraigth.Add(new Dictionary<ulong, RookPreCalcs>());
             }
+        }
+
+        public void SetStatics()
+        {
+            STATIC_QUEENMOVEMENT.DIAGONAL_MASKS = diagonalMasks;
+            STATIC_QUEENMOVEMENT.STRAIGHT_MASKS = straightMasks;
+            STATIC_QUEENMOVEMENT.PRECALCULATED_MOVES_DIAGONAL = precalculatedMovesDiagonal; 
+            STATIC_QUEENMOVEMENT.PRECALCULATED_MOVES_STRAIGHT = precalculatedMovesStraigth;
+        }
+
+        public void GetStatics()
+        {
+            diagonalMasks = STATIC_QUEENMOVEMENT.DIAGONAL_MASKS;
+            straightMasks = STATIC_QUEENMOVEMENT.STRAIGHT_MASKS;
+            precalculatedMovesDiagonal = STATIC_QUEENMOVEMENT.PRECALCULATED_MOVES_DIAGONAL;
+            precalculatedMovesStraigth = STATIC_QUEENMOVEMENT.PRECALCULATED_MOVES_STRAIGHT;
         }
 
         public void ClearTempDictDiagonal() { tempDiaPreCalcDict.Clear(); }

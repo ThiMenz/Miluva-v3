@@ -3,34 +3,75 @@ using System.Collections.Generic;
 
 namespace ChessBot
 {
+    public static class STATIC_RAYS
+    {
+        public static Rays? RAY_INSTANCE;
+        public static bool PRECALCULATED = false;
+
+        public static void SetPrecalcs(Rays pRI)
+        {
+            RAY_INSTANCE = pRI;
+            PRECALCULATED = true;
+        }
+
+        public static Rays? GetPrecalcs()
+        {
+            return RAY_INSTANCE;
+        }
+    }
+
     public class Rays
     {
-        private List<int>[] straightLRRayLists = new List<int>[64], straightTBRayLists = new List<int>[64], diagonalLBRayLists = new List<int>[64], diagonalRBRayLists = new List<int>[64];
-        private ulong[] straightLRRays = new ulong[64], straightTBRays = new ulong[64], diagonalLBRays = new ulong[64], diagonalRBRays = new ulong[64];
-        private int[] diagonalLBRayLengths = new int[64], diagonalRBRayLengths = new int[64];
+        public List<int>[] straightLRRayLists = new List<int>[64], straightTBRayLists = new List<int>[64], diagonalLBRayLists = new List<int>[64], diagonalRBRayLists = new List<int>[64];
+        public ulong[] straightLRRays = new ulong[64], straightTBRays = new ulong[64], diagonalLBRays = new ulong[64], diagonalRBRays = new ulong[64];
+        public int[] diagonalLBRayLengths = new int[64], diagonalRBRayLengths = new int[64];
 
         private ushort[] combinationCount = new ushort[8] { 0, 0b1, 0b11, 0b111, 0b1111, 0b11111, 0b111111, 0b1111111 };
 
-        private Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictLB = new Dictionary<ulong, RayPrecalcs>[64, 64];
-        private Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictRB = new Dictionary<ulong, RayPrecalcs>[64, 64];
-        private Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictLR = new Dictionary<ulong, RayPrecalcs>[64, 64];
-        private Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictTB = new Dictionary<ulong, RayPrecalcs>[64, 64];
+        public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictLB = new Dictionary<ulong, RayPrecalcs>[64, 64];
+        public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictRB = new Dictionary<ulong, RayPrecalcs>[64, 64];
+        public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictLR = new Dictionary<ulong, RayPrecalcs>[64, 64];
+        public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictTB = new Dictionary<ulong, RayPrecalcs>[64, 64];
 
         public Rays()
         {
-            for (int sq = 0; sq < 64; sq++) 
+            if (STATIC_RAYS.PRECALCULATED)
             {
-                for (int k = 0; k < 64; k++)
+                Rays? tR = STATIC_RAYS.GetPrecalcs();
+                if (tR != null)
                 {
-                    rayPrecalcDictLB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
-                    rayPrecalcDictRB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
-                    rayPrecalcDictLR[sq, k] = new Dictionary<ulong, RayPrecalcs>();
-                    rayPrecalcDictTB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
+                    straightLRRayLists = tR.straightLRRayLists;
+                    straightTBRayLists = tR.straightTBRayLists;
+                    diagonalLBRayLists = tR.diagonalLBRayLists;
+                    diagonalRBRayLists = tR.diagonalRBRayLists;
+                    straightLRRays = tR.straightLRRays;
+                    straightTBRays = tR.straightTBRays;
+                    diagonalLBRays = tR.diagonalLBRays;
+                    diagonalRBRays = tR.diagonalRBRays;
+                    rayPrecalcDictLB = tR.rayPrecalcDictLB;
+                    rayPrecalcDictRB = tR.rayPrecalcDictRB;
+                    rayPrecalcDictLR = tR.rayPrecalcDictLR;
+                    rayPrecalcDictTB = tR.rayPrecalcDictTB;
+                    diagonalLBRayLengths = tR.diagonalLBRayLengths;
+                    diagonalRBRayLengths = tR.diagonalRBRayLengths;
                 }
-            } 
-            PrecalculateAllRayBitboards(); 
-            PrecalculateAllRays();
-
+            }
+            else 
+            { 
+                for (int sq = 0; sq < 64; sq++)
+                {
+                    for (int k = 0; k < 64; k++)
+                    {
+                        rayPrecalcDictLB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
+                        rayPrecalcDictRB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
+                        rayPrecalcDictLR[sq, k] = new Dictionary<ulong, RayPrecalcs>();
+                        rayPrecalcDictTB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
+                    }
+                }
+                PrecalculateAllRayBitboards();
+                PrecalculateAllRays();
+                STATIC_RAYS.SetPrecalcs(this);
+            }
             //ulong tu = 0ul;
             //tu = ULONG_OPERATIONS.SetBitsToOne(tu, 5, 7);
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tu));

@@ -48,7 +48,7 @@ namespace ChessBot
         public static int depthsSearched = 0;
         public static long evaluationsMade = 0;
         public static int searchesFinished = 0;
-        public static int goalGameCount = 32;
+        public static int goalGameCount = 1_000;
 
         public static void Main(string[] args)
         {
@@ -57,16 +57,24 @@ namespace ChessBot
             NuCRe.Init();
             ULONG_OPERATIONS.SetUpCountingArray();
 
+            SetupParallelBoards();
+
+            //boardManagers[7].TempStuff();
+            //CGFF.InterpretateLine(File.ReadAllLines(Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", ""))[0]);
+            //CGFF.InterpretateLine("r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/1BPQPN2/P4PPP/R4RK1 w - - 2 15;Ñ8,ù:,tq,KI,2W,[[,Èa,ĥ7,ĘG,ëW,58,·|,ÞK,ľc,n6,°v,KN,Á²,ąa,Øt,0");
+            //SetupParallelBoards();
+            MEM_SelfPlay();
+        }
+
+        private static void SetupParallelBoards()
+        {
             for (int i = 0; i < ENGINE_VALS.PARALLEL_BOARDS; i++)
             {
                 boardManagers[i] = new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
                 Console.Write((i + 1) + ", ");
                 isFirstBoardManagerInitialized = true;
             }
-
             Console.WriteLine("\n\n");
-
-            MEM_SelfPlay();
         }
 
         private static void MEM_SelfPlay()
@@ -84,7 +92,9 @@ namespace ChessBot
 
             sw.Stop();
 
-            Console.WriteLine("Time in ms: " + GetThreeDigitSeperatedInteger((int)sw.ElapsedMilliseconds)
+            string tSave;
+
+            Console.WriteLine(tSave = "Time in ms: " + GetThreeDigitSeperatedInteger((int)sw.ElapsedMilliseconds) + " | Time Constraint: " + ENGINE_VALS.SELF_PLAY_THINK_TIME
             + " | Games Played: " + gamesPlayed + " | Moves Played: " + movesPlayed + " | Depths Searched: " + depthsSearched + " | Evaluations Made: " + evaluationsMade);
 
             double ttime = (sw.ElapsedTicks / 10_000_000d);
@@ -99,19 +109,29 @@ namespace ChessBot
             double BlackWinPrecentage = gamesPlayedResultArray[0] * 100d / gamesPlayed;
 
             Console.WriteLine("\n===\n");
-            Console.WriteLine(">>> Games Per Second: " + GpS);
-            Console.WriteLine(">>> Moves Per Second: " + MpS);
-            Console.WriteLine(">>> Moves Per Game: " + MpG);
-            Console.WriteLine(">>> Depths Per Search: " + DpS);
-            Console.WriteLine(">>> Evaluations Per Second: " + EpSec);
-            Console.WriteLine(">>> Evaluations Per Search: " + EpSrch);
+            tSave += " | Games Per Second: " + GpS;
+            Console.WriteLine("| Games Per Second: " + GpS);
+            tSave += " | Moves Per Second: " + MpS;
+            Console.WriteLine("| Moves Per Second: " + MpS);
+            tSave += " | Moves Per Game: " + MpG;
+            Console.WriteLine("| Moves Per Game: " + MpG);
+            tSave += " | Depths Per Search: " + DpS;
+            Console.WriteLine("| Depths Per Search: " + DpS);
+            tSave += " | Evaluations Per Second: " + EpSec;
+            Console.WriteLine("| Evaluations Per Second: " + EpSec);
+            tSave += " | Evaluations Per Search: " + EpSrch;
+            Console.WriteLine("| Evaluations Per Search: " + EpSrch);
             Console.WriteLine("\n===\n");
-            Console.WriteLine(">>> White Win%: " + WhiteWinPrecentage);
-            Console.WriteLine(">>> Draw%: : " + DrawPrecentage);
-            Console.WriteLine(">>> Black Win%: " + BlackWinPrecentage);
+            tSave += " | White Win%: " + WhiteWinPrecentage;
+            Console.WriteLine("| White Win%: " + WhiteWinPrecentage);
+            tSave += " | Draw%: : " + DrawPrecentage;
+            Console.WriteLine("| Draw%: : " + DrawPrecentage);
+            tSave += " | Black Win%: " + BlackWinPrecentage;
+            Console.WriteLine("| Black Win%: " + BlackWinPrecentage);
 
             string tPath = Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
-            File.WriteAllLines(tPath, selfPlayGameStrings.ToArray());
+            selfPlayGameStrings.Add(tSave);
+            File.AppendAllLines(tPath, selfPlayGameStrings.ToArray());
         }
 
         private static string GetThreeDigitSeperatedInteger(int pInt)
@@ -199,9 +219,9 @@ namespace ChessBot
         {
             Stopwatch setupStopwatch = Stopwatch.StartNew();
 
-            //for (int i = 0; i < 33; i++)
-            //    for (int j = 0; j < 14; j++)
-            //        piecePositionEvals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            for (int i = 0; i < 33; i++)
+                for (int j = 0; j < 14; j++)
+                    piecePositionEvals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
             PrecalculateMultipliers();
             GetLowNoisePositionalEvaluation(globalRandom);
@@ -322,6 +342,13 @@ namespace ChessBot
         #endregion
 
         #region | PLAYING |
+
+        public void TempStuff()
+        {
+            LoadFenString("r2q1rk1/1p1n1ppp/p3p3/3pP3/Pb1P2b1/3B1N2/1P2QPPP/R1B2RK1 b - - 1 14");
+            debugSearchDepthResults = true;
+            MinimaxRoot(30_000_000L);
+        }
 
         private string[] gameResultStrings = new string[5]
         {
@@ -1995,6 +2022,7 @@ namespace ChessBot
             long tTimestamp = globalTimer.ElapsedTicks + pTime;
 
             ClearHeuristics();
+            transpositionTable.Clear();
 
             ulong[] tZobristKeyLine = Array.Empty<ulong>();
             if (curSearchZobristKeyLine != null) {
@@ -3022,6 +3050,7 @@ namespace ChessBot
             #region NodePrep()
 
             List<Move> moveOptionList = new List<Move>();
+
             if (pLastMove.isPromotion && pLastMove.isCapture && pLastMove.startPos % 8 == pCheckingSquare % 8 && pLastMove.startPos == blackKingSquare - 8 && (pLastMove.promotionType == 4 || pLastMove.promotionType == 5)) GetLegalBlackCapturesSpecialDoubleCheckCase(ref moveOptionList);
             else GetLegalBlackCaptures(pCheckingSquare, ref moveOptionList);
             int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
@@ -4227,12 +4256,13 @@ namespace ChessBot
     public static class NuCRe
     {
         private static char[] NuCReChars = new char[256];
-        private static int[] NuCReInts = new int[375];
+        private static int[] NuCReInts = new int[1_000];
 
         public static void Init()
         {
             for (int i = 33; i < 127; i++) NuCReChars[i - 33] = (char)i;
             for (int i = 161; i < 323; i++) NuCReChars[i - 67] = (char)i;
+            NuCReChars[11] = 'ǂ';
             NuCReChars[239] = 'œ';
             NuCReChars[240] = 'Ŝ';
             NuCReChars[245] = 'Ř';
@@ -4291,6 +4321,48 @@ namespace ChessBot
 
     #endregion
 
+    #region | MOVE HASH EXTRACTOR |
+
+    public static class MOVE_HASH_EXTRACTOR
+    {
+        public static Move[] moveLookupTable = new Move[262_144]; 
+
+        public static Move Get(string pNuCRe)
+        {
+            return moveLookupTable[NuCRe.GetNumber(pNuCRe)];
+        }
+    }
+
+    #endregion
+
+    #region | CUSTOM GAME FILE FORMAT |
+
+    public static class CGFF
+    {
+        private static string[] gameResultStrings = new string[3]
+        {
+            "Black Has Won",
+            "Draw",
+            "White Has Won"
+        };
+
+        public static void InterpretateLine(string pStr)
+        {
+            string[] tSpl = pStr.Split(';');
+            string startFen = tSpl[0];
+            Console.WriteLine("StartFEN: " + startFen);
+            string[] tSpl2 = pStr.Replace(startFen + ";", "").Split(',');
+            int tSpl2Len = tSpl2.Length - 1;
+            for (int i = 0; i < tSpl2Len; i++) {
+                Console.WriteLine("Move (" + i + "): " + MOVE_HASH_EXTRACTOR.Get(tSpl2[i]));
+            }
+            string outcome = gameResultStrings[Convert.ToInt32(tSpl2[tSpl2Len])];
+            Console.WriteLine("Outcome: " + outcome);
+        }
+    }
+
+    #endregion
+
     #region | DATA CLASSES |
 
     public class TranspositionEntry
@@ -4318,7 +4390,6 @@ namespace ChessBot
         public int promotionType { get; private set; } = 0;
         public int moveTypeID { get; private set; } = 0;
         public int moveHash { get; private set; }
-        public int MVVLVA_value { get; private set; } = 0;
         public bool isCapture { get; private set; } = false;
         public bool isSliderMove { get; private set; }
         public bool isEnPassant { get; private set; } = false;
@@ -4356,6 +4427,7 @@ namespace ChessBot
             if (isRochade) ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(ownPieceBitboardXOR, rochadeEndPos), rochadeStartPos);
 
             moveHash = startPos | (endPos << 6) | (pieceType << 12) | (promotionType << 15);
+            MOVE_HASH_EXTRACTOR.moveLookupTable[moveHash] = this;
 
             switch (pieceType) {
                 case 1:

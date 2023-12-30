@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -50,6 +51,11 @@ namespace ChessBot
         public static int searchesFinished = 0;
         public static int goalGameCount = 1_000;
 
+
+        public static double TEXELcostSum = 0d;
+        public static int TEXELcostMovesEvaluated = 0;
+        public static int TEXELfinished = 0;
+
         public static void Main(string[] args)
         {
             SQUARES.Init();
@@ -59,11 +65,11 @@ namespace ChessBot
 
             SetupParallelBoards();
 
-            //boardManagers[7].TempStuff();
+            boardManagers[31].TempStuff();
             //CGFF.InterpretateLine(File.ReadAllLines(Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", ""))[0]);
             //CGFF.InterpretateLine("r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/1BPQPN2/P4PPP/R4RK1 w - - 2 15;Ñ8,ù:,tq,KI,2W,[[,Èa,ĥ7,ĘG,ëW,58,·|,ÞK,ľc,n6,°v,KN,Á²,ąa,Øt,0");
             //SetupParallelBoards();
-            MEM_SelfPlay();
+            //MEM_SelfPlay();
         }
 
         private static void SetupParallelBoards()
@@ -223,6 +229,16 @@ namespace ChessBot
                 for (int j = 0; j < 14; j++)
                     piecePositionEvals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
+            for (int i = 0; i < 33; i++)
+                for (int j = 0; j < 14; j++)
+                    texelTuningRuntimeVals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 6; j++)
+                    texelTuningVals[i, j] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+
+
             PrecalculateMultipliers();
             GetLowNoisePositionalEvaluation(globalRandom);
             MinimaxRoot(1L); // Minimax Preloader
@@ -345,9 +361,21 @@ namespace ChessBot
 
         public void TempStuff()
         {
-            LoadFenString("r2q1rk1/1p1n1ppp/p3p3/3pP3/Pb1P2b1/3B1N2/1P2QPPP/R1B2RK1 b - - 1 14");
-            debugSearchDepthResults = true;
-            MinimaxRoot(30_000_000L);
+            int[] ttt = new int[1152] { 0, 0, 0, 0, 0, 0, 0, 0, 1, -1, -9, -10, -7, 0, 4, 4, 1, 3, -2, 1, -5, 0, 3, 4, -1, 1, -4, 0, 0, -2, 1, 3, -4, 3, 7, 3, -4, 6, -3, -10, -3, 0, 14, 21, 3, 108, -15, -8, 11, -26, 93, 38, -24, 74, 34, 54, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 7, -3, -4, 6, -2, 28, -6, -3, -6, 5, -2, 0, 4, 1, 0, -9, 0, -3, -8, -2, 5, -10, -5, 7, 12, -3, 7, -7, -17, -5, -4, 7, -11, 7, 6, -8, 1, -18, -8, -10, 26, 4, -1, 4, 7, 25, 82, 64, 19, -37, -11, 12, 23, 101, -8, -22, -51, 27, -111, 298, 20, 22, 3, 6, 0, -3, -2, 0, -2, -8, 3, 5, -3, 5, -4, 17, -3, 15, 2, -4, 7, -1, 2, 3, -3, 7, -8, 12, -3, 4, -1, -3, -1, -2, 8, -8, -4, -2, -1, 71, -3, 9, 11, 30, 12, 7, 53, 19, -3, 3, 45, 24, -35, 16, 48, -13, 39, -15, 30, -112, 3, 366, -233, 240, 174, 35, 2, -4, 1, 0, -2, 0, -7, 0, -3, 9, -6, 1, 2, -8, 21, -6, -13, 6, 12, -5, 5, -2, 31, -6, 1, -8, 12, -11, -8, -2, -4, 21, 3, 34, 3, -16, 16, 6, -21, 38, 1, -28, 4, -26, 18, 16, -4, -3, 24, 12, 23, -8, 28, -5, 37, 14, -2, 6, 38, -50, -11, -22, 31, -29, -5, 2, 8, 0, -3, -5, 8, 30, -6, -8, -1, -1, -4, 6, 32, -2, -9, 4, 4, -1, 12, -9, 0, 14, 1, 6, 8, 15, 4, -12, -1, 1, -16, -4, -9, -1, 28, -26, 13, 14, -25, -8, -34, 5, -16, -33, 1, 64, -166, -7, 17, -10, -15, -4, 154, -44, -71, -67, -8, -47, 33, -86, 5, -152, 0, 1, -6, 10, 2, 7, -2, 1, 15, 2, 6, -10, 0, 0, 11, -4, -6, 21, -11, -10, -6, 9, -7, 10, -120, 72, 93, 49, 53, -30, -1, 32, 100, 48, -28, 4, -53, 36, 82, -212, -14, 11, 101, 12, -50, -6, 12, 36, 8, 12, 4, 0, 112, -161, -17, 0, 0, -8, 0, 8, -4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, -6, 4, 2, -18, 8, 1, -1, 4, -10, 1, 1, 4, 1, 3, -2, 1, -2, 0, 0, 4, -2, -3, 3, 1, 10, 3, -9, 10, 1, -9, 0, 0, 46, -1, -6, -2, -20, -79, -33, -30, 19, -17, -37, 4, 0, 59, 4, 130, 0, 0, 0, 0, 0, 0, 0, 0, 5, -1, -11, -12, -2, 0, -1, -8, -14, -15, -8, -3, 4, -2, -6, -3, 10, 3, -1, -4, 11, 1, 3, 8, 10, -6, -9, 5, 0, 4, 15, 0, -12, 0, 16, 5, 0, 0, -3, -20, 9, 16, -12, -10, 0, 60, 11, 38, 5, 1, 12, -2, -24, 0, 24, 8, -24, 7, 0, 4, -118, -20, -104, 0, -5, 0, 3, -4, -4, -2, 24, 5, 3, 1, -4, 3, -2, -4, -4, -12, 10, 0, 0, -4, 3, -6, -3, -4, -6, 0, 4, 1, -10, -1, 13, -2, 6, -2, 7, -2, -4, -12, 10, 0, 0, -2, 22, -1, -8, 19, 9, 10, -18, 9, 8, 52, 35, 120, 0, -2, 62, 7, 20, 57, 12, 122, -27, 9, 1, 4, 0, -5, -2, -2, 8, 1, 0, 0, 0, -5, 3, 2, 1, 3, -7, -3, 4, -3, 7, 4, 0, 0, -10, -12, 9, -6, 0, 4, -4, 4, 4, 14, -3, 31, 1, 9, 5, -8, -17, -4, 11, -1, 2, -6, -14, -2, 6, 9, 0, 0, 10, 8, 4, -1, 17, -8, -8, 4, -6, 1, 9, -90, 0, 0, -8, -1, 0, -4, -10, -6, 5, 4, 4, 0, -2, -8, -64, 15, 2, -3, -1, 4, 0, -4, -8, 4, -5, -2, -7, 4, -2, 4, 5, 2, -3, -4, -8, 4, 1, 10, 7, 32, 4, 10, 7, -2, -11, 43, -5, -4, 36, 2, 20, 13, 1, 8, 6, -39, 3, 5, 41, -10, -34, 67, -5, -12, 7, -8, 6, -3, 0, 0, -1, 0, -9, -6, 0, 1, -3, 4, 6, -3, 20, -31, -9, 7, -2, 5, 1, -4, -28, 6, -7, 14, 16, 64, 7, -12, 12, 28, 73, 1, -14, 16, -84, -33, -201, 9, -6, 16, -79, 41, 31, 19, -16, 98, 4, -52, 163, -39, 32, 87, -673, -148, -121, -11, 282, 30, 33, 12, 0, 0, 0, 0, 0, 0, 0, 0, -1, 2, 0, 0, 0, 5, 0, 6, -16, -1, 4, 0, 1, 0, 0, 4, -12, 0, 0, 5, 1, -6, 6, 0, 34, 7, -8, 0, 3, -31, 6, 5, 14, 120, 25, -58, 18, 0, 7, -1, 76, -48, -206, -4, -17, 16, -56, -24, 0, 0, 0, 0, 0, 0, 0, 0, 35, 0, -25, -4, -4, -49, 0, -6, -6, -45, 0, -1, 2, -14, -1, 1, 0, -7, 0, 0, -16, -2, 1, 0, -2, -6, -44, 8, 0, 35, 9, 0, 32, -4, 4, 12, -1, 0, -9, -1, 0, 2, -20, 0, 6, -3, 0, 1, -6, 6, 1, -60, -2, 2, 10, -24, -1, -19, 0, 0, -36, -26, -52, 132, 0, 0, -1, -30, 3, 1, 0, 0, 3, -6, -9, 1, 8, 1, 4, -13, 1, 0, -1, -7, 3, -6, 7, -3, -22, 1, -1, 0, 9, 4, 4, 0, 0, 0, 5, 7, 0, -1, 5, 0, 11, -34, 41, 0, 0, 26, 5, 22, -4, 2, 2, 0, -1, -32, 21, 0, -14, 0, 0, -31, 54, 96, -72, 0, 5, 3, 0, 1, 4, 1, 0, 5, -3, -1, -1, 0, 14, -4, -2, -2, 6, 1, 5, 0, 1, 8, 2, 0, -36, -20, -4, -16, 4, -4, -6, -1, 0, 3, 8, 6, 5, -1, 4, -1, 20, 2, 4, 21, -13, 8, 12, 1, -2, 5, 0, -8, -33, 3, -4, -31, -31, -26, -26, -8, 1, 0, 62, 96, -1, 0, 6, 0, 3, 3, -8, -1, 2, 3, 4, 1, 4, -6, 0, 4, -4, -5, 0, 4, 1, 4, 0, 5, 4, 2, -52, -2, 2, -1, 6, -4, 6, -3, 0, 2, 0, 6, 0, -1, -2, 2, -6, 3, 4, 0, -2, 1, 0, 0, -3, 32, 0, 1, 1, 4, 30, 7, 32, 146, -22, 104, 0, 5, -52, 4, 1, 0, -1, -1, 4, -2, -2, -35, -24, 16, -7, 8, -4, -6, 0, -24, -1, 3, -8, 0, -4, 3, -68, 73, -23, -18, -8, 0, -11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            //PrintDefinedTexelParams(ttt);
+            //PlayGameOnConsoleAgainstHuman();
+
+            TuneWithTxtFile("SELF_PLAY_GAMES");
+
+            //TuneWithTxtFile("SELF_PLAY_GAMES", 500d, 10);
+
+            //Tune(@"r3kb1r/2q2ppp/pn2p3/3b2B1/3N4/PPp2P2/4B1PP/2RQ1R1K w kq - 0 17;Ću,Sz,v8,§¡,Åe,ĺ<,Ėv,Ăp,ĩX,^U,ÞK,ļ{,@^,î},UU,æ[,Èa,µx,Õk,~t,Kl,Ŵ±,1^,\²,÷Y,V<,8|,Ŵ±,¥T,ĬM,ï¢,\°,_¡,I9,Åm,ù<,mY,·®,Ĥ],œ:,Yy,N°,ãz,·°,¶Z,¸²,ĩ¡,2"
+            //, 13d);
+
+            //LoadFenString("r2q1rk1/1p1n1ppp/p3p3/3pP3/Pb1P2b1/3B1N2/1P2QPPP/R1B2RK1 b - - 1 14");
+            //debugSearchDepthResults = true;
+            //MinimaxRoot(30_000_000L);
         }
 
         private string[] gameResultStrings = new string[5]
@@ -2031,7 +2059,7 @@ namespace ChessBot
                 Array.Copy(curSearchZobristKeyLine, tZobristKeyLine, baseLineLen);
             }
 
-            int perftScore, tattk = (isWhiteToMove) ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
+            int perftScore, tattk = isWhiteToMove ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
 
             do {
                 curSearchDepth = pDepth;
@@ -3298,18 +3326,11 @@ namespace ChessBot
 
         private int evalCount = 0;
 
-        private int Evaluate()
-        {
+        private int Evaluate() {
             evalCount++;
-            if (fiftyMoveRuleCounter > 99) return 0;
-
+            if (fiftyMoveRuleCounter>99) return 0;
             int tEval = 0, tPT, pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard);
-
-            for (int p = 0; p < 64; p++)
-            {
-                tEval += pieceEvals[tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)] + piecePositionEvals[pieceCount, tPT][p];
-            }
-
+            for(int p=0;p<64;p++) tEval += pieceEvals[tPT=pieceTypeArray[p]+7*((int)(blackPieceBitboard>>p)&1)]+piecePositionEvals[pieceCount,tPT][p];
             return tEval;
         }
 
@@ -3457,6 +3478,35 @@ namespace ChessBot
             return processedValues;
         }
 
+        private double[,][] GetInterpolatedProcessedValues(double[,][] pEvalPositionValues)
+        {
+            double[,][] processedValues = new double[33, 14][];
+            for (int i = 0; i < 32; i++)
+            {
+                int ip1 = i + 1;
+                processedValues[ip1, 7] = processedValues[ip1, 0] = new double[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+                processedValues[ip1, 8] = SwapArrayViewingSide(processedValues[ip1, 1] = MultiplyArraysWithVal(pEvalPositionValues[0, 0], pEvalPositionValues[1, 0], pEvalPositionValues[2, 0], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+                processedValues[ip1, 9] = SwapArrayViewingSide(processedValues[ip1, 2] = MultiplyArraysWithVal(pEvalPositionValues[0, 1], pEvalPositionValues[1, 1], pEvalPositionValues[2, 1], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+                processedValues[ip1, 10] = SwapArrayViewingSide(processedValues[ip1, 3] = MultiplyArraysWithVal(pEvalPositionValues[0, 2], pEvalPositionValues[1, 2], pEvalPositionValues[2, 2], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+                processedValues[ip1, 11] = SwapArrayViewingSide(processedValues[ip1, 4] = MultiplyArraysWithVal(pEvalPositionValues[0, 3], pEvalPositionValues[1, 3], pEvalPositionValues[2, 3], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+                processedValues[ip1, 12] = SwapArrayViewingSide(processedValues[ip1, 5] = MultiplyArraysWithVal(pEvalPositionValues[0, 4], pEvalPositionValues[1, 4], pEvalPositionValues[2, 4], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+                processedValues[ip1, 13] = SwapArrayViewingSide(processedValues[ip1, 6] = MultiplyArraysWithVal(pEvalPositionValues[0, 5], pEvalPositionValues[1, 5], pEvalPositionValues[2, 5], earlyGameMultipliers[ip1], middleGameMultipliers[ip1], lateGameMultipliers[ip1]));
+            }
+            return processedValues;
+        }
+
+        private double[] MultiplyArraysWithVal(double[] pArr1, double[] pArr2, double[] pArr3, double pVal1, double pVal2, double pVal3)
+        {
+            int tL = pArr1.Length;
+            double[] rArr = new double[tL];
+            for (int i = 0; i < tL; i++)
+            {
+                rArr[i] = pArr1[i] * pVal1 + pArr2[i] * pVal2 + pArr3[i] * pVal3;
+            }
+            return rArr;
+        }
+
         private int[] MultiplyArraysWithVal(int[] pArr1, int[] pArr2, int[] pArr3, double pVal1, double pVal2, double pVal3)
         {
             int tL = pArr1.Length;
@@ -3481,6 +3531,517 @@ namespace ChessBot
                 pArr[8],   pArr[9], pArr[10], pArr[11], pArr[12], pArr[13], pArr[14], pArr[15],
                 pArr[0],   pArr[1],  pArr[2],  pArr[3],  pArr[4],  pArr[5],  pArr[6],  pArr[7]
             };
+        }
+
+        private double[] SwapArrayViewingSide(double[] pArr)
+        {
+            return new double[64]
+            {
+                pArr[56], pArr[57], pArr[58], pArr[59], pArr[60], pArr[61], pArr[62], pArr[63],
+                pArr[48], pArr[49], pArr[50], pArr[51], pArr[52], pArr[53], pArr[54], pArr[55],
+                pArr[40], pArr[41], pArr[42], pArr[43], pArr[44], pArr[45], pArr[46], pArr[47],
+                pArr[32], pArr[33], pArr[34], pArr[35], pArr[36], pArr[37], pArr[38], pArr[39],
+                pArr[24], pArr[25], pArr[26], pArr[27], pArr[28], pArr[29], pArr[30], pArr[31],
+                pArr[16], pArr[17], pArr[18], pArr[19], pArr[20], pArr[21], pArr[22], pArr[23],
+                pArr[8],   pArr[9], pArr[10], pArr[11], pArr[12], pArr[13], pArr[14], pArr[15],
+                pArr[0],   pArr[1],  pArr[2],  pArr[3],  pArr[4],  pArr[5],  pArr[6],  pArr[7]
+            };
+        }
+
+        #endregion
+
+        #region | TEXEL TUNING |
+
+        private int[,][] texelTuningRuntimeVals = new int[33,14][];
+        private int[,][] texelTuningVals = new int[3,6][];
+        private int[,] texelTuningAdjustIterations = new int[6,64];
+
+        private int[] texelPieceEvaluations = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
+
+        private int[] blackSidedSquares = new int[64]
+        {
+            56, 57, 58, 59, 60, 61, 62, 63,
+            48, 49, 50, 51, 52, 53, 54, 55,
+            40, 41, 42, 43, 44, 45, 46, 47,
+            32, 33, 34, 35, 36, 37, 38, 39,
+            24, 25, 26, 27, 28, 29, 30, 31,
+            16, 17, 18, 19, 20, 21, 22, 23,
+            08, 09, 10, 11, 12, 13, 14, 15,
+            00, 01, 02, 03, 04, 05, 06, 07
+        };
+
+        private double lastCostVal = 0d;
+        private double sumCostVals = 0d;
+        private int costCalculations = 0;
+
+        private void TuneWithTxtFile(string pTXTName)
+        {
+            List<TLM_ChessGame> gameDataset = new List<TLM_ChessGame>();
+            string tPath = Path.GetFullPath(pTXTName + ".txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string[] tStrs = File.ReadAllLines(tPath);
+            List<string> tGames = new List<string>();
+            foreach (string s in tStrs) if (s.Contains(';') && s.Replace(" ", "") != "") tGames.Add(s);
+            foreach (string s in tGames) {
+                TLM_ChessGame tGame = CGFF.GetGame(s);
+                LoadFenString(tGame.startFen);
+                foreach (int hMove in tGame.hashedMoves)
+                {
+                    List<Move> moveOptionList = new List<Move>();
+                    if (isWhiteToMove) GetLegalWhiteMoves(PreMinimaxCheckCheckWhite(), ref moveOptionList);
+                    else GetLegalBlackMoves(PreMinimaxCheckCheckBlack(), ref moveOptionList);
+
+                    int tL = moveOptionList.Count;
+                    for (int j = 0; j < tL; j++)
+                    {
+                        Move tMove = moveOptionList[j];
+                        if (tMove.moveHash == hMove)
+                        {
+                            tGame.actualMoves.Add(tMove);
+                            PlainMakeMove(tMove);
+                            tL = -1;
+                            break;
+                        }
+                    }
+
+                    if (tL != -1) break;
+                }
+                gameDataset.Add(tGame);
+            }
+            Console.WriteLine("[TLM TEXEL TUNER] " + tGames.Count + " Games Loaded In!");
+
+            TLMTuning(gameDataset);
+
+            //TexelTuning(gameDataset, new int[1152]);
+
+            //Stopwatch sw = Stopwatch.StartNew();
+
+            //CalculateAverageTexelCost(gameDataset, new int[0]);
+            //for (int i = 0; i < 10_000_000; i++) Evaluate();
+            //sw.Stop();
+            //Console.WriteLine(sw.ElapsedTicks);
+
+            //for (int j = 0; j < 6; j++)
+            //{
+            //    Console.Write("{");
+            //    for (int k = 0; k < 64; k++)
+            //        Console.Write(texelTuningAdjustIterations[j, k] + ", ");
+            //    Console.WriteLine("}");
+            //}
+            //
+            //ConsoleWriteLineTuneArray(texelTuningVals);
+            //
+            //Console.WriteLine("| EPOCHE " + (i + 1));
+            //Console.WriteLine("| Games: " + tGames.Count);
+            //Console.WriteLine("| Average Cost: " + (sumCostVals / costCalculations));
+            //Console.WriteLine("| Cost Calculations: " + costCalculations);
+            //Console.WriteLine("| Sum Cost: " + sumCostVals);
+            //Console.WriteLine("\n\n");
+        }
+
+        private void SetupTexelEvaluationParams(int[] pParams)
+        {
+            //texelPieceEvaluations[8] = -(texelPieceEvaluations[1] = pParams[0]);
+            //texelPieceEvaluations[9] = -(texelPieceEvaluations[2] = pParams[1]);
+            //texelPieceEvaluations[10] = -(texelPieceEvaluations[3] = pParams[2]);
+            //texelPieceEvaluations[11] = -(texelPieceEvaluations[4] = pParams[3]);
+            //texelPieceEvaluations[12] = -(texelPieceEvaluations[5] = pParams[4]);
+            int c = 0;
+            for (int t = 0; t < 3; t++)
+            {
+                for (int p = 0; p < 6; p++)
+                {
+                    texelTuningVals[t, p] = new int[64];
+                    for (int s = 0; s < 64; s++)
+                    {
+                        texelTuningVals[t, p][s] = pParams[c++];
+                    }
+                }
+            }
+            texelTuningRuntimeVals = GetInterpolatedProcessedValues(texelTuningVals);
+        }
+
+        private readonly string[] TEXELPRINT_GAMEPARTS
+            = new string[3] { "Early Game: ", "Mid Game: ", "Late Game: " };
+        private readonly string[] TEXELPRINT_PIECES
+            = new string[6] { "Bauer: ", "Springer: ", "Läufer: ", "Turm: ", "Dame: ", "König: " };
+
+        private void PrintDefinedTexelParams(int[] pParams)
+        {
+            int c = 0;
+            for (int t = 0; t < 3; t++)
+            {
+                Console.WriteLine(TEXELPRINT_GAMEPARTS[t]);
+                for (int p = 0; p < 6; p++)
+                {
+                    Console.WriteLine(TEXELPRINT_PIECES[p]);
+                    texelTuningVals[t, p] = new int[64];
+                    for (int s = 0; s < 64; s++)
+                    {
+                        if (s % 8 == 0 && s != 0) Console.WriteLine();
+                        Console.Write((texelTuningVals[t, p][s] = pParams[c++]) + ", ");
+                    }
+                    Console.WriteLine();
+                }
+            }
+            piecePositionEvals = GetInterpolatedProcessedValues(texelTuningVals);
+        }
+
+        private void TLMTuning(List<TLM_ChessGame> pDataset)
+        {
+            int tGameDataSetLen = pDataset.Count;
+            int[,][] tRatio = new int[33,6][];
+            int[,][] tTotalMoves = new int[33,6][];
+
+            for (int t = 1; t < 33; t++) {
+                for (int p = 0; p < 6; p++) {
+                    tRatio[t, p] = new int[64];
+                    tTotalMoves[t, p] = new int[64];
+                }
+            }
+
+            for (int j = 0; j < tGameDataSetLen; j++)
+            {
+                TLM_ChessGame tGame = pDataset[j];
+                int tGR = tGame.gameResult - 1;
+                LoadFenString(tGame.startFen);
+                int tL = tGame.actualMoves.Count - 5;
+                for (int i = 0; i < tL; i++)
+                {
+                    int tPieceAmount = ULONG_OPERATIONS.CountBits(allPieceBitboard);
+                    for (int s = 0; s < 64; s++)
+                    {
+                        int tPT = pieceTypeArray[s] - 1;
+                        if (ULONG_OPERATIONS.IsBitOne(whitePieceBitboard, s))
+                        {
+                            tTotalMoves[tPieceAmount, tPT][s]++;
+                            tRatio[tPieceAmount, tPT][s] += tGR;
+                        }
+                        //else if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, s))
+                        //{
+                        //    int b = blackSidedSquares[s];
+                        //    tTotalMoves[tPieceAmount, tPT][b]++;
+                        //    tRatio[tPieceAmount, tPT][b] += tGR;
+                        //}
+                    }
+                    PlainMakeMove(tGame.actualMoves[i]);
+                }
+            }
+
+            int c = 0;
+            for (int t = 1; t < 33; t++)
+            {
+                Console.WriteLine("PieceCount = " + t + ": ");
+                for (int p = 0; p < 6; p++)
+                {
+                    Console.WriteLine(TEXELPRINT_PIECES[p]);
+                    for (int s = 0; s < 64; s++)
+                    {
+                        if (s % 8 == 0 && s != 0) Console.WriteLine();
+                        Console.Write(TTT(tRatio[t, p][s], tTotalMoves[t, p][s]).ToString().Replace(",", ".") + ", "); // / (double)tTotalMoves[t, p][s]
+                    }
+                    Console.WriteLine();
+                }
+            }
+
+        }
+
+        private double TTT(double d1, double d2)
+        {
+            if (d2 == 0) return 0;
+            return ((int)(d1 * 100d / d2) / 100d);
+        }
+
+        private void TexelTuning(List<TLM_ChessGame> pDataset, int[] pCurBestParams)
+        {
+            string tPath = Path.GetFullPath("TEXEL_TUNING.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            int adjust_val = 8, paramCount = pCurBestParams.Length;
+            double bestAvrgCost = CalculateAverageTexelCost(pDataset, pCurBestParams);
+
+            int packetSize = 32;
+
+            while (packetSize < paramCount)
+            {
+                int lM = 0;
+                for (int m = packetSize; m < paramCount; m += packetSize)
+                {
+                    if (m > paramCount) m = paramCount;
+                    adjust_val = 8;
+                    do
+                    {
+                        adjust_val /= 2;
+                        Console.WriteLine("Adjust Value = " + adjust_val);
+                        bool improvedAvrgCost = true;
+                        while (improvedAvrgCost)
+                        {
+                            improvedAvrgCost = false;
+                            for (int i = lM; i < m; i++)
+                            {
+                                int[] curParams = (int[])pCurBestParams.Clone();
+                                curParams[i] += adjust_val;
+                                double curAvrgCost = CalculateAverageTexelCost(pDataset, curParams);
+                                if (curAvrgCost < bestAvrgCost)
+                                {
+                                    improvedAvrgCost = true;
+                                    bestAvrgCost = curAvrgCost;
+                                    pCurBestParams = curParams;
+                                    Console.WriteLine("Improved Param " + i + ": +" + adjust_val);
+                                }
+                                else
+                                {
+                                    curParams[i] -= 2 * adjust_val;
+                                    curAvrgCost = CalculateAverageTexelCost(pDataset, curParams);
+                                    if (curAvrgCost < bestAvrgCost)
+                                    {
+                                        improvedAvrgCost = true;
+                                        bestAvrgCost = curAvrgCost;
+                                        pCurBestParams = curParams;
+                                        Console.WriteLine("Improved Param " + i + ": -" + adjust_val);
+                                    }
+                                }
+                            }
+                            Console.WriteLine("End of one complete TLM Texel Improvement Cycle!");
+                            WriteTexelParamsToTXT(tPath, pCurBestParams);
+                        }
+                    } while (adjust_val != 1); //128, 64, 32, 16, 8, 4, 2, 1
+
+                    lM = m;
+                }
+                packetSize += 32;
+            }
+        }
+
+        private void WriteTexelParamsToTXT(string pPath, int[] pParams)
+        {
+            string tS = "PARAMS: {";
+            for (int i = 0; i < pParams.Length; i++) tS += pParams[i] + ",";
+            tS = tS.Substring(0, tS.Length - 1) + "}\n";
+            File.AppendAllText(pPath, tS);
+        }
+
+        private double costSum = 0d;
+        private int texelCostMovesEvaluated = 0;
+
+        private double CalculateAverageTexelCost(List<TLM_ChessGame> tDataset, int[] pParams)
+        {
+            costSum = 0d;
+            texelCostMovesEvaluated = 0;
+            SetupTexelEvaluationParams(pParams);
+            int tGameDataSetLen = tDataset.Count;
+
+            // HAD AN ISSUE: THREADED VERSION
+            //int gamesPerThread = tGameDataSetLen / ENGINE_VALS.CPU_CORES;
+            //int tMin = 0;
+            //for (int i = 0; i < ENGINE_VALS.CPU_CORES - 1; i++)
+            //{
+            //    //CalculateAverageTexelCostThreadFunction(tDataset, tMin, tMin += gamesPerThread);
+            //    //ThreadPool.QueueUserWorkItem(new WaitCallback(state => BOT_MAIN.boardManagers[i].CalculateAverageTexelCostThreadFunction(tDataset, tMin, tMin += gamesPerThread)));
+            //}
+            //CalculateAverageTexelCostThreadFunction(tDataset, tMin, tGameDataSetLen);
+            //ThreadPool.QueueUserWorkItem(new WaitCallback(state => BOT_MAIN.boardManagers[ENGINE_VALS.CPU_CORES - 1].CalculateAverageTexelCostThreadFunction(tDataset, tMin, tGameDataSetLen)));
+
+            for (int j = 0; j < tGameDataSetLen; j++)
+            {
+                TLM_ChessGame tGame = tDataset[j];
+                double tGR = tGame.gameResult;
+                LoadFenString(tGame.startFen);
+                int tL = tGame.actualMoves.Count - 5;
+                texelCostMovesEvaluated += tL;
+                for (int i = 0; i < tL; i++)
+                {
+                    costSum += TexelCost(tGR - TexelTuningSigmoid(TexelEvaluate()));
+                    PlainMakeMove(tGame.actualMoves[i]);
+                }
+            }
+
+            //Console.WriteLine(texelCostMovesEvaluated);
+
+            return costSum / texelCostMovesEvaluated;
+        }
+
+        private double CalculateAverageTexelCostThreadedVersion(List<TLM_ChessGame> tDataset, int[] pParams)
+        {
+            BOT_MAIN.TEXELcostSum = 0d;
+            BOT_MAIN.TEXELfinished = 0;
+            BOT_MAIN.TEXELcostMovesEvaluated = 0;
+            int tGameDataSetLen = tDataset.Count;
+
+            // HAD AN ISSUE: THREADED VERSION
+            int gamesPerThread = tGameDataSetLen / ENGINE_VALS.CPU_CORES;
+            int tMin = 0;
+            for (int i = 0; i < ENGINE_VALS.CPU_CORES - 1; i++)
+            {
+                //CalculateAverageTexelCostThreadFunction(tDataset, tMin, tMin += gamesPerThread);
+                ThreadPool.QueueUserWorkItem(new WaitCallback(state => BOT_MAIN.boardManagers[i].CalculateAverageTexelCostThreadFunction(tDataset, pParams, tMin, tMin += gamesPerThread)));
+            }
+            //CalculateAverageTexelCostThreadFunction(tDataset, tMin, tGameDataSetLen);
+            ThreadPool.QueueUserWorkItem(new WaitCallback(state => BOT_MAIN.boardManagers[ENGINE_VALS.CPU_CORES - 1].CalculateAverageTexelCostThreadFunction(tDataset, pParams, tMin, tGameDataSetLen)));
+
+            while (BOT_MAIN.TEXELfinished != ENGINE_VALS.CPU_CORES) Thread.Sleep(1);
+
+            //for (int j = 0; j < tGameDataSetLen; j++)
+            //{
+            //    TLM_ChessGame tGame = tDataset[j];
+            //    double tGR = tGame.gameResult;
+            //    LoadFenString(tGame.startFen);
+            //    int tL = tGame.actualMoves.Count - 5;
+            //    texelCostMovesEvaluated += tL;
+            //    for (int i = 0; i < tL; i++)
+            //    {
+            //        costSum += TexelCost(tGR - TexelTuningSigmoid(TexelEvaluate()));
+            //        PlainMakeMove(tGame.actualMoves[i]);
+            //    }
+            //}
+
+            //Console.WriteLine(texelCostMovesEvaluated);
+
+            Console.WriteLine(":)");
+
+
+            return BOT_MAIN.TEXELcostSum / BOT_MAIN.TEXELcostMovesEvaluated;
+        }
+
+
+        public void CalculateAverageTexelCostThreadFunction(List<TLM_ChessGame> pDataset, int[] pParams, int pFrom, int pTo)
+        {
+            Console.WriteLine(pFrom + "->" + pTo);
+
+            SetupTexelEvaluationParams(pParams);
+            double d = 0d;
+            for (int j = pFrom; j < pTo; j++)
+            {
+                TLM_ChessGame tGame = pDataset[j];
+                double tGR = tGame.gameResult;
+                LoadFenString(tGame.startFen);
+                Console.WriteLine(tGame.startFen);
+                int tL = tGame.actualMoves.Count - 5;
+                BOT_MAIN.TEXELcostMovesEvaluated += tL;
+                for (int i = 0; i < tL; i++)
+                {
+                    //d += TexelCost(tGR - TexelTuningSigmoid(TexelEvaluate()));
+                    PlainMakeMove(tGame.actualMoves[i]);
+                }
+            }
+            BOT_MAIN.TEXELcostSum += d;
+            BOT_MAIN.TEXELfinished++;
+        }
+
+        private void ConsoleWriteLineTuneArray<T>(T[,][] pArr)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                Console.Write("{");
+                for (int k = 0; k < 6; k++)
+                {
+                    Console.WriteLine("{");
+                    for (int s = 0; s < 64; s++)
+                        Console.Write(pArr[j,k][s] + ", ");
+                    Console.WriteLine("\n}");
+                }
+                Console.WriteLine("}");
+            }
+        }
+
+        private void Tune(string pGameCGFF, double pLearningRate)
+        {
+            TLM_ChessGame tGame = CGFF.GetGame(pGameCGFF);
+            LoadFenString(tGame.startFen);
+
+            double tDGameResult = tGame.gameResult;
+
+            foreach (int hMove in tGame.hashedMoves)
+            {
+                Tune(tDGameResult, pLearningRate);
+
+                // Könnte sein, dass es theoretisch nicht ganz save ist; da es den special double Check Case gibt; aber der ist so selten...
+                List<Move> moveOptionList = new List<Move>();
+                if (isWhiteToMove) GetLegalWhiteMoves(PreMinimaxCheckCheckWhite(), ref moveOptionList);
+                else GetLegalBlackMoves(PreMinimaxCheckCheckBlack(), ref moveOptionList);
+
+                int tL = moveOptionList.Count;
+                for (int i = 0; i < tL; i++)
+                {
+                    Move tMove = moveOptionList[i];
+                    if (tMove.moveHash == hMove)
+                    {
+                        //Console.WriteLine(tMove);
+                        PlainMakeMove(tMove);
+                        tL = -1;
+                        break;
+                    }
+                }
+
+                if (tL != -1) break;
+            }
+        }
+
+        private void Tune(double pGameResult, double pLearningRate)
+        {
+            int tPC = ULONG_OPERATIONS.CountBits(allPieceBitboard);
+            double oneThroughPieceCount = 1d / tPC;
+            double egMult = earlyGameMultipliers[tPC], mgMult = middleGameMultipliers[tPC], lgMult = lateGameMultipliers[tPC];
+            double tTexelResult = TexelEvaluateF();
+            double tSigmoidedTexelResult = TexelSigmoid(tTexelResult);
+            double tDif = tSigmoidedTexelResult - pGameResult;
+            double tM = oneThroughPieceCount * TexelCostDerivative(tDif) * TexelSigmoidDerivative(tTexelResult) * pLearningRate;
+
+            sumCostVals += lastCostVal = TexelCost(tDif);
+            costCalculations++;
+
+            for (int i = 0; i < 64; i++)
+            {
+                if (ULONG_OPERATIONS.IsBitZero(allPieceBitboard, i)) continue;
+                int tPT = pieceTypeArray[i] - 1, tI = i;
+                if (ULONG_OPERATIONS.IsBitOne(blackPieceBitboard, i)) tI = blackSidedSquares[i];
+
+                //texelTuningVals[0, tPT][tI] -= egMult * tM;
+                //texelTuningVals[1, tPT][tI] -= mgMult * tM;
+                //texelTuningVals[2, tPT][tI] -= lgMult * tM;
+
+                texelTuningAdjustIterations[tPT, tI]++;
+            }
+        }
+
+        private double TexelEvaluateF()
+        {
+            // Set Positional Evaluation To Texel Vals
+            texelTuningRuntimeVals = GetInterpolatedProcessedValues(texelTuningVals);
+
+            // Evaluate Position almost normally; just with doubles
+            return TexelEvaluate();
+        }
+
+        private double TexelEvaluate()
+        {
+            int tEval = 0, tPT, pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard);
+            for (int p = 0; p < 64; p++) tEval += texelPieceEvaluations[tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)] + texelTuningRuntimeVals[pieceCount, tPT][p];
+            return tEval;
+        }
+
+        private const int TexelK = 5;
+        private double TexelTuningSigmoid(double pVal)
+        {
+            return 2d / (1 + Math.Pow(10, -TexelK * pVal / 400));
+        }
+
+        private double TexelSigmoid(double pVal)
+        {
+            return 2d / (Math.Exp(-0.04d * pVal) + 1d);
+        }
+
+        private double TexelSigmoidDerivative(double pVal)
+        {
+            double d = Math.Exp(-0.04d * pVal);
+            return 2d * d / (25d * (d + 1d) * (d + 1d));
+        }
+
+        private double TexelCost(double pVal)
+        {
+            return pVal * pVal;
+        }
+
+        private double TexelCostDerivative(double pVal)
+        {
+            return 2 * pVal;
         }
 
         #endregion
@@ -4339,25 +4900,48 @@ namespace ChessBot
 
     public static class CGFF
     {
-        private static string[] gameResultStrings = new string[3]
+        public static readonly string FILE_BEGIN = "TLM_ChessGame: \nStart FEN: ";
+
+        public static readonly string[] GAME_RESULT_STRINGS = new string[3]
         {
-            "Black Has Won",
-            "Draw",
-            "White Has Won"
+            "Result: Black Has Won",
+            "Result: Draw",
+            "Result: White Has Won"
         };
 
-        public static void InterpretateLine(string pStr)
+        public static TLM_ChessGame GetGame(string pStr)
         {
             string[] tSpl = pStr.Split(';');
             string startFen = tSpl[0];
-            Console.WriteLine("StartFEN: " + startFen);
+            TLM_ChessGame rCG = new TLM_ChessGame(startFen);
             string[] tSpl2 = pStr.Replace(startFen + ";", "").Split(',');
             int tSpl2Len = tSpl2.Length - 1;
-            for (int i = 0; i < tSpl2Len; i++) {
-                Console.WriteLine("Move (" + i + "): " + MOVE_HASH_EXTRACTOR.Get(tSpl2[i]));
-            }
-            string outcome = gameResultStrings[Convert.ToInt32(tSpl2[tSpl2Len])];
-            Console.WriteLine("Outcome: " + outcome);
+            for (int i = 0; i < tSpl2Len; i++) rCG.hashedMoves.Add(NuCRe.GetNumber(tSpl2[i]));
+            int outcome = Convert.ToInt32(tSpl2[tSpl2Len]);
+            rCG.gameResult = outcome;
+            return rCG;
+        }
+    }
+
+    public class TLM_ChessGame
+    {
+        public string startFen;
+        public List<int> hashedMoves = new List<int>();
+        public List<Move> actualMoves = new List<Move>();
+        public int gameResult;
+
+        public TLM_ChessGame(string pStartFen)
+        {
+            startFen = pStartFen;
+        }
+
+        public override string ToString()
+        {
+            string tS = CGFF.FILE_BEGIN + startFen + "\n";
+            int tL = hashedMoves.Count;
+            for (int i = 0; i < tL; i++)
+                tS += "Move " + (i + 1) + ": " + MOVE_HASH_EXTRACTOR.moveLookupTable[hashedMoves[i]] + "\n";
+            return tS + CGFF.GAME_RESULT_STRINGS[gameResult];
         }
     }
 

@@ -88,6 +88,19 @@ namespace ChessBot
             return ~(1ul << index) & u;
         }
 
+        public static string GetBitVisualization(ulong u)
+        {
+            string r = "";
+            bool b = true;
+            for (int i = 63; i > -1; i--)
+            {
+                if (b && IsBitZero(u, i) && i != 0) continue;
+                b = false;
+                r += IsBitOne(u, i) ? "#" : "_";
+            }
+            return r;
+        }
+
         public static string GetStringBoardVisualization(ulong u)
         {
             string r = "";

@@ -166,7 +166,7 @@ namespace ChessBot
             tSave += " | Black Win%: " + BlackWinPrecentage;
             Console.WriteLine("| Black Win%: " + BlackWinPrecentage);
 
-            string tPath = Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string tPath = PathManager.GetTXTPath("DATABASES/SELF_PLAY_GAMES");
             selfPlayGameStrings.Add(tSave);
             File.AppendAllLines(tPath, selfPlayGameStrings.ToArray());
         }
@@ -509,9 +509,7 @@ namespace ChessBot
 
         public static void Init()
         {
-            //C: \Users\tpmen\Desktop\4 - Programming\41 - Unity & C#\MiluvaV3\Miluva-v3\Chessbot\FENS.txt \bin\Debug\net6.0
-            string tPath = Path.GetFullPath("FENS.txt").Replace(@"\\bin\\Debug\\net6.0", "");
-            tPath = tPath.Replace(@"\bin\Debug\net6.0", "");
+            string tPath = PathManager.GetTXTPath("UTILITY/FENS");
             fens = File.ReadAllLines(tPath);
         }
 

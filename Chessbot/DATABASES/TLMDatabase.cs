@@ -53,7 +53,7 @@ namespace ChessBot
 
         public static void InitDatabase()
         {
-            string tPath2 = Path.GetFullPath("TLM_DB1.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string tPath2 = PathManager.GetTXTPath("DATABASES/TLM_DB1");
             DATABASE = File.ReadAllLines(tPath2);
             DATABASE_SIZE = DATABASE.Length;
             bM = BOT_MAIN.boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1];
@@ -210,7 +210,7 @@ namespace ChessBot
             pieceTypeDict.Add('K', 6);
             pieceTypeDict.Add('O', 6);
 
-            string tPath = Path.GetFullPath("OpeningDatabaseV1.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string tPath = PathManager.GetTXTPath("DATABASES/OpeningDatabaseV1");
             string[] strs = File.ReadAllLines(tPath);
             int tL = strs.Length;
             skippedChars['!'] = skippedChars['?'] = skippedChars['+'] = skippedChars['#'] = skippedChars[' '] = true;

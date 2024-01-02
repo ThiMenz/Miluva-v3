@@ -3826,7 +3826,7 @@ namespace ChessBot
         private void TuneWithTxtFile(string pTXTName)
         {
             List<TLM_ChessGame> gameDataset = new List<TLM_ChessGame>();
-            string tPath = Path.GetFullPath(pTXTName + ".txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string tPath = PathManager.GetTXTPath(pTXTName);
             string[] tStrs = File.ReadAllLines(tPath);
             //int g = 0, sortedOut = 0;
             List<string> tGames = new List<string>();
@@ -4120,7 +4120,7 @@ namespace ChessBot
         {
             Stopwatch sw = Stopwatch.StartNew();
 
-            string tPath = Path.GetFullPath("TEXEL_TUNING.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", "");
+            string tPath = PathManager.GetTXTPath("OTHER/TEXEL_TUNING");
             int paramCount = pCurBestParams.Length;
             double bestAvrgCost = CalculateAverageTexelCost(pDataset, pCurBestParams);
 

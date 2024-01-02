@@ -401,3 +401,7 @@ Chessbot/TLM_DB1.txt
 Chessbot/SELF_PLAY_GAMES.txt
 Chessbot/SELF_PLAY_GAMES.txt
 Chessbot/TEXEL_TUNING.txt
+Chessbot/OTHER/TEXEL_TUNING.txt
+Chessbot/DATABASES/SELF_PLAY_GAMES.txt
+Chessbot/DATABASES/TLM_DB1.txt
+Chessbot/DATABASES/OpeningDatabaseV1.txt

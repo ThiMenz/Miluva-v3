@@ -26,7 +26,7 @@ namespace ChessBot
     {
         private const int KNIGHT_PIECE_ID = 2;
 
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
 
         private ulong[] knightSquareBitboards = new ulong[64];
         private int[][] knightSquareArrays = new int[64][];
@@ -34,7 +34,7 @@ namespace ChessBot
         private List<Dictionary<ulong, List<Move>>> nonCapturePrecalcs = new List<Dictionary<ulong, List<Move>>>();
         private List<Dictionary<ulong, List<Move>>> capturePrecalcs = new List<Dictionary<ulong, List<Move>>>();
 
-        public KnightMovement(BoardManager bM)
+        public KnightMovement(IBoardManager bM)
         {
             boardManager = bM;
             if (STATIC_KNIGHTMOVEMENT.PRECALCULATED) 

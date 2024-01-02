@@ -30,9 +30,9 @@ namespace ChessBot
         private List<Dictionary<ulong, List<Move>>> movePrecalcs = new List<Dictionary<ulong, List<Move>>>();
         private List<List<Dictionary<ulong, List<Move>>>> pinMovePrecalcs = new List<List<Dictionary<ulong, List<Move>>>>();
 
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
 
-        public BlackPawnMovement(BoardManager bM)
+        public BlackPawnMovement(IBoardManager bM)
         {
             boardManager = bM;
 

@@ -24,7 +24,7 @@ namespace ChessBot
 
     public class QueenMovement
     {
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
 
         private List<Dictionary<ulong, BishopPreCalcs>> precalculatedMovesDiagonal = new List<Dictionary<ulong, BishopPreCalcs>>();
         private List<Dictionary<ulong, RookPreCalcs>> precalculatedMovesStraigth = new List<Dictionary<ulong, RookPreCalcs>>();
@@ -36,7 +36,7 @@ namespace ChessBot
         private Dictionary<int, BishopPreCalcs> tempDiaPreCalcDict = new Dictionary<int, BishopPreCalcs>();
         private Dictionary<int, RookPreCalcs> tempStrPreCalcDict = new Dictionary<int, RookPreCalcs>();
 
-        public QueenMovement(BoardManager bM)
+        public QueenMovement(IBoardManager bM)
         {
             boardManager = bM;
             for (int i = 0; i < 64; i++)

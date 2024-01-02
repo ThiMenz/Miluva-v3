@@ -39,14 +39,19 @@ namespace ChessBot
             FEN_MANAGER.Init();
             NuCRe.Init();
             ULONG_OPERATIONS.SetUpCountingArray();
-            //TLMDatabase.InitDatabase();
+            TLMDatabase.InitDatabase();
+
+            //LegacyEngineManager.CreateNewBoardManagerSnapshot("SNAPSHOT_V01_00_000");
+            //return;
 
             SetupParallelBoards();
 
-            TLMDatabase.InitDatabase();
+            IBoardManager opp = new SNAPSHOT_V01_00_000(ENGINE_VALS.DEFAULT_FEN);
+
+            LegacyEngineManager.PlayTwoGamesBetweenTwoSnapshots(boardManagers[0], opp, 500_000L, ENGINE_VALS.DEFAULT_FEN);
 
             //SetupParallelBoards();
-            boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
+            //boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
 
             //CGFF.InterpretateLine(File.ReadAllLines(Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", ""))[0]);
             //CGFF.InterpretateLine("r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/1BPQPN2/P4PPP/R4RK1 w - - 2 15;Ñ8,ù:,tq,KI,2W,[[,Èa,ĥ7,ĘG,ëW,58,·|,ÞK,ľc,n6,°v,KN,Á²,ąa,Øt,0");

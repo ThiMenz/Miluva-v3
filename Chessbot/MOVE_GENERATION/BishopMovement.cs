@@ -22,13 +22,13 @@ namespace ChessBot
     {
         private const int BISHOP_TILE_ID = 3, QUEEN_TILE_ID = 5;
 
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
         private QueenMovement queenMovement;
 
         private List<Dictionary<ulong, BishopPreCalcs>> precalculatedMoves = new List<Dictionary<ulong, BishopPreCalcs>>();
         private ulong[] bishopMasks = new ulong[64];
 
-        public BishopMovement(BoardManager pBM, QueenMovement pQM)
+        public BishopMovement(IBoardManager pBM, QueenMovement pQM)
         {
             boardManager = pBM;
             queenMovement = pQM;

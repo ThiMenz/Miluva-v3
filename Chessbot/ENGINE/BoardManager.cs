@@ -14,6 +14,23 @@ namespace ChessBot
             get;
         }
 
+        int[] squareConnectivesCrossDirsPrecalculationArray
+        {
+            get;
+            set;
+        }
+
+        List<Move> moveOptionList
+        {
+            get;
+            set;
+        }
+
+        Move? ReturnNextMove(Move? pLastMove, long pThinkingTime);
+
+        void SetKingMasks(ulong[] pKingMasks);
+        void SetKnightMasks(ulong[] pKnightMasks);
+
         void SetJumpState();
         void LoadJumpState();
         void GetLegalMoves(ref List<Move> pMoveList);
@@ -67,7 +84,7 @@ namespace ChessBot
         private WhitePawnMovement whitePawnMovement;
         private BlackPawnMovement blackPawnMovement;
         private Rays rays;
-        public List<Move> moveOptionList;
+        public List<Move> moveOptionList { get; set; }
 
         private int[] pieceTypeArray = new int[64];
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
@@ -185,6 +202,9 @@ namespace ChessBot
             SetupConsoleWriteLine("[DONE]\n\n");
 
             LoadFenString(pFen);
+
+            LoadBestTexelParamsIn();
+
             setupStopwatch.Stop();
         }
 
@@ -314,10 +334,6 @@ namespace ChessBot
             //
             //Console.WriteLine(sw.ElapsedMilliseconds);
 
-
-
-
-            LoadBestTexelParamsIn();
             PlayGameOnConsoleAgainstHuman("B4k2/8/4Q3/5K2/8/8/2P5/8 w ha - 5 11", true, 30_000_000L);
 
 
@@ -455,6 +471,23 @@ namespace ChessBot
             }
             Console.WriteLine("- - - - - - - - - - - - -\n");
             LoadJumpState();
+        }
+
+        public Move? ReturnNextMove(Move? lastMove, long pThinkingTime)
+        {
+            if (lastMove != null) PlainMakeMove(lastMove);
+
+            if (GameState(isWhiteToMove) != 3) return null;
+
+            MinimaxRoot(pThinkingTime);
+
+            if (!transpositionTable.ContainsKey(zobristKey)) return null;
+
+            Move tm = transpositionTable[zobristKey].bestMove;
+
+            PlainMakeMove(tm);
+
+            return tm;
         }
 
         #endregion
@@ -4886,7 +4919,7 @@ namespace ChessBot
         }
 
         private int[] squareConnectivesPrecalculationArray = new int[4096];
-        public int[] squareConnectivesCrossDirsPrecalculationArray = new int[4096];
+        public int[] squareConnectivesCrossDirsPrecalculationArray { get; set; } = new int[4096];
         private ulong[] squareConnectivesPrecalculationRayArray = new ulong[4096];
         private ulong[] squareConnectivesPrecalculationLineArray = new ulong[4096];
 

@@ -22,7 +22,7 @@ namespace ChessBot
     {
         private static int KING_PIECE_ID = 6;
 
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
         private Dictionary<ulong, Dictionary<ulong, List<Move>>>[] preCalcMoves = new Dictionary<ulong, Dictionary<ulong, List<Move>>>[64];
 
         private ulong[] kingMasks = new ulong[64];
@@ -40,7 +40,7 @@ namespace ChessBot
 
         private ushort[] optionCount = new ushort[9] { 0, 0b1, 0b11, 0b111, 0b1111, 0b11111, 0b111111, 0b1111111, 0b11111111 };
 
-        public KingMovement(BoardManager pBoardManager)
+        public KingMovement(IBoardManager pBoardManager)
         {
             boardManager = pBoardManager;
 

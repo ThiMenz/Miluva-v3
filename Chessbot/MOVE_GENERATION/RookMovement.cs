@@ -24,13 +24,13 @@ namespace ChessBot
     {
         private const int ROOK_TILE_ID = 4, QUEEN_TILE_ID = 5;
 
-        private BoardManager boardManager;
+        private IBoardManager boardManager;
         private QueenMovement queenMovement;
 
         private List<Dictionary<ulong, RookPreCalcs>> precalculatedMoves = new List<Dictionary<ulong, RookPreCalcs>>();
         private ulong[] rookMasks = new ulong[64];
 
-        public RookMovement(BoardManager pBM, QueenMovement pQM)
+        public RookMovement(IBoardManager pBM, QueenMovement pQM)
         {
             boardManager = pBM;
             queenMovement = pQM;

@@ -74,13 +74,14 @@ namespace ChessBot
             FEN_MANAGER.Init();
             NuCRe.Init();
             ULONG_OPERATIONS.SetUpCountingArray();
+            //TLMDatabase.InitDatabase();
 
             SetupParallelBoards();
 
             TLMDatabase.InitDatabase();
 
             //SetupParallelBoards();
-            //boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
+            boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
 
             //CGFF.InterpretateLine(File.ReadAllLines(Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", ""))[0]);
             //CGFF.InterpretateLine("r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/1BPQPN2/P4PPP/R4RK1 w - - 2 15;Ñ8,ù:,tq,KI,2W,[[,Èa,ĥ7,ĘG,ëW,58,·|,ÞK,ľc,n6,°v,KN,Á²,ąa,Øt,0");
@@ -269,6 +270,8 @@ namespace ChessBot
             { false, false, false }  // König
         };
 
+
+        private List<int> moveHashList = new List<int>(); 
         private ulong[] curSearchZobristKeyLine = Array.Empty<ulong>(); //Die History muss bis zum letzten Capture, PawnMove, der letzten Rochade gehen oder dem Spielbeginn gehen
 
         //private Move[] debugMoveList = new Move[128];
@@ -488,13 +491,13 @@ namespace ChessBot
 
 
 
-            //LoadBestTexelParamsIn();
-            //PlayGameOnConsoleAgainstHuman("2bq2rk/1p5p/2n1Pn2/b2p4/2pP4/2N1B2B/1PP2PPP/Q2R2K1 w - - 0 1", true, 30_000_000L);
+            LoadBestTexelParamsIn();
+            PlayGameOnConsoleAgainstHuman("B4k2/8/4Q3/5K2/8/8/2P5/8 w ha - 5 11", true, 30_000_000L);
 
 
 
 
-            TuneWithTxtFile("SELF_PLAY_GAMES");
+            //TuneWithTxtFile("SELF_PLAY_GAMES");
 
             //TuneWithTxtFile("SELF_PLAY_GAMES", 500d, 10);
 
@@ -587,8 +590,8 @@ namespace ChessBot
                 Console.WriteLine(tM);
                 Console.WriteLine(CreateFenString());
                 PlainMakeMove(tM);
-                tGState = GameState(pHumanPlaysWhite);
-                if (tGState != 3) break;
+                tGState = GameState(isWhiteToMove);
+                if (tGState != 3 || tM == NULL_MOVE) break;
                 var pV = "";
                 tM = NULL_MOVE;
                 do {
@@ -598,7 +601,7 @@ namespace ChessBot
                     Console.WriteLine(tM);
                 } while (tM == NULL_MOVE);
                 PlainMakeMove(tM);
-                tGState = GameState(!pHumanPlaysWhite);
+                tGState = GameState(isWhiteToMove);
             }
         }
 
@@ -635,10 +638,11 @@ namespace ChessBot
         private bool jmpSt_whiteCastleRightKingSide, jmpSt_whiteCastleRightQueenSide, jmpSt_blackCastleRightKingSide, jmpSt_blackCastleRightQueenSide;
         private bool jmpSt_isWhiteToMove;
         private ulong[] jmpSt_curSearchZobristKeyLine;
+        private int[] jmpSt_moveHashList;
 
         public void LoadJumpState()
         {
-            pieceTypeArray = jmpSt_pieceTypeArray;
+            pieceTypeArray = (int[])jmpSt_pieceTypeArray.Clone();
             whitePieceBitboard = jmpSt_whitePieceBitboard;
             blackPieceBitboard = jmpSt_blackPieceBitboard;
             zobristKey = jmpSt_zobristKey;
@@ -652,8 +656,9 @@ namespace ChessBot
             blackCastleRightKingSide = jmpSt_blackCastleRightKingSide;
             blackCastleRightQueenSide = jmpSt_blackCastleRightQueenSide;
             isWhiteToMove = jmpSt_isWhiteToMove;
-            curSearchZobristKeyLine = jmpSt_curSearchZobristKeyLine;
+            curSearchZobristKeyLine = (ulong[])jmpSt_curSearchZobristKeyLine.Clone();
             allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+            moveHashList = jmpSt_moveHashList.ToList();
         }
 
         public void SetJumpState()
@@ -673,6 +678,7 @@ namespace ChessBot
             jmpSt_blackCastleRightQueenSide = blackCastleRightQueenSide;
             jmpSt_isWhiteToMove = isWhiteToMove;
             jmpSt_curSearchZobristKeyLine = (ulong[])curSearchZobristKeyLine.Clone();
+            jmpSt_moveHashList = moveHashList.ToArray();
         }
 
         #endregion
@@ -1761,6 +1767,8 @@ namespace ChessBot
                     break;
             }
 
+            moveHashList.Add(pMove.moveHash);
+
             if (pMove.isCapture || tPieceType == 1)
             {
                 curSearchZobristKeyLine = Array.Empty<ulong>();
@@ -1783,6 +1791,7 @@ namespace ChessBot
             zobristKey ^= blackTurnHash ^ enPassantSquareHashes[enPassantSquare] ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
             enPassantSquare = 65;
             isWhiteToMove = true;
+
             switch (pMove.moveTypeID)
             {
                 case 0: // Standard-Standard-Move
@@ -1955,6 +1964,8 @@ namespace ChessBot
                     allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
                     break;
             }
+
+            moveHashList.Add(pMove.moveHash);
 
             if (pMove.isCapture || tPieceType == 1)
             {
@@ -2212,6 +2223,32 @@ namespace ChessBot
 
             int perftScore, tattk = isWhiteToMove ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
 
+            (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMove(moveHashList);
+
+            if (bookMoveTuple.Item2 != 0)
+            {
+                int actualMoveHash = NuCRe.GetNumber(bookMoveTuple.Item1);
+                List<Move> tMoves = new List<Move>();
+                if (isWhiteToMove) GetLegalWhiteMoves(tattk, ref tMoves);
+                else GetLegalBlackMoves(tattk, ref tMoves);
+                int tL = tMoves.Count;
+                for (int i = 0; i < tL; i++)
+                {
+                    if (tMoves[i].moveHash == actualMoveHash)
+                    {
+                        if (debugSearchDepthResults)
+                        {
+                            Console.WriteLine("TLM_DB_Count: " + bookMoveTuple.Item2);
+                            Console.WriteLine(">> " + tMoves[i]);
+                        }
+
+                        transpositionTable.Add(zobristKey, new TranspositionEntry(tMoves[i], Array.Empty<int>()));
+
+                        return 0;
+                    }
+                }
+            }
+
             do {
                 curSearchDepth = pDepth;
                 curSubSearchDepth = pDepth - 1;
@@ -2246,7 +2283,9 @@ namespace ChessBot
                 }
 
                 pDepth++; 
-            } while (globalTimer.ElapsedTicks < tTimestamp);
+            } while (globalTimer.ElapsedTicks < tTimestamp && pDepth < 179);
+
+
 
             depths += pDepth - 1;
             BOT_MAIN.depthsSearched += pDepth - 1;
@@ -4915,6 +4954,15 @@ namespace ChessBot
             zobristKey ^= enPassantSquareHashes[enPassantSquare];
 
             allPieceBitboard = whitePieceBitboard | blackPieceBitboard;
+
+            if (zobristKey == 16260251586586513106) moveHashList.Clear();
+            else
+            {
+                moveHashList.Clear();
+                moveHashList.Add(1);
+                moveHashList.Add(2);
+                moveHashList.Add(3);
+            }
         }
 
         #endregion
@@ -5634,6 +5682,7 @@ namespace ChessBot
         {
             string[] tSpl = pStr.Split(';');
             string startFen = tSpl[0];
+            if (startFen.Replace(" ", "") == "") startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
             TLM_ChessGame rCG = new TLM_ChessGame(startFen);
             string[] tSpl2 = pStr.Replace(startFen + ";", "").Split(',');
             int tSpl2Len = tSpl2.Length - 1;

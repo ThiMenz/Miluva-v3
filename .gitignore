@@ -398,3 +398,4 @@ FodyWeavers.xsd
 *.sln.iml
 Chessbot/OpeningDatabaseV1.txt
 Chessbot/TLM_DB1.txt
+Chessbot/SELF_PLAY_GAMES.txt

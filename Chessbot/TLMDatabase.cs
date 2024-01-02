@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+#pragma warning disable CS8622
+
 namespace ChessBot
 {
     // 99.98055251% der 22.6 GB großen PGN File
@@ -31,7 +33,7 @@ namespace ChessBot
         private static List<TLMDatabaseThreadObject> threadTasks = new List<TLMDatabaseThreadObject>();
         private static List<string> validPGNs = new List<string>();
         public static List<string> processedPGNs = new List<string>();
-        private static BoardManager bM;
+        private static IBoardManager? bM;
         private static Dictionary<char, int> pieceTypeDict = new Dictionary<char, int>();
 
         private static Random databaseRNG = new Random();
@@ -58,6 +60,8 @@ namespace ChessBot
 
             Console.WriteLine("[TLM_DB] LOADED IN");
         }
+
+        #region | RUNTIME METHODS |
 
         public static (string, int) SearchForNextBookMove(string pNuCReMoveOpening)
         {
@@ -180,6 +184,10 @@ namespace ChessBot
             }
             pRefList.Add((pBookMoveStr, 1));
         }
+
+        #endregion
+
+        #region | CREATION |
 
         public static void ProcessCreatedDatabase()
         {
@@ -306,7 +314,11 @@ namespace ChessBot
                 while (completedThreads != tasksStarted) Thread.Sleep(100);
             }
         }
+
+        #endregion
     }
+
+    #region | THREAD OBJECTS |
 
     public class TLMDatabaseThreadObject
     {
@@ -408,13 +420,13 @@ namespace ChessBot
         private string[] loadedUnprocessedStrs;
         private bool[] skippedChars;
         private int from, to;
-        private BoardManager bM;
+        private IBoardManager bM;
         private int minMoves;
         private Dictionary<char, int> pieceTypeDict;
         private int[] rankArr;
         private List<string> tempStringListHolder = new List<string>();
 
-        public TLMDatabaseThreadObject2(string[] pStrs, int pFrom, int pTo, BoardManager pBM, bool[] pSkippedChars, int[] pRankArray, Dictionary<char, int> pPieceTypeDict)
+        public TLMDatabaseThreadObject2(string[] pStrs, int pFrom, int pTo, IBoardManager pBM, bool[] pSkippedChars, int[] pRankArray, Dictionary<char, int> pPieceTypeDict)
         {
             loadedUnprocessedStrs = pStrs;
             from = pFrom;
@@ -557,7 +569,7 @@ namespace ChessBot
                 }
 
                 int molc = tMoves.Count;
-                Move theMove = null;
+                Move? theMove = null;
 
                 bool b = startPos == -1 && startLine == -1, rankAndNotFileSpecified;
 
@@ -616,6 +628,12 @@ namespace ChessBot
                     }
                 }
 
+                if (theMove == null)
+                {
+                    Console.WriteLine("NULL REFERENCE; HIER IST NOCH IWO N ERROR");
+                    return;
+                }
+
                 string tS = NuCRe.GetNuCRe(theMove.moveHash);
                 for (int m = 0; m < tS.Length; m++)
                     newGameString.Add(tS[m]);
@@ -636,4 +654,6 @@ namespace ChessBot
             tempStringListHolder.Add(new string(newGameString.ToArray()));
         }
     }
+
+    #endregion
 }

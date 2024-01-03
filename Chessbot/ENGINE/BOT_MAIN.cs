@@ -3,6 +3,8 @@
 #pragma warning disable CS8618
 #pragma warning disable CS8622
 
+// Depth = 1 or generally GetLegalMoves => SpecialDoubleCheckCase Problem
+
 namespace ChessBot
 {
     public static class BOT_MAIN
@@ -39,16 +41,29 @@ namespace ChessBot
             FEN_MANAGER.Init();
             NuCRe.Init();
             ULONG_OPERATIONS.SetUpCountingArray();
+            LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
             //LegacyEngineManager.CreateNewBoardManagerSnapshot("SNAPSHOT_V01_00_000");
             //return;
 
-            SetupParallelBoards();
+            //Glicko2.Test();
 
-            IBoardManager opp = new SNAPSHOT_V01_00_000(ENGINE_VALS.DEFAULT_FEN);
+            //SetupParallelBoards();
+            //
 
-            LegacyEngineManager.PlayTwoGamesBetweenTwoSnapshots(boardManagers[0], opp, 500_000L, ENGINE_VALS.DEFAULT_FEN);
+            isFirstBoardManagerInitialized = true;
+
+            IBoardManager[] oppBoards = new SNAPSHOT_V01_00_000[16];
+            IBoardManager[] ownBoards = new BoardManager[16];
+            
+            for (int i = 0; i < 16; i++)
+            {
+                oppBoards[i] = new SNAPSHOT_V01_00_000(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
+            }
+            
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 32);
 
             //SetupParallelBoards();
             //boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
@@ -68,6 +83,7 @@ namespace ChessBot
                 Console.Write((i + 1) + ", ");
                 isFirstBoardManagerInitialized = true;
             }
+            curBoardManagerID = 1024;
             Console.WriteLine("\n\n");
         }
 

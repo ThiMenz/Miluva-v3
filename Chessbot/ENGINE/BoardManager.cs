@@ -27,6 +27,7 @@ namespace ChessBot
         }
 
         Move? ReturnNextMove(Move? pLastMove, long pThinkingTime);
+        int GameState(bool pCanWhiteBeAttacked);
 
         void SetKingMasks(ulong[] pKingMasks);
         void SetKnightMasks(ulong[] pKnightMasks);
@@ -35,6 +36,7 @@ namespace ChessBot
         void LoadJumpState();
         void GetLegalMoves(ref List<Move> pMoveList);
         void LoadFenString(string pFen);
+        string CreateFenString();
         void PlainMakeMove(string pMove);
         void PlainMakeMove(Move pMove);
 
@@ -3387,7 +3389,7 @@ namespace ChessBot
             return tEval;
         }
 
-        private int GameState(bool pWhiteKingCouldBeAttacked)
+        public int GameState(bool pWhiteKingCouldBeAttacked)
         {
             if (IsDrawByRepetition(curSearchZobristKeyLine.Length - 5) || fiftyMoveRuleCounter > 99) return 0;
 
@@ -5079,7 +5081,8 @@ namespace ChessBot
         #endregion
 
         #region | UTILITY |
-
+        public void SNAPSHOT_WRITLINE_REPLACEMENT() { }
+        public void SNAPSHOT_WRITLINE_REPLACEMENT(object pStr) { }
         private string GetDoublePrecentageString(double pVal)
         {
             return ((int)(pVal * 1_000_000) / 10_000d) + "%";

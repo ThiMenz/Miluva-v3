@@ -3,8 +3,6 @@
 #pragma warning disable CS8618
 #pragma warning disable CS8622
 
-// Depth = 1 or generally GetLegalMoves => SpecialDoubleCheckCase Problem
-
 namespace ChessBot
 {
     public static class BOT_MAIN

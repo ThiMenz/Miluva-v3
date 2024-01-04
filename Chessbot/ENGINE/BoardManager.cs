@@ -553,6 +553,7 @@ namespace ChessBot
         private int PreMinimaxCheckCheckWhite()
         {
             ulong bitShiftedKingPos = 1ul << whiteKingSquare;
+            int curR = -1;
             for (int p = 0; p < 64; p++)
             {
                 if (ULONG_OPERATIONS.IsBitZero(blackPieceBitboard, p)) continue;
@@ -560,24 +561,31 @@ namespace ChessBot
                 switch (tPT = pieceTypeArray[p])
                 {
                     case 1:
-                        if ((bitShiftedKingPos & blackPawnAttackSquareBitboards[p]) != 0ul) return p;
+                        if ((bitShiftedKingPos & blackPawnAttackSquareBitboards[p]) != 0ul)
+                            return p;
                         break;
                     case 2:
-                        if ((bitShiftedKingPos & knightSquareBitboards[p]) != 0ul) return p;
+                        if ((bitShiftedKingPos & knightSquareBitboards[p]) != 0ul)
+                            return p;
                         break;
                     case 6: break;
                     default:
-                        if ((squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[whiteKingSquare << 6 | p]]) return p;
+                        if ((squareConnectivesPrecalculationLineArray[whiteKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[whiteKingSquare << 6 | p]])
+                        {
+                            if (curR != -1) return -779;
+                            curR = p;
+                        }
                         break;
                 }
             }
 
-            return -1;
+            return curR;
         }
 
         private int PreMinimaxCheckCheckBlack()
         {
             ulong bitShiftedKingPos = 1ul << blackKingSquare;
+            int curR = -1;
             for (int p = 0; p < 64; p++)
             {
                 if (ULONG_OPERATIONS.IsBitZero(whitePieceBitboard, p)) continue;
@@ -592,12 +600,16 @@ namespace ChessBot
                         break;
                     case 6: break;
                     default:
-                        if ((squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[blackKingSquare << 6 | p]]) return p;
+                        if ((squareConnectivesPrecalculationLineArray[blackKingSquare << 6 | p] & allPieceBitboard) == (1ul << p) && pieceTypeAbilities[tPT, squareConnectivesPrecalculationArray[blackKingSquare << 6 | p]])
+                        {
+                            if (curR != -1) return -779;
+                            curR = p;
+                        }
                         break;
                 }
             }
 
-            return -1;
+            return curR;
         }
 
         private int LecacyLeafCheckingPieceCheckWhite(int pStartPos, int pEndPos, int pPieceType)
@@ -648,8 +660,19 @@ namespace ChessBot
 
         public void GetLegalMoves(ref List<Move> pMoveList)
         {
-            if (isWhiteToMove) GetLegalWhiteMoves(PreMinimaxCheckCheckWhite(), ref pMoveList);
-            else GetLegalBlackMoves(PreMinimaxCheckCheckBlack(), ref pMoveList);
+            int attk;
+            if (isWhiteToMove)
+            {
+                attk = PreMinimaxCheckCheckWhite();
+                if (attk == -779) GetLegalWhiteMovesSpecialDoubleCheckCase(ref pMoveList);
+                else GetLegalWhiteMoves(attk, ref pMoveList);
+            }
+            else
+            {
+                attk = PreMinimaxCheckCheckBlack();
+                if (attk == -779) GetLegalBlackMovesSpecialDoubleCheckCase(ref pMoveList);
+                else GetLegalBlackMoves(attk, ref pMoveList);
+            }
         }
 
         private void GetLegalWhiteMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
@@ -2092,8 +2115,8 @@ namespace ChessBot
             {
                 int actualMoveHash = NuCRe.GetNumber(bookMoveTuple.Item1);
                 List<Move> tMoves = new List<Move>();
-                if (isWhiteToMove) GetLegalWhiteMoves(tattk, ref tMoves);
-                else GetLegalBlackMoves(tattk, ref tMoves);
+                GetLegalMoves(ref tMoves);
+
                 int tL = tMoves.Count;
                 for (int i = 0; i < tL; i++)
                 {
@@ -3395,18 +3418,21 @@ namespace ChessBot
 
             int t;
             List<Move> tMoves = new List<Move>();
+            GetLegalMoves(ref tMoves);
 
             if (pWhiteKingCouldBeAttacked)
             {
-                GetLegalWhiteMoves(t = PreMinimaxCheckCheckWhite(), ref tMoves);
+                //GetLegalWhiteMoves(t = PreMinimaxCheckCheckWhite(), ref tMoves);
                 //Console.WriteLine(t);
+                t = PreMinimaxCheckCheckWhite();
                 if (t == -1) return tMoves.Count == 0 ? 0 : 3;
                 else if (tMoves.Count == 0) return -1;
             }
             else
             {
-                GetLegalBlackMoves(t = PreMinimaxCheckCheckBlack(), ref tMoves);
+                //GetLegalBlackMoves(t = PreMinimaxCheckCheckBlack(), ref tMoves);
                 //Console.WriteLine(t);
+                t = PreMinimaxCheckCheckBlack();
                 if (t == -1) return tMoves.Count == 0 ? 0 : 3;
                 else if (tMoves.Count == 0) return 1;
             }
@@ -3873,8 +3899,7 @@ namespace ChessBot
                 foreach (int hMove in tGame.hashedMoves)
                 {
                     List<Move> moveOptionList = new List<Move>();
-                    if (isWhiteToMove) GetLegalWhiteMoves(PreMinimaxCheckCheckWhite(), ref moveOptionList);
-                    else GetLegalBlackMoves(PreMinimaxCheckCheckBlack(), ref moveOptionList);
+                    GetLegalMoves(ref moveOptionList);
 
                     int tL = moveOptionList.Count;
                     for (int j = 0; j < tL; j++)
@@ -4546,10 +4571,8 @@ namespace ChessBot
             {
                 Tune(tDGameResult, pLearningRate);
 
-                // Könnte sein, dass es theoretisch nicht ganz save ist; da es den special double Check Case gibt; aber der ist so selten...
                 List<Move> moveOptionList = new List<Move>();
-                if (isWhiteToMove) GetLegalWhiteMoves(PreMinimaxCheckCheckWhite(), ref moveOptionList);
-                else GetLegalBlackMoves(PreMinimaxCheckCheckBlack(), ref moveOptionList);
+                GetLegalMoves(ref moveOptionList);
 
                 int tL = moveOptionList.Count;
                 for (int i = 0; i < tL; i++)

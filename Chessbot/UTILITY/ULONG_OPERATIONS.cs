@@ -74,7 +74,14 @@ namespace ChessBot
         public static ulong SetBitsToOne(ulong u, params int[] index)
         {
             int tL = index.Length;
-            for (int i = 0; i < tL; i++) u |= (1ul << index[i]);
+            for (int i = 0; i < tL; i++) u |= 1ul << index[i];
+            return u;
+        }
+
+        public static ulong SetBitsToZero(ulong u, params int[] index)
+        {
+            int tL = index.Length;
+            for (int i = 0; i < tL; i++) u &= ~(1ul << index[i]);
             return u;
         }
 

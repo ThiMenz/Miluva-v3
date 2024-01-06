@@ -33,6 +33,15 @@ namespace ChessBot
         public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictLR = new Dictionary<ulong, RayPrecalcs>[64, 64];
         public Dictionary<ulong, RayPrecalcs>[,] rayPrecalcDictTB = new Dictionary<ulong, RayPrecalcs>[64, 64];
 
+        // rayPrecalcDictDiagonal[ulong]
+        // rayPrecalcDictStraight[ulong]
+
+        private List<ulong>[] diagonalOtherRays = new List<ulong>[64];
+        private List<ulong>[] straightOtherRays = new List<ulong>[64];
+
+        public Dictionary<ulong, RayPrecalcs>[] rayPrecalcsDiagonal = new Dictionary<ulong, RayPrecalcs>[64];
+        public Dictionary<ulong, RayPrecalcs>[] rayPrecalcsStraight = new Dictionary<ulong, RayPrecalcs>[64];
+
         public Rays()
         {
             if (STATIC_RAYS.PRECALCULATED)
@@ -54,12 +63,18 @@ namespace ChessBot
                     rayPrecalcDictTB = tR.rayPrecalcDictTB;
                     diagonalLBRayLengths = tR.diagonalLBRayLengths;
                     diagonalRBRayLengths = tR.diagonalRBRayLengths;
+                    rayPrecalcsDiagonal = tR.rayPrecalcsDiagonal;
+                    rayPrecalcsStraight = tR.rayPrecalcsStraight;
                 }
             }
             else 
             { 
                 for (int sq = 0; sq < 64; sq++)
                 {
+                    rayPrecalcsStraight[sq] = new Dictionary<ulong, RayPrecalcs>();
+                    rayPrecalcsDiagonal[sq] = new Dictionary<ulong, RayPrecalcs>();
+                    diagonalOtherRays[sq] = new List<ulong>();
+                    straightOtherRays[sq] = new List<ulong>();
                     for (int k = 0; k < 64; k++)
                     {
                         rayPrecalcDictLB[sq, k] = new Dictionary<ulong, RayPrecalcs>();
@@ -102,7 +117,7 @@ namespace ChessBot
             }
         }
 
-        private void FillDictionaryArray(Dictionary<ulong, RayPrecalcs>[,] pArr, int pSquare, ulong pAttkBB, ulong pTU, int pAscendingOption, int pAscendingPinO, int pDescendingOption, int pDescendingPinO, int pAscendingAdder)
+        private void FillDictionaryArray(Dictionary<ulong, RayPrecalcs>[,] pArr, Dictionary<ulong, RayPrecalcs>[] pArr2, List<ulong>[] otherSidedRays, int pSquare, ulong pAttkBB, ulong pTU, int pAscendingOption, int pAscendingPinO, int pDescendingOption, int pDescendingPinO, int pAscendingAdder, ulong pFullBB)
         {
             if (pAscendingOption != -1) pAttkBB = ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption);
             if (pDescendingOption != -1) pAttkBB = ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption);
@@ -112,11 +127,25 @@ namespace ChessBot
             //if (pSquare == 3) { Console.WriteLine(pAscendingOption + "-" + pDescendingOption); }
             if (pAscendingOption != -1) pArr[pSquare, pAscendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption + pAscendingAdder), 0ul));
             if (pDescendingOption != -1) pArr[pSquare, pDescendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption - pAscendingAdder), 0ul));
+            
             RayPrecalcs tRP = new RayPrecalcs(pAttkBB, 0ul);
             for (int kSq = 0; kSq < 64; kSq++)
             {
                 if (kSq == pAscendingPinO || kSq == pDescendingPinO || kSq == pAscendingOption || kSq == pDescendingOption) continue;
                 pArr[pSquare, kSq].Add(pTU, tRP);
+            }
+
+            if (pArr2 != null)
+            {
+                int tC = otherSidedRays[pSquare].Count;
+                for (int i = 0; i < tC; i++)
+                {
+                    ulong u = otherSidedRays[pSquare][i];
+                    if (otherSidedRays == diagonalOtherRays) 
+                        rayPrecalcsDiagonal[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLB[pSquare, 0][u].attackingBitboard | pAttkBB, 0ul));
+                    else 
+                        rayPrecalcsStraight[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLR[pSquare, 0][u].attackingBitboard | pAttkBB, 0ul));
+                }
             }
         }
 
@@ -136,6 +165,20 @@ namespace ChessBot
             RayPrecalcs trp2 = rayPrecalcDictTB[pSquare, pKingSquare][pAllPieceBitboard & straightTBRays[pSquare]];
             curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
             curPinnedPieces |= trp.pinnedPieceBitboard | trp2.pinnedPieceBitboard;
+        }
+        public int DiagonalRaySquareCount(ulong pAllPieceBitboard, int pSquare, ref ulong curAttkBitboard)
+        {
+            RayPrecalcs trp = rayPrecalcDictLB[pSquare, 0][pAllPieceBitboard & diagonalLBRays[pSquare]];
+            RayPrecalcs trp2 = rayPrecalcDictRB[pSquare, 0][pAllPieceBitboard & diagonalRBRays[pSquare]];
+            curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
+            return trp.attackCount + trp2.attackCount;
+        }
+        public int StraightRaySquareCount(ulong pAllPieceBitboard, int pSquare, ref ulong curAttkBitboard)
+        {
+            RayPrecalcs trp = rayPrecalcDictLR[pSquare, 0][pAllPieceBitboard & straightLRRays[pSquare]];
+            RayPrecalcs trp2 = rayPrecalcDictTB[pSquare, 0][pAllPieceBitboard & straightTBRays[pSquare]];
+            curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
+            return trp.attackCount + trp2.attackCount;
         }
 
         public void DiagonalRayLB(ulong pAllPieceBitboard, int pSquare, int pKingSquare, ref ulong curAttkBitboard, ref ulong curPinnedPieces)
@@ -170,9 +213,14 @@ namespace ChessBot
 
         #region | LINE PRECALCULATIONS |
 
-        private void PrecalculateAllDiagonalLBRaysFromSquare(int pSquare)
+        private void PrecalculateAllDiagonalLBRaysFromSquare(int pSquare) //
         {
             int c = diagonalLBRayLengths[pSquare];
+
+            //Console.WriteLine("  Sq := " + pSquare);
+            //Console.WriteLine(c);
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(diagonalLBRays[pSquare]));
+
             ushort o = combinationCount[c];
             List<int> tl = diagonalLBRayLists[pSquare];
             do {
@@ -183,13 +231,17 @@ namespace ChessBot
                     if (ULONG_OPERATIONS.IsBitZero(o, i)) continue;
                     tu = ULONG_OPERATIONS.SetBitToOne(tu, tl[i]);
                 }
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tu));
+                diagonalOtherRays[pSquare].Add(tu);
+
                 for (int t = pSquare + 7; t < 64 && t % 8 != 7; t += 7)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), ascendingOption == -1, 64, ref attkBB, ref ascendingOption, ref ascendingPinO, ref t);
                 for (int t = pSquare - 7; t > -1 && t % 8 != 0; t -= 7)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
-
-                FillDictionaryArray(rayPrecalcDictLB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 7);
+                FillDictionaryArray(rayPrecalcDictLB, null, diagonalOtherRays, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 7, tu);
             } while (o-- != 0);
+
+            //Console.WriteLine(".");
         }
 
         private void PrecalculateAllDiagonalRBRaysFromSquare(int pSquare)
@@ -206,16 +258,19 @@ namespace ChessBot
                     if (ULONG_OPERATIONS.IsBitZero(o, i)) continue;
                     tu = ULONG_OPERATIONS.SetBitToOne(tu, tl[i]);
                 }
+
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tu));
+
                 for (int t = pSquare + 9; t < 64 && t % 8 != 0; t += 9)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), ascendingOption == -1, 64, ref attkBB, ref ascendingOption, ref ascendingPinO, ref t);
                 for (int t = pSquare - 9; t > -1 && t % 8 != 7; t -= 9)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictRB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 9);
+                FillDictionaryArray(rayPrecalcDictRB, rayPrecalcsDiagonal, diagonalOtherRays, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 9, tu);
             } while (o-- != 0);
         }
 
-        private void PrecalculateAllStraightLRRaysFromSquare(int pSquare)
+        private void PrecalculateAllStraightLRRaysFromSquare(int pSquare) //
         {
             ushort o = combinationCount[7];
             int tmin = pSquare - pSquare % 8 - 1, tmax = tmin + 9;
@@ -229,12 +284,14 @@ namespace ChessBot
                     if (ULONG_OPERATIONS.IsBitZero(o, i)) continue;
                     tu = ULONG_OPERATIONS.SetBitToOne(tu, tl[i]);
                 }
+                straightOtherRays[pSquare].Add(tu);
+
                 for (int t = pSquare + 1; t < tmax; t++)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), ascendingOption == -1, 64, ref attkBB, ref ascendingOption, ref ascendingPinO, ref t);
                 for (int t = pSquare - 1; t > tmin; t--)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictLR, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 1);
+                FillDictionaryArray(rayPrecalcDictLR, null, straightOtherRays, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 1, tu);
             } while (o-- != 0);
         }
 
@@ -256,7 +313,7 @@ namespace ChessBot
                 for (int t = pSquare - 8; t > -1; t -= 8)
                     SingleAttkSquareIteration(ULONG_OPERATIONS.IsBitOne(tu, t), descendingOption == -1, -1, ref attkBB, ref descendingOption, ref descendingPinO, ref t);
 
-                FillDictionaryArray(rayPrecalcDictTB, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 8);
+                FillDictionaryArray(rayPrecalcDictTB, rayPrecalcsStraight, straightOtherRays, pSquare, attkBB, tu, ascendingOption, ascendingPinO, descendingOption, descendingPinO, 8, tu);
             } while (o-- != 0);
         }
 
@@ -307,11 +364,19 @@ namespace ChessBot
     {
         public ulong attackingBitboard { get; private set; }
         public ulong pinnedPieceBitboard { get; private set; }
+        public int attackCount { get; private set; }
 
         public RayPrecalcs(ulong pAttkBB, ulong pPpBB)
         {
             attackingBitboard = pAttkBB;
             pinnedPieceBitboard = pPpBB;
+            attackCount = ULONG_OPERATIONS.CountBits(attackingBitboard);
+        }
+
+        public void Add(ulong pAttkBB)
+        {
+            attackingBitboard |= pAttkBB;
+            attackCount = ULONG_OPERATIONS.CountBits(attackingBitboard);
         }
     }
 }

@@ -54,7 +54,7 @@ namespace ChessBot
     {
         #region | BOARD VALS |
 
-        public int TEXEL_PARAMS { get; } = 778;
+        public int TEXEL_PARAMS { get; } = 1130;
 
         private const int BESTMOVE_SORT_VAL = -2_000_000_000;
         private const int CAPTURE_SORT_VAL = -1_000_000_000;
@@ -159,6 +159,8 @@ namespace ChessBot
                 texelTuningRuntimePositionalValsV2EG[i] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
                 texelTuningRuntimePositionalValsV2LG[i] = new int[64] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             }
+
+            PrecalculateKingSafetyBitboards();
             PrecalculateMultipliers();
             GetLowNoisePositionalEvaluation(globalRandom);
             MinimaxRoot(1L); // Minimax Preloader
@@ -205,7 +207,7 @@ namespace ChessBot
 
             LoadFenString(pFen);
 
-            LoadBestTexelParamsIn();
+           // LoadBestTexelParamsIn();
 
             setupStopwatch.Stop();
         }
@@ -305,7 +307,8 @@ namespace ChessBot
             //    }
             //}
 
-            //SetupTexelEvaluationParams(tttt);
+            int[] tttt = new int[TEXEL_PARAMS];
+            SetupTexelEvaluationParams(tttt);
 
             //int[] ttt = new int[64];
             //
@@ -325,18 +328,18 @@ namespace ChessBot
             //LoadFenString("1kr4r/p1p2ppp/bp2pn2/8/1bBP4/2N1PQ2/PPPB2PP/2KR2NR w Kk - 0 1");
             //Console.WriteLine(TexelEvaluate());
 
-            //Stopwatch sw = Stopwatch.StartNew();
+            Stopwatch sw = Stopwatch.StartNew();
             //
-            //for (int i = 0; i < 2_000_000; i++)
-            //{
-            //    TexelEvaluate();
-            //}
+            for (int i = 0; i < 1_000_000; i++)
+            {
+                TexelEvaluate();
+            }
+            
+            sw.Stop();
             //
-            //sw.Stop();
-            //
-            //Console.WriteLine(sw.ElapsedMilliseconds);
+            Console.WriteLine(sw.ElapsedMilliseconds);
 
-            PlayGameOnConsoleAgainstHuman("B4k2/8/4Q3/5K2/8/8/2P5/8 w ha - 5 11", true, 30_000_000L);
+            //PlayGameOnConsoleAgainstHuman("B4k2/8/4Q3/5K2/8/8/2P5/8 w ha - 5 11", true, 30_000_000L);
 
 
 
@@ -3579,6 +3582,21 @@ namespace ChessBot
             return rArr;
         }
 
+        private int[] SwapArrayViewingSideAndNegate(int[] pArr)
+        {
+            return new int[64]
+            {
+                -pArr[56], -pArr[57], -pArr[58], -pArr[59], -pArr[60], -pArr[61], -pArr[62], -pArr[63],
+                -pArr[48], -pArr[49], -pArr[50], -pArr[51], -pArr[52], -pArr[53], -pArr[54], -pArr[55],
+                -pArr[40], -pArr[41], -pArr[42], -pArr[43], -pArr[44], -pArr[45], -pArr[46], -pArr[47],
+                -pArr[32], -pArr[33], -pArr[34], -pArr[35], -pArr[36], -pArr[37], -pArr[38], -pArr[39],
+                -pArr[24], -pArr[25], -pArr[26], -pArr[27], -pArr[28], -pArr[29], -pArr[30], -pArr[31],
+                -pArr[16], -pArr[17], -pArr[18], -pArr[19], -pArr[20], -pArr[21], -pArr[22], -pArr[23],
+                -pArr[8],   -pArr[9], -pArr[10], -pArr[11], -pArr[12], -pArr[13], -pArr[14], -pArr[15],
+                -pArr[0],   -pArr[1],  -pArr[2],  -pArr[3],  -pArr[4],  -pArr[5],  -pArr[6],  -pArr[7]
+            };
+        }
+
         private int[] SwapArrayViewingSide(int[] pArr)
         {
             return new int[64]
@@ -3622,6 +3640,14 @@ namespace ChessBot
 
         private int[] texelPieceEvaluationsV2EG = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
         private int[] texelPieceEvaluationsV2LG = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
+
+        private int[] texelKingSafetyR1EvaluationsEG = new int[9];
+        private int[] texelKingSafetyR2EvaluationsEG = new int[17];
+        private int[] texelKingSafetyR1EvaluationsLG = new int[9];
+        private int[] texelKingSafetyR2EvaluationsLG = new int[17];
+
+        private int[,] texelMobilityStraightEG = new int[14, 15], texelMobilityStraightLG = new int[14, 15];
+        private int[,] texelMobilityDiagonalEG = new int[14, 14], texelMobilityDiagonalLG = new int[14, 14];
 
         private int[] texelPieceEvaluations = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
 
@@ -3979,6 +4005,8 @@ namespace ChessBot
             //texelPieceEvaluations[10] = -(texelPieceEvaluations[3] = pParams[2]);
             //texelPieceEvaluations[11] = -(texelPieceEvaluations[4] = pParams[3]);
             //texelPieceEvaluations[12] = -(texelPieceEvaluations[5] = pParams[4]);
+
+            // 10 Stk
             texelPieceEvaluationsV2EG[8] = -(texelPieceEvaluationsV2EG[1] = pParams[0]);
             texelPieceEvaluationsV2EG[9] = -(texelPieceEvaluationsV2EG[2] = pParams[1]);
             texelPieceEvaluationsV2EG[10] = -(texelPieceEvaluationsV2EG[3] = pParams[2]);
@@ -3989,15 +4017,48 @@ namespace ChessBot
             texelPieceEvaluationsV2LG[10] = -(texelPieceEvaluationsV2LG[3] = pParams[7]);
             texelPieceEvaluationsV2LG[11] = -(texelPieceEvaluationsV2LG[4] = pParams[8]);
             texelPieceEvaluationsV2LG[12] = -(texelPieceEvaluationsV2LG[5] = pParams[9]);
-            int c = 10;
+
+            int c = 10; // 768 Stk
             for (int p = 1; p < 7; p++)
             {
                 for (int s = 0; s < 64; s++)
                 {
-                    texelTuningRuntimePositionalValsV2EG[p + 7][blackSidedSquares[s]] = texelTuningRuntimePositionalValsV2EG[p][s] = pParams[c++];
-                    texelTuningRuntimePositionalValsV2LG[p + 7][blackSidedSquares[s]] = texelTuningRuntimePositionalValsV2LG[p][s] = pParams[c++];
+                    texelTuningRuntimePositionalValsV2EG[p + 7][blackSidedSquares[s]] = -(texelTuningRuntimePositionalValsV2EG[p][s] = pParams[c++]);
+                    texelTuningRuntimePositionalValsV2LG[p + 7][blackSidedSquares[s]] = -(texelTuningRuntimePositionalValsV2LG[p][s] = pParams[c++]);
                 }
             }
+
+            //c = 778; >> 290 Stk
+            for (int p = 2; p < 7; p++)
+            {
+                for (int a = 0; a < 15; a++)
+                {
+                    if (a != 14)
+                    {
+                        // Diagonal
+                        texelMobilityDiagonalEG[p + 2, a] = pParams[c++];
+                        texelMobilityDiagonalLG[p + 2, a] = pParams[c++];
+                    }
+                    // Straight
+                    texelMobilityStraightEG[p + 2, a] = pParams[c++];
+                    texelMobilityStraightLG[p + 2, a] = pParams[c++];
+                }
+
+            }
+
+            //c = 1068; >> 52 Stk
+            for (int i = 0; i < 9; i++)
+            {
+                texelKingSafetyR1EvaluationsEG[i] = pParams[c++];
+                texelKingSafetyR1EvaluationsLG[i] = pParams[c++];
+            }
+            for (int i = 0; i < 17; i++)
+            {
+                texelKingSafetyR2EvaluationsEG[i] = pParams[c++];
+                texelKingSafetyR2EvaluationsLG[i] = pParams[c++];
+            }
+
+            Console.WriteLine(c);
 
             //texelTuningRuntimePositionalValsV2EG
 
@@ -4627,44 +4688,108 @@ namespace ChessBot
             return TexelEvaluate();
         }
 
+        // Tapered Eval (0 - 24 based on remaining pieces) =>
+
+        // IMPLEMENTED:
+        // 1. Piece Existancy Values
+        // 2. Piece Position Values
+
+        // NEXT:
+        // 3. King Safety (Somehow combined with mobility...)
+        // 4. Piece Mobility (White / Black Squares?)
+        // 5. Pawn Structure (Pawn Hashing)
+
+        // Performance Goal: 3m EvpS (Single Threaded)
+        // ==> All Texel Tunable
+
+        // FIX BOTH SIDED
+
         private int TexelEvaluate()
         {
+            //if (transpositionTable.ContainsKey(zobristKey))
+            //{
+            //
+            //}
             //pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard)
+            //int tAPT = pieceTypeArray[p];
+
+            //tEval += texelPieceEvaluations[
+            //    tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
+            //] + texelTuningRuntimeVals[pieceCount, tPT][p];
+
+            //tEvalEG 
+
+            //tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
+
+            //switch (pieceTypeArray[p])
+            //{
+            //    case 1:
+            //        oppStaticPieceVision |= blackPawnAttackSquareBitboards[p];
+            //        break;
+            //    case 2:
+            //        oppStaticPieceVision |= knightSquareBitboards[p];
+            //        break;
+            //    case 3:
+            //        //rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
+            //        break;
+            //    case 4:
+            //        //rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
+            //        break;
+            //    case 5:
+            //        //rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
+            //        //rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
+            //        break;
+            //    case 6:
+            //        oppStaticPieceVision |= kingSquareBitboards[p];
+            //        break;
+            //}
+
             int tEvalEG = 0, tEvalLG = 0, tProgress = 0;
+
+            ulong[] attkULs = new ulong[2];
+
             for (int p = 0; p < 64; p++)
             {
                 if (((int)(allPieceBitboard >> p) & 1) == 0) continue;
-                //int tAPT = pieceTypeArray[p];
 
-                //tEval += texelPieceEvaluations[
-                //    tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
-                //] + texelTuningRuntimeVals[pieceCount, tPT][p];
+                int side = (int)(blackPieceBitboard >> p) & 1, mobilityDiagonal = 0, mobilityStraight = 0;
 
-                //tEvalEG 
+                int aPT = pieceTypeArray[p];
 
-                //tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
+                if (aPT == 1)
+                {
+                    mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p, ref attkULs[side]);
+                    mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p, ref attkULs[side]);
+                }
 
-                int tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1);
+                int tPT = aPT + 7 * side;
 
-                tEvalEG += texelTuningRuntimePositionalValsV2EG[tPT][p] + texelPieceEvaluationsV2EG[tPT];
-                tEvalLG += texelTuningRuntimePositionalValsV2LG[tPT][p] + texelPieceEvaluationsV2LG[tPT];
+                tEvalEG += texelMobilityStraightEG[tPT, mobilityStraight] + texelMobilityDiagonalEG[tPT, mobilityDiagonal] 
+                         + texelTuningRuntimePositionalValsV2EG[tPT][p] + texelPieceEvaluationsV2EG[tPT];
+
+                tEvalLG += texelMobilityStraightLG[tPT, mobilityStraight] + texelMobilityDiagonalLG[tPT, mobilityDiagonal] 
+                         + texelTuningRuntimePositionalValsV2LG[tPT][p] + texelPieceEvaluationsV2LG[tPT];
+
                 tProgress += pieceTypeGameProgressImpact[tPT];
-
             }
 
-            //Console.WriteLine(tProgress);
+            int wksr1 = ULONG_OPERATIONS.CountBits(kingSafetyRing1[whiteKingSquare] & attkULs[1]), wksr2 = ULONG_OPERATIONS.CountBits(kingSafetyRing2[whiteKingSquare] & attkULs[1]);
+            int bksr1 = ULONG_OPERATIONS.CountBits(kingSafetyRing1[blackKingSquare] & attkULs[0]), bksr2 = ULONG_OPERATIONS.CountBits(kingSafetyRing2[blackKingSquare] & attkULs[0]);
 
-            if (tProgress > 24)
+            if (isWhiteToMove)
             {
-                tProgress = 24;
+                tEvalEG += texelKingSafetyR1EvaluationsEG[wksr1] + texelKingSafetyR2EvaluationsEG[wksr2] - texelKingSafetyR1EvaluationsEG[bksr1] - texelKingSafetyR2EvaluationsEG[bksr2];
+                tEvalLG += texelKingSafetyR1EvaluationsLG[wksr1] + texelKingSafetyR2EvaluationsLG[wksr2] - texelKingSafetyR1EvaluationsLG[bksr1] - texelKingSafetyR2EvaluationsLG[bksr2];
+            }
+            else
+            {
+                tEvalEG -= texelKingSafetyR1EvaluationsEG[wksr1] - texelKingSafetyR2EvaluationsEG[wksr2] + texelKingSafetyR1EvaluationsEG[bksr1] + texelKingSafetyR2EvaluationsEG[bksr2];
+                tEvalLG -= texelKingSafetyR1EvaluationsLG[wksr1] - texelKingSafetyR2EvaluationsLG[wksr2] + texelKingSafetyR1EvaluationsLG[bksr1] + texelKingSafetyR2EvaluationsLG[bksr2];
             }
 
-            //tProgress = 24;
-
-            //int pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard);
+            if (tProgress > 24) tProgress = 24;
 
             return (int)(earlyGameMultipliers[tProgress] * tEvalEG + lateGameMultipliers[tProgress] * tEvalLG);
-            //return tEval;
         }
 
         private const double TexelK = 0.2;
@@ -4910,6 +5035,44 @@ namespace ChessBot
           false, false, false, false, false, false, false, false,
           false, false, false, false, false, false, false, false
         };
+
+        private ulong[] kingSafetyRing1 = new ulong[64], kingSafetyRing2 = new ulong[64];
+
+        private ulong[] rowPrecalcs = new ulong[8], columnPrecalcs = new ulong[8];
+
+        const ulong columnUL = 0x101010101010101, rowUL = 0b11111111;
+
+        private void PrecalculateKingSafetyBitboards()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                rowPrecalcs[i] = rowUL << (8 * i);
+                columnPrecalcs[i] = columnUL << i;
+            }
+
+            for (int i = 0; i < 64; i++)
+            {
+                int tMod = i % 8;
+                int tRow = (i - tMod) / 8;
+                ulong tULC = columnPrecalcs[tMod], tULR = rowPrecalcs[tRow];
+                ulong tULC2 = columnPrecalcs[tMod], tULR2 = rowPrecalcs[tRow];
+
+                if (tMod < 7) tULC |= columnPrecalcs[tMod + 1];
+                if (tMod > 0) tULC |= columnPrecalcs[tMod - 1];
+                if (tRow < 7) tULR |= rowPrecalcs[tRow + 1];
+                if (tRow > 0) tULR |= rowPrecalcs[tRow - 1];
+                if (tMod < 6) tULC2 |= columnPrecalcs[tMod + 2];
+                if (tMod > 1) tULC2 |= columnPrecalcs[tMod - 2];
+                if (tRow < 6) tULR2 |= rowPrecalcs[tRow + 2];
+                if (tRow > 1) tULR2 |= rowPrecalcs[tRow - 2];
+
+                tULR2 |= tULR;
+                tULC2 |= tULC;
+
+                kingSafetyRing1[i] = ULONG_OPERATIONS.SetBitToZero(tULR & tULC, i);
+                kingSafetyRing2[i] = ULONG_OPERATIONS.SetBitsToZero(tULR2 & tULC2, i, i + 1, i - 1, i + 7, i + 8, i + 9, i - 7, i - 8, i - 9);
+            }
+        }
 
         private void PrecalculateEnPassantMoves()
         {

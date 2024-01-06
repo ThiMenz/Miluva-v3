@@ -42,35 +42,99 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //LegacyEngineManager.CreateNewBoardManagerSnapshot("SNAPSHOT_V01_00_000");
-            //return;
+            MEM_TempStuff();
+        }
 
-            //Glicko2.Test();
+        #region | MAIN METHODS |
 
-            //SetupParallelBoards();
-            //
+        private static void MEM_TempStuff()
+        {
+            SetupParallelBoards();
 
+            boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
+        }
+
+        private static void MEM_CreateSnapshot()
+        {
+            LegacyEngineManager.CreateNewBoardManagerSnapshot("SNAPSHOT_V01_00_000");
+        }
+
+        private static void MEM_SnapshotClash()
+        {
             isFirstBoardManagerInitialized = true;
 
             IBoardManager[] oppBoards = new SNAPSHOT_V01_00_000[16];
             IBoardManager[] ownBoards = new BoardManager[16];
-            
+
             for (int i = 0; i < 16; i++)
             {
                 oppBoards[i] = new SNAPSHOT_V01_00_000(ENGINE_VALS.DEFAULT_FEN);
                 ownBoards[i] = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
             }
-            
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 32);
 
-            //SetupParallelBoards();
-            //boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TempStuff();
-
-            //CGFF.InterpretateLine(File.ReadAllLines(Path.GetFullPath("SELF_PLAY_GAMES.txt").Replace(@"\\bin\\Debug\\net6.0", "").Replace(@"\bin\Debug\net6.0", ""))[0]);
-            //CGFF.InterpretateLine("r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/1BPQPN2/P4PPP/R4RK1 w - - 2 15;Ñ8,ù:,tq,KI,2W,[[,Èa,ĥ7,ĘG,ëW,58,·|,ÞK,ľc,n6,°v,KN,Á²,ąa,Øt,0");
-            //SetupParallelBoards();
-            //MEM_SelfPlay();
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 512);
         }
+
+        private static void MEM_SelfPlay()
+        {
+            SetupParallelBoards();
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < ENGINE_VALS.CPU_CORES; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    new WaitCallback(boardManagers[i].ThreadSelfPlay)
+                );
+            }
+
+            while (gamesPlayed < goalGameCount) Thread.Sleep(1000);
+
+            sw.Stop();
+
+            string tSave;
+
+            Console.WriteLine(tSave = "Time in ms: " + GetThreeDigitSeperatedInteger((int)sw.ElapsedMilliseconds) + " | Time Constraint: " + ENGINE_VALS.SELF_PLAY_THINK_TIME
+            + " | Games Played: " + gamesPlayed + " | Moves Played: " + movesPlayed + " | Depths Searched: " + depthsSearched + " | Evaluations Made: " + evaluationsMade);
+
+            double ttime = (sw.ElapsedTicks / 10_000_000d);
+            double GpS = gamesPlayed / ttime;
+            double MpS = movesPlayed / ttime;
+            double MpG = movesPlayed / (double)gamesPlayed;
+            double EpSec = evaluationsMade / ttime;
+            double EpSrch = evaluationsMade / (double)searchesFinished;
+            double DpS = depthsSearched / (double)searchesFinished;
+            double DrawPrecentage = gamesPlayedResultArray[1] * 100d / gamesPlayed;
+            double WhiteWinPrecentage = gamesPlayedResultArray[2] * 100d / gamesPlayed;
+            double BlackWinPrecentage = gamesPlayedResultArray[0] * 100d / gamesPlayed;
+
+            Console.WriteLine("\n===\n");
+            tSave += " | Games Per Second: " + GpS;
+            Console.WriteLine("| Games Per Second: " + GpS);
+            tSave += " | Moves Per Second: " + MpS;
+            Console.WriteLine("| Moves Per Second: " + MpS);
+            tSave += " | Moves Per Game: " + MpG;
+            Console.WriteLine("| Moves Per Game: " + MpG);
+            tSave += " | Depths Per Search: " + DpS;
+            Console.WriteLine("| Depths Per Search: " + DpS);
+            tSave += " | Evaluations Per Second: " + EpSec;
+            Console.WriteLine("| Evaluations Per Second: " + EpSec);
+            tSave += " | Evaluations Per Search: " + EpSrch;
+            Console.WriteLine("| Evaluations Per Search: " + EpSrch);
+            Console.WriteLine("\n===\n");
+            tSave += " | White Win%: " + WhiteWinPrecentage;
+            Console.WriteLine("| White Win%: " + WhiteWinPrecentage);
+            tSave += " | Draw%: : " + DrawPrecentage;
+            Console.WriteLine("| Draw%: : " + DrawPrecentage);
+            tSave += " | Black Win%: " + BlackWinPrecentage;
+            Console.WriteLine("| Black Win%: " + BlackWinPrecentage);
+
+            string tPath = PathManager.GetTXTPath("DATABASES/SELF_PLAY_GAMES");
+            selfPlayGameStrings.Add(tSave);
+            File.AppendAllLines(tPath, selfPlayGameStrings.ToArray());
+        }
+
+        #endregion
 
         private static void SetupParallelBoards()
         {
@@ -131,63 +195,6 @@ namespace ChessBot
             boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TexelTuning(pChessGamesToEdit, new int[boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TEXEL_PARAMS]);
 
             //boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1].TLMTuning(pChessGamesToEdit);
-        }
-
-        private static void MEM_SelfPlay()
-        {
-            Stopwatch sw = Stopwatch.StartNew();
-
-            for (int i = 0; i < ENGINE_VALS.CPU_CORES; i++)
-            {
-                ThreadPool.QueueUserWorkItem(
-                    new WaitCallback(boardManagers[i].ThreadSelfPlay)
-                );
-            }
-
-            while (gamesPlayed < goalGameCount) Thread.Sleep(1000);
-
-            sw.Stop();
-
-            string tSave;
-
-            Console.WriteLine(tSave = "Time in ms: " + GetThreeDigitSeperatedInteger((int)sw.ElapsedMilliseconds) + " | Time Constraint: " + ENGINE_VALS.SELF_PLAY_THINK_TIME
-            + " | Games Played: " + gamesPlayed + " | Moves Played: " + movesPlayed + " | Depths Searched: " + depthsSearched + " | Evaluations Made: " + evaluationsMade);
-
-            double ttime = (sw.ElapsedTicks / 10_000_000d);
-            double GpS = gamesPlayed / ttime;
-            double MpS = movesPlayed / ttime;
-            double MpG = movesPlayed / (double)gamesPlayed;
-            double EpSec = evaluationsMade / ttime;
-            double EpSrch = evaluationsMade / (double)searchesFinished;
-            double DpS = depthsSearched / (double)searchesFinished;
-            double DrawPrecentage = gamesPlayedResultArray[1] * 100d / gamesPlayed;
-            double WhiteWinPrecentage = gamesPlayedResultArray[2] * 100d / gamesPlayed;
-            double BlackWinPrecentage = gamesPlayedResultArray[0] * 100d / gamesPlayed;
-
-            Console.WriteLine("\n===\n");
-            tSave += " | Games Per Second: " + GpS;
-            Console.WriteLine("| Games Per Second: " + GpS);
-            tSave += " | Moves Per Second: " + MpS;
-            Console.WriteLine("| Moves Per Second: " + MpS);
-            tSave += " | Moves Per Game: " + MpG;
-            Console.WriteLine("| Moves Per Game: " + MpG);
-            tSave += " | Depths Per Search: " + DpS;
-            Console.WriteLine("| Depths Per Search: " + DpS);
-            tSave += " | Evaluations Per Second: " + EpSec;
-            Console.WriteLine("| Evaluations Per Second: " + EpSec);
-            tSave += " | Evaluations Per Search: " + EpSrch;
-            Console.WriteLine("| Evaluations Per Search: " + EpSrch);
-            Console.WriteLine("\n===\n");
-            tSave += " | White Win%: " + WhiteWinPrecentage;
-            Console.WriteLine("| White Win%: " + WhiteWinPrecentage);
-            tSave += " | Draw%: : " + DrawPrecentage;
-            Console.WriteLine("| Draw%: : " + DrawPrecentage);
-            tSave += " | Black Win%: " + BlackWinPrecentage;
-            Console.WriteLine("| Black Win%: " + BlackWinPrecentage);
-
-            string tPath = PathManager.GetTXTPath("DATABASES/SELF_PLAY_GAMES");
-            selfPlayGameStrings.Add(tSave);
-            File.AppendAllLines(tPath, selfPlayGameStrings.ToArray());
         }
 
         private static string GetThreeDigitSeperatedInteger(int pInt)

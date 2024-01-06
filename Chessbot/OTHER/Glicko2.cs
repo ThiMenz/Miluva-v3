@@ -6,40 +6,6 @@
 
         private const double T = 0.5;
 
-        public static void Test()
-        {
-            //GlickoEntity PLAYER = new GlickoEntity(1500, 200, 0.06);
-            //
-            //GlickoEntity[] OPPS = new GlickoEntity[3] {
-            //    new GlickoEntity(1400, 30, 0.06),
-            //    new GlickoEntity(1550, 100, 0.06),
-            //    new GlickoEntity(1700, 300, 0.06)
-            //};
-            //
-            //double[] tResults = new double[3] { 1, 0, 0 };
-            //
-            //CalculateRating(PLAYER, OPPS, tResults);
-            //GlickoEntity Mila = new GlickoEntity("Mila");
-            //GlickoEntity Luna = new GlickoEntity("Luna");
-            //GlickoEntity Tino = new GlickoEntity("Tino");
-            //GlickoEntity Filo = new GlickoEntity("Filo");
-            //GlickoEntity Mark = new GlickoEntity("Mark");
-            //
-            //new GlickoGame(Mila, Luna, 0);
-            //new GlickoGame(Tino, Filo, 1);
-            //new GlickoGame(Mark, Filo, -1);
-            //new GlickoGame(Mark, Luna, -1);
-            //new GlickoGame(Mila, Tino, 1);
-            //for (int i = 0; i < 1000; i++)
-            //    new GlickoGame(Filo, Luna, -1);
-            //
-            //for (int i = 0; i < 1000; i++)
-            //    new GlickoGame(Mark, Luna, -1);
-            //new GlickoGame(Mila, Luna, 1);
-            //new GlickoGame(Mark, Mila, 0);
-            //UpdateAllEntities(new List<GlickoEntity>() { Mila, Luna, Tino, Filo, Mark });
-        }
-
         public static void CalculateAllEntities(List<GlickoEntity> entityList)
         {
             foreach (GlickoEntity entity in entityList)

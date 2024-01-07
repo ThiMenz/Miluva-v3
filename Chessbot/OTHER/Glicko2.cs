@@ -41,6 +41,8 @@
             {
                 tGlicko2ScaleRD = Math.Sqrt(tGlicko2ScaleRD * tGlicko2ScaleRD + tVol * tVol);
                 pEntityToGetRated.NEXT_RD = ConvertToGlicko1ScaledRD(tGlicko2ScaleRD);
+                pEntityToGetRated.NEXT_ELO = pEntityToGetRated.ELO;
+                pEntityToGetRated.NEXT_VOL = pEntityToGetRated.VOL;
                 return;
             }
 

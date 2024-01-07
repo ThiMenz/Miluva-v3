@@ -23,7 +23,7 @@ namespace ChessBot
     public class Rays
     {
         public List<int>[] straightLRRayLists = new List<int>[64], straightTBRayLists = new List<int>[64], diagonalLBRayLists = new List<int>[64], diagonalRBRayLists = new List<int>[64];
-        public ulong[] straightLRRays = new ulong[64], straightTBRays = new ulong[64], diagonalLBRays = new ulong[64], diagonalRBRays = new ulong[64];
+        public ulong[] straightLRRays = new ulong[64], straightTBRays = new ulong[64], diagonalLBRays = new ulong[64], diagonalRBRays = new ulong[64], diagonalRays = new ulong[64], straightRays = new ulong[64];
         public int[] diagonalLBRayLengths = new int[64], diagonalRBRayLengths = new int[64];
 
         private ushort[] combinationCount = new ushort[8] { 0, 0b1, 0b11, 0b111, 0b1111, 0b11111, 0b111111, 0b1111111 };
@@ -65,6 +65,8 @@ namespace ChessBot
                     diagonalRBRayLengths = tR.diagonalRBRayLengths;
                     rayPrecalcsDiagonal = tR.rayPrecalcsDiagonal;
                     rayPrecalcsStraight = tR.rayPrecalcsStraight;
+                    diagonalRays = tR.diagonalRays;
+                    straightRays = tR.straightRays;
                 }
             }
             else 
@@ -127,7 +129,10 @@ namespace ChessBot
             //if (pSquare == 3) { Console.WriteLine(pAscendingOption + "-" + pDescendingOption); }
             if (pAscendingOption != -1) pArr[pSquare, pAscendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pAscendingOption + pAscendingAdder), 0ul));
             if (pDescendingOption != -1) pArr[pSquare, pDescendingOption].Add(pTU, new RayPrecalcs(ULONG_OPERATIONS.SetBitToOne(pAttkBB, pDescendingOption - pAscendingAdder), 0ul));
-            
+
+            // (pArr2 == null && otherSidedRays == straightOtherRays && (~straightRays[pSquare] & pTU) != 0ul) 
+            //  Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(pTU));
+
             RayPrecalcs tRP = new RayPrecalcs(pAttkBB, 0ul);
             for (int kSq = 0; kSq < 64; kSq++)
             {
@@ -141,10 +146,29 @@ namespace ChessBot
                 for (int i = 0; i < tC; i++)
                 {
                     ulong u = otherSidedRays[pSquare][i];
-                    if (otherSidedRays == diagonalOtherRays) 
-                        rayPrecalcsDiagonal[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLB[pSquare, 0][u].attackingBitboard | pAttkBB, 0ul));
-                    else 
-                        rayPrecalcsStraight[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLR[pSquare, 0][u].attackingBitboard | pAttkBB, 0ul));
+                    if (otherSidedRays == diagonalOtherRays)
+                    {
+                        //if ((~diagonalRays[pSquare] & (rayPrecalcDictLB[pSquare, pSquare][u].attackingBitboard | pAttkBB)) != 0ul)
+                        //{
+                        //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(rayPrecalcDictLB[pSquare, pSquare][u].attackingBitboard));
+                        //    Console.WriteLine(" <=> ");
+                        //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(pAttkBB));
+                        //}
+                        rayPrecalcsDiagonal[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLB[pSquare, pSquare][u].attackingBitboard | pAttkBB, 0ul));
+                    }
+                    else
+                    {
+
+                       //if ((~straightRays[pSquare] & (rayPrecalcDictLR[pSquare, pSquare][u].attackingBitboard | pAttkBB)) != 0ul)
+                       //{
+                       //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(rayPrecalcDictLR[pSquare, pSquare][u].attackingBitboard));
+                       //    Console.WriteLine(" <=> ");
+                       //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(pAttkBB));
+                       //}
+                       ////if ((~straightRays[pSquare] & (rayPrecalcDictLR[pSquare, 0][u].attackingBitboard | pAttkBB)) != 0ul)
+                       ////    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(rayPrecalcDictLR[pSquare, 0][u].attackingBitboard | pAttkBB));
+                        rayPrecalcsStraight[pSquare].Add(u | pFullBB, new RayPrecalcs(rayPrecalcDictLR[pSquare, pSquare][u].attackingBitboard | pAttkBB, 0ul));
+                    }
                 }
             }
         }
@@ -166,19 +190,25 @@ namespace ChessBot
             curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
             curPinnedPieces |= trp.pinnedPieceBitboard | trp2.pinnedPieceBitboard;
         }
+        public int DiagonalRaySquareCount(ulong pAllPieceBitboard, int pSquare)
+        {
+            return rayPrecalcsDiagonal[pSquare][pAllPieceBitboard & diagonalRays[pSquare]].attackCount;
+        }
         public int DiagonalRaySquareCount(ulong pAllPieceBitboard, int pSquare, ref ulong curAttkBitboard)
         {
-            RayPrecalcs trp = rayPrecalcDictLB[pSquare, 0][pAllPieceBitboard & diagonalLBRays[pSquare]];
-            RayPrecalcs trp2 = rayPrecalcDictRB[pSquare, 0][pAllPieceBitboard & diagonalRBRays[pSquare]];
-            curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
-            return trp.attackCount + trp2.attackCount;
+            RayPrecalcs trp = rayPrecalcsDiagonal[pSquare][pAllPieceBitboard & diagonalRays[pSquare]];
+            curAttkBitboard |= trp.attackingBitboard;
+            return trp.attackCount;
+        }
+        public int StraightRaySquareCount(ulong pAllPieceBitboard, int pSquare)
+        {
+            return rayPrecalcsStraight[pSquare][pAllPieceBitboard & straightRays[pSquare]].attackCount;
         }
         public int StraightRaySquareCount(ulong pAllPieceBitboard, int pSquare, ref ulong curAttkBitboard)
         {
-            RayPrecalcs trp = rayPrecalcDictLR[pSquare, 0][pAllPieceBitboard & straightLRRays[pSquare]];
-            RayPrecalcs trp2 = rayPrecalcDictTB[pSquare, 0][pAllPieceBitboard & straightTBRays[pSquare]];
-            curAttkBitboard |= trp.attackingBitboard | trp2.attackingBitboard;
-            return trp.attackCount + trp2.attackCount;
+            RayPrecalcs trp = rayPrecalcsStraight[pSquare][pAllPieceBitboard & straightRays[pSquare]];
+            curAttkBitboard |= trp.attackingBitboard;
+            return trp.attackCount;
         }
 
         public void DiagonalRayLB(ulong pAllPieceBitboard, int pSquare, int pKingSquare, ref ulong curAttkBitboard, ref ulong curPinnedPieces)
@@ -273,7 +303,10 @@ namespace ChessBot
         private void PrecalculateAllStraightLRRaysFromSquare(int pSquare) //
         {
             ushort o = combinationCount[7];
-            int tmin = pSquare - pSquare % 8 - 1, tmax = tmin + 9;
+            int tmin = pSquare - (pSquare % 8) - 1, tmax = tmin + 9;
+
+            //Console.WriteLine(pSquare + ". " + tmin + " -> " + tmax);
+
             List<int> tl = straightLRRayLists[pSquare];
             do
             {
@@ -284,6 +317,9 @@ namespace ChessBot
                     if (ULONG_OPERATIONS.IsBitZero(o, i)) continue;
                     tu = ULONG_OPERATIONS.SetBitToOne(tu, tl[i]);
                 }
+
+                //if (ULONG_OPERATIONS.IsBitOne(tu, 63)) Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tu));
+
                 straightOtherRays[pSquare].Add(tu);
 
                 for (int t = pSquare + 1; t < tmax; t++)
@@ -346,6 +382,10 @@ namespace ChessBot
                 for (int t = sq - 8; t > -1; t -= 8)
                 { u4 = ULONG_OPERATIONS.SetBitToOne(u4, t); l4.Add(t); }
 
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(u3));
+                //foreach (int i in l3)
+                //    Console.WriteLine(i);
+
                 diagonalRBRayLengths[sq] = ULONG_OPERATIONS.CountBits(diagonalRBRays[sq] = u1);
                 diagonalLBRayLengths[sq] = ULONG_OPERATIONS.CountBits(diagonalLBRays[sq] = u2);
                 straightLRRays[sq] = u3;
@@ -354,6 +394,8 @@ namespace ChessBot
                 straightTBRayLists[sq] = l4;
                 diagonalLBRayLists[sq] = l2;
                 diagonalRBRayLists[sq] = l1;
+                diagonalRays[sq] = u1 | u2;
+                straightRays[sq] = u3 | u4;
             }
         }
 

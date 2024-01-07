@@ -54,7 +54,7 @@ namespace ChessBot
     {
         #region | BOARD VALS |
 
-        public int TEXEL_PARAMS { get; } = 1130;
+        public int TEXEL_PARAMS { get; } = 778;
 
         private const int BESTMOVE_SORT_VAL = -2_000_000_000;
         private const int CAPTURE_SORT_VAL = -1_000_000_000;
@@ -207,7 +207,7 @@ namespace ChessBot
 
             LoadFenString(pFen);
 
-           // LoadBestTexelParamsIn();
+            LoadBestTexelParamsIn();
 
             setupStopwatch.Stop();
         }
@@ -307,8 +307,21 @@ namespace ChessBot
             //    }
             //}
 
-            int[] tttt = new int[TEXEL_PARAMS];
-            SetupTexelEvaluationParams(tttt);
+            //LoadFenString("2kr2n1/pp1r1p1p/2n3pb/q1p1pbB1/2PpP3/2NP1N2/PP1QBPPP/R4RK1 w Q - 0 1");
+
+            //ulong tul = 0ul;
+            //
+            //int ttttt = rays.DiagonalRaySquareCount(allPieceBitboard, 11, ref tul);
+            //
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tul));
+            //Console.WriteLine(ttttt);
+
+
+
+            //return;
+
+            //int[] tttt = new int[TEXEL_PARAMS];
+            //SetupTexelEvaluationParams(tttt);
 
             //int[] ttt = new int[64];
             //
@@ -328,23 +341,35 @@ namespace ChessBot
             //LoadFenString("1kr4r/p1p2ppp/bp2pn2/8/1bBP4/2N1PQ2/PPPB2PP/2KR2NR w Kk - 0 1");
             //Console.WriteLine(TexelEvaluate());
 
-            Stopwatch sw = Stopwatch.StartNew();
+            //TexelEvaluate();
             //
-            for (int i = 0; i < 1_000_000; i++)
-            {
-                TexelEvaluate();
-            }
-            
-            sw.Stop();
+            //Stopwatch sw = Stopwatch.StartNew();
+            ////
+            //for (int i = 0; i < 1_000_000; i++)
+            //{
+            //    TexelEvaluate();
+            //}
             //
-            Console.WriteLine(sw.ElapsedMilliseconds);
+            //sw.Stop();
+            ////
+            //Console.WriteLine(sw.ElapsedMilliseconds);
 
-            //PlayGameOnConsoleAgainstHuman("B4k2/8/4Q3/5K2/8/8/2P5/8 w ha - 5 11", true, 30_000_000L);
+            //PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 500_000L);
 
 
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(10802606085532904069));
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(14126000376877154961));
+            //
+            //ulong ul = 0ul;
+            //
+            //rays.StraightRaySquareCount(14126000376877154961, 4, ref ul);
+            //
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(ul));
 
+            //LoadBestTexelParamsIn();
+            //PlayGameOnConsoleAgainstHuman();
 
-            //TuneWithTxtFile("SELF_PLAY_GAMES");
+            //TuneWithTxtFile("DATABASES/SELF_PLAY_GAMES");
 
             //TuneWithTxtFile("SELF_PLAY_GAMES", 500d, 10);
 
@@ -680,6 +705,12 @@ namespace ChessBot
 
         private void GetLegalWhiteMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            if (pCheckingPieceSquare == -779)
+            {
+                GetLegalWhiteMovesSpecialDoubleCheckCase(ref pMoveList);
+                return;
+            }
+
             moveOptionList = pMoveList;
             ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
             for (int p = 0; p < 64; p++)
@@ -837,6 +868,12 @@ namespace ChessBot
 
         private void GetLegalWhiteCaptures(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            if (pCheckingPieceSquare == -779)
+            {
+                GetLegalWhiteCapturesSpecialDoubleCheckCase(ref pMoveList);
+                return;
+            }
+
             moveOptionList = pMoveList;
             ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
             for (int p = 0; p < 64; p++)
@@ -1056,6 +1093,11 @@ namespace ChessBot
 
         private void GetLegalBlackMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            if (pCheckingPieceSquare == -779)
+            {
+                GetLegalBlackMovesSpecialDoubleCheckCase(ref pMoveList);
+                return;
+            }
             moveOptionList = pMoveList;
             ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
             for (int p = 0; p < 64; p++)
@@ -1213,6 +1255,12 @@ namespace ChessBot
 
         private void GetLegalBlackCaptures(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            if (pCheckingPieceSquare == -779)
+            {
+                GetLegalBlackCapturesSpecialDoubleCheckCase(ref pMoveList);
+                return;
+            }
+
             moveOptionList = pMoveList;
             ulong oppDiagonalSliderVision = 0ul, oppStraightSliderVision = 0ul, oppStaticPieceVision = 0ul, oppAttkBitboard, pinnedPieces = 0ul;
             for (int p = 0; p < 64; p++)
@@ -3646,6 +3694,19 @@ namespace ChessBot
         private int[] texelKingSafetyR1EvaluationsLG = new int[9];
         private int[] texelKingSafetyR2EvaluationsLG = new int[17];
 
+        private int[] texelKingSafetySREvaluationsPT1EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT2EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT3EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT4EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT5EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT6EG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT1LG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT2LG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT3LG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT4LG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT5LG = new int[12];
+        private int[] texelKingSafetySREvaluationsPT6LG = new int[12];
+
         private int[,] texelMobilityStraightEG = new int[14, 15], texelMobilityStraightLG = new int[14, 15];
         private int[,] texelMobilityDiagonalEG = new int[14, 14], texelMobilityDiagonalLG = new int[14, 14];
 
@@ -3956,8 +4017,7 @@ namespace ChessBot
 
             //int[] ttt = new int[1152] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, -1, 1, 2, 0, 0, 1, 2, 3, -1, 0, 0, 0, 0, 1, 4, -3, -11, -2, 1, -2, 2, -8, 1, -10, 3, 4, -6, -10, -1, 15, 33, -4, -18, -16, 17, -72, 47, 8, -10, -62, 51, -111, 134, -78, 60, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, -29, -10, 2, -1, 0, -19, 1, -5, -13, -3, 2, -1, -16, -5, 1, -1, 1, 6, -1, 0, 2, 2, -4, -16, -13, -9, -11, -16, 2, -11, -32, 0, -1, -6, -14, -25, 1, 10, -5, -9, -1, 1, -7, 1, 3, -14, -10, -69, -6, 92, 22, -5, 6, 17, 43, -133, -83, -71, -20, -26, -104, -87, 4, -4, -1, -7, -8, 0, -13, -8, -7, -12, -2, -1, 0, 2, -4, -14, -3, 0, -10, -7, -11, -3, -11, -3, -16, -1, 3, 1, -6, -1, -2, 8, -3, -2, -3, 14, -17, 11, -2, -5, 0, -16, 5, -18, 21, -2, 1, 2, 1, 9, 112, 105, 14, 20, -48, 12, 114, -16, 29, -10, -66, 4, -21, -18, 0, 0, -12, 2, -19, -15, -3, 0, -1, -15, -16, -16, -14, -4, -8, 1, -12, 4, -21, -4, -16, -17, -14, -11, -16, -8, 2, -14, 1, -11, 29, -1, -13, -14, -1, 21, -4, 96, -25, 5, -10, -11, 94, -42, 59, 38, 4, -7, -14, -48, -31, -89, -38, 101, 6, 7, -75, -14, -31, -86, 18, -79, -7, -7, -26, -6, -2, -2, -16, -12, -9, -37, -7, 4, -12, -1, -4, -5, -8, -6, -3, -1, -2, -19, -3, -4, -5, -17, -2, -12, -8, -3, -12, -7, -13, -15, -10, -8, 2, -11, 0, 29, -20, -11, -53, 2, -30, 0, -22, -10, -10, 23, -5, -6, -6, -28, -72, -1, -98, 4, -32, 10, -116, 3, -1, 22, 54, -114, 6, 18, -20, -2, 0, 2, -8, -28, 104, -25, -10, -2, -16, 0, -4, -9, -118, -125, 1, -11, -8, -14, -2, -16, 24, 112, -23, -26, 5, 0, -2, -15, 132, 117, 136, -1, -104, 77, -14, 107, 128, 122, -78, 133, 169, 61, 126, 134, 31, -132, -131, 130, 155, 88, 116, 142, -128, 182, -159, 2, 151, 43, -133, -163, 0, 0, 0, 0, 0, 0, 0, 0, -16, 0, 0, -1, 1, 1, 0, 0, -16, 0, 2, -1, 0, 0, 16, 0, -16, -12, 12, -14, -1, 0, -2, -15, -29, -17, 3, 17, 3, -12, -14, 15, -84, 18, 26, 10, 15, 18, 33, 32, 11, -73, 46, 15, -115, 132, -71, 142, 0, 0, 0, 0, 0, 0, 0, 0, 1, -17, -54, -23, 4, 23, 0, -51, -13, -2, -14, -3, 0, 0, -18, 14, -15, 0, -16, 6, 0, 0, 5, 0, 32, -17, -16, -28, -11, 0, 12, 5, -118, -17, 48, -8, 1, -62, 2, 59, 6, -59, -2, -1, 6, -36, 59, -2, -18, 120, 10, 24, -58, 11, 21, 51, 20, -154, -4, 18, 96, 115, -96, 89, -1, -37, -17, 8, -24, 0, -21, -4, -117, -31, 15, -16, 0, -13, 13, -82, -17, 34, -14, -11, -31, 15, -17, 16, -39, -1, 4, 5, 8, -16, 11, 5, -15, 0, -52, 30, -17, 76, -16, 6, 81, -25, 28, -31, 90, -65, 32, 74, 53, -53, 3, 107, -70, 30, -27, 12, 65, -83, 19, -112, 55, 107, 7, -4, -16, 0, -13, 2, -4, 2, -3, 0, -17, -16, 2, 16, -14, -2, 6, 0, -32, 0, -53, 15, -16, -36, 0, -13, -14, -5, -1, -32, 14, 4, 52, 14, -14, 2, -20, 56, -29, 92, -11, 23, -60, 19, -97, -41, -9, 102, 22, -24, -46, -17, -13, -111, -19, 102, 3, 38, -106, 1, -16, -72, 18, 81, -16, 6, -27, -18, -16, -17, -16, -10, -40, -33, -38, 5, -13, -16, -4, -4, -4, -72, 14, -1, -2, -34, -3, -3, -21, -19, -18, -32, -12, -17, -29, -42, -31, -30, -27, -16, 0, -16, 1, 30, -18, 9, -98, -13, -30, 66, -81, -90, 9, 54, 21, 5, -56, -47, -57, -5, -88, 17, -91, 11, -103, 100, 3, 92, 108, -107, 54, 19, -10, 0, -16, -14, -26, -59, 35, -13, -13, -17, -16, -17, -3, -23, 84, -112, 19, 0, -27, 0, 14, 0, 103, 96, 71, -108, 37, -3, -2, 36, 67, 80, 23, -13, -27, 17, 23, 74, 80, 76, 1, 115, 152, 99, 41, 63, 14, -82, -18, 113, 143, -56, 99, 114, -112, 155, -131, 75, 135, -49, -134, -168, 0, 0, 0, 0, 0, 0, 0, 0, -16, 16, -48, -49, 16, 0, 16, -32, -16, -33, -111, -16, -97, -16, 80, 15, -17, -60, 13, -112, 16, 46, -50, -64, -64, -84, -64, 111, 0, 31, -48, 47, -85, 119, -55, 37, 40, 65, 101, 99, -70, -112, 26, -72, -110, 156, -64, 78, 0, 0, 0, 0, 0, 0, 0, 0, 3, -113, -121, -68, -76, 111, -112, -12, -40, -57, -111, -3, -50, 2, -5, -16, -31, 32, 16, -6, -78, -113, -74, -48, 116, -34, -32, -65, -109, 29, -24, -13, 1, -52, -73, -73, 81, -104, -15, 111, -106, -112, 30, -5, 83, -122, 114, -20, 6, 7, 58, 105, -112, 41, 102, 102, 91, -143, 29, 82, 103, 121, -111, 106, 10, -34, -80, 22, -60, -96, 26, -114, -111, -112, -16, -64, -48, -73, -1, 5, -64, 116, -64, -94, -47, 48, -5, -32, -48, -32, -111, 3, 116, -32, -12, 87, -80, -18, -18, 113, -99, 125, -112, -111, 86, -115, 96, -96, 120, 43, 91, 106, 57, -32, 6, -84, -125, 55, 21, -33, 114, -110, -100, -99, -56, 112, 66, -3, -64, -48, -80, -29, -6, 16, -34, -64, -48, -16, 113, 78, 19, -48, -27, -16, -66, 31, -120, 67, 16, -57, 14, -96, 0, -17, -68, -100, 80, 96, 121, 78, -14, 96, -25, 120, -16, 108, -18, 44, -106, 81, -80, -103, -105, 115, 57, 102, -16, 24, -58, -114, 0, 116, 60, 82, -105, 32, -17, -105, 94, 109, -106, -13, -113, -96, -112, -97, -112, -23, -105, -44, -101, -23, -110, -95, -97, -113, -31, -118, 0, -112, -3, -113, -18, -64, -114, -47, -113, -102, 18, -113, -96, -110, -49, -48, -120, -96, -18, -69, 16, 117, 11, -3, -119, -41, -59, 115, 33, -106, -116, 114, -54, 37, -77, -112, -91, -28, -107, -112, -4, 114, -123, 114, -8, 111, 121, -82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-            //BOT_MAIN.curTEXELPARAMS = ttt;
-
+            BOT_MAIN.curTEXELPARAMS = new int[TEXEL_PARAMS];
             BOT_MAIN.ParallelTexelTuning(gameDataset);
 
 
@@ -3993,7 +4053,22 @@ namespace ChessBot
 
         private void LoadBestTexelParamsIn()
         {
-            int[] ttt = new int[778] { 82, 341, 416, 470, 1106, 102, 302, 304, 518, 960, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, -46, 0, -20, 0, 64, -21, -71, 37, 29, 6, 98, 13, 44, 0, -26, -14, -36, -20, 94, 16, 60, 10, -62, -19, -38, -8, -28, 14, -26, -4, -32, -28, -52, 30, 56, -40, -72, -22, 100, 4, -98, -34, 6, -49, 32, -10, 72, 20, 84, -56, -60, -112, 128, -28, 152, 34, 26, -52, 200, -56, 76, 44, -56, -113, -156, 188, -39, 28, 200, -90, -60, -86, 100, -178, -119, -200, 200, 200, -20, -22, -78, -158, -200, 196, 200, -200, -200, -200, 104, 200, 138, -122, 200, 200, 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 156, -37, -68, -148, -200, 200, -70, 72, 76, -31, -200, -21, 178, -200, 200, 200, -200, 123, -188, -6, 164, -74, 24, -28, -8, 71, -50, -112, -200, -8, -44, 27, -23, -50, 19, 19, 41, 150, 152, 4, -98, -36, -34, 174, -106, -16, 17, 141, -48, -108, 162, 6, -112, -52, 76, 68, 8, -86, 68, -176, 189, 81, 162, -200, 152, -41, 128, 172, -173, -144, 56, 22, 94, -28, 32, 16, -63, 36, -200, -200, -200, -22, 56, -116, 76, -36, -30, 100, 52, -166, -114, 142, -52, -44, -200, -18, -72, 60, 200, -160, 96, 46, -200, -28, -32, -44, 132, 60, -200, -137, -200, -176, 200, -200, -200, 4, 200, -200, 72, 200, -78, 200, 160, -105, 200, 96, -114, 200, 200, -88, -24, 11, -34, 184, 26, 83, -140, 10, -16, -72, -200, 12, -200, 46, -200, 11, 82, 66, -102, 22, -184, 32, 114, 140, -26, -18, -36, 66, 100, 25, -24, 133, -96, 50, 2, 80, 184, 43, -136, 44, 124, -148, 180, 69, -126, -200, 6, 78, -96, 89, -68, 200, -116, 114, 158, 5, -154, 115, 200, -152, -171, 41, -80, -23, 137, 98, -80, 40, -42, 200, 52, 146, 200, 6, -112, 32, 200, 132, 4, 90, -200, -200, 104, 67, -56, 186, 124, 140, 97, -144, 200, -4, -160, -117, -200, 24, -80, 200, 28, -46, -24, -52, -200, -200, 72, 20, 34, 200, -16, 88, 56, 200, -146, 120, 174, 200, -200, -86, 125, 172, -70, 4, 124, -72, 0, -2, 70, -14, 48, -32, 200, 80, 24, -132, 74, -44, 184, -4, -136, 0, -16, 20, -18, -32, 96, 92, 56, 2, 174, 196, -200, -56, -116, 88, 200, -8, 168, -13, 74, -106, 200, -182, 80, 82, -128, -16, 90, -200, 66, -88, 58, -16, 80, -34, 96, -95, -96, -200, 76, 26, -72, 32, -27, -108, 164, 200, -36, -93, -10, -56, 22, 36, 74, -200, -96, 200, 88, -88, 156, -92, 96, -200, 200, 191, -8, 62, -8, -100, 136, -72, -36, 200, -64, -114, 153, -110, 174, 46, 108, 142, 121, -200, 108, -200, 74, -4, 104, -200, 116, 82, 200, -76, 176, -200, 76, -8, 200, 46, 29, -86, 12, -24, -80, -12, 200, 124, -16, 54, 104, 200, -94, 140, 36, 32, -64, 24, -178, 15, -200, 0, -200, 4, -32, -124, 148, 176, 192, 90, 164, -91, 200, 172, -200, 64, 34, 40, -200, 0, -200, 12, -124, 48, -200, -56, 184, -8, -184, 0, 200, -16, 200, -8, 180, -18, -20, 24, -200, -58, 174, -200, 40, -4, -200, -24, 200, 54, 200, -24, -32, 37, 192, 48, 44, 26, 200, -22, 200, -145, -200, 30, 86, 54, 200, -102, -34, 94, -98, 92, -200, -76, 196, -18, -200, -180, 16, 186, -92, -200, -200, 164, -200, 62, 192, 159, -112, -12, -70, 184, 104, 200, -200, -148, -4, 86, -144, 200, -100, 200, 200, -104, 114, 132, -168, 12, 56, -10, 82, 200, -200, -200, -196, -6, 52, -200, 84, 200, -192, 128, 200, -200, -200, 200, 88, 168, -32, -84, 172, 52, -172, 0, -40, 68, -186, 42, 96, -200, -198, 200, -56, -176, 88, 0, 86, 16, -124, -46, 40, -16, -4, 54, -184, 200, 58, -200, 77, -200, -44, 102, 0, -50, -10, -92, 100, -86, 8, 20, -20, -200, 38, -200, -49, -4, 2, -200, 78, 0, -40, -92, 32, 0, -164, -88, -38, -138, -118, 29, -34, -200, -200, -200, -71, -200, 200, -200, -108, -200, 0, 192, -24, 104, -200, 200, 190, -28, -200, -200, -200, 128, -96, 200, 200, 200, 200, -200, -200, 177, -24, 200, 132, 200, -190, 200, -130, 200, 148, 200, 200, -200, -100, 200, -196, -200, 90, 200, -200, 200, 200, -200, -200, -200, -200, -200, 118, -200, 85, -200, 166, 199, -200 };
+            //int[] ttt = new int[778] { 82, 341, 416, 470, 1106, 102, 302, 304, 518, 960, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, -46, 0, -20, 0, 64, -21, -71, 37, 29, 6, 98, 13, 44, 0, -26, -14, -36, -20, 94, 16, 60, 10, -62, -19, -38, -8, -28, 14, -26, -4, -32, -28, -52, 30, 56, -40, -72, -22, 100, 4, -98, -34, 6, -49, 32, -10, 72, 20, 84, -56, -60, -112, 128, -28, 152, 34, 26, -52, 200, -56, 76, 44, -56, -113, -156, 188, -39, 28, 200, -90, -60, -86, 100, -178, -119, -200, 200, 200, -20, -22, -78, -158, -200, 196, 200, -200, -200, -200, 104, 200, 138, -122, 200, 200, 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200, 156, -37, -68, -148, -200, 200, -70, 72, 76, -31, -200, -21, 178, -200, 200, 200, -200, 123, -188, -6, 164, -74, 24, -28, -8, 71, -50, -112, -200, -8, -44, 27, -23, -50, 19, 19, 41, 150, 152, 4, -98, -36, -34, 174, -106, -16, 17, 141, -48, -108, 162, 6, -112, -52, 76, 68, 8, -86, 68, -176, 189, 81, 162, -200, 152, -41, 128, 172, -173, -144, 56, 22, 94, -28, 32, 16, -63, 36, -200, -200, -200, -22, 56, -116, 76, -36, -30, 100, 52, -166, -114, 142, -52, -44, -200, -18, -72, 60, 200, -160, 96, 46, -200, -28, -32, -44, 132, 60, -200, -137, -200, -176, 200, -200, -200, 4, 200, -200, 72, 200, -78, 200, 160, -105, 200, 96, -114, 200, 200, -88, -24, 11, -34, 184, 26, 83, -140, 10, -16, -72, -200, 12, -200, 46, -200, 11, 82, 66, -102, 22, -184, 32, 114, 140, -26, -18, -36, 66, 100, 25, -24, 133, -96, 50, 2, 80, 184, 43, -136, 44, 124, -148, 180, 69, -126, -200, 6, 78, -96, 89, -68, 200, -116, 114, 158, 5, -154, 115, 200, -152, -171, 41, -80, -23, 137, 98, -80, 40, -42, 200, 52, 146, 200, 6, -112, 32, 200, 132, 4, 90, -200, -200, 104, 67, -56, 186, 124, 140, 97, -144, 200, -4, -160, -117, -200, 24, -80, 200, 28, -46, -24, -52, -200, -200, 72, 20, 34, 200, -16, 88, 56, 200, -146, 120, 174, 200, -200, -86, 125, 172, -70, 4, 124, -72, 0, -2, 70, -14, 48, -32, 200, 80, 24, -132, 74, -44, 184, -4, -136, 0, -16, 20, -18, -32, 96, 92, 56, 2, 174, 196, -200, -56, -116, 88, 200, -8, 168, -13, 74, -106, 200, -182, 80, 82, -128, -16, 90, -200, 66, -88, 58, -16, 80, -34, 96, -95, -96, -200, 76, 26, -72, 32, -27, -108, 164, 200, -36, -93, -10, -56, 22, 36, 74, -200, -96, 200, 88, -88, 156, -92, 96, -200, 200, 191, -8, 62, -8, -100, 136, -72, -36, 200, -64, -114, 153, -110, 174, 46, 108, 142, 121, -200, 108, -200, 74, -4, 104, -200, 116, 82, 200, -76, 176, -200, 76, -8, 200, 46, 29, -86, 12, -24, -80, -12, 200, 124, -16, 54, 104, 200, -94, 140, 36, 32, -64, 24, -178, 15, -200, 0, -200, 4, -32, -124, 148, 176, 192, 90, 164, -91, 200, 172, -200, 64, 34, 40, -200, 0, -200, 12, -124, 48, -200, -56, 184, -8, -184, 0, 200, -16, 200, -8, 180, -18, -20, 24, -200, -58, 174, -200, 40, -4, -200, -24, 200, 54, 200, -24, -32, 37, 192, 48, 44, 26, 200, -22, 200, -145, -200, 30, 86, 54, 200, -102, -34, 94, -98, 92, -200, -76, 196, -18, -200, -180, 16, 186, -92, -200, -200, 164, -200, 62, 192, 159, -112, -12, -70, 184, 104, 200, -200, -148, -4, 86, -144, 200, -100, 200, 200, -104, 114, 132, -168, 12, 56, -10, 82, 200, -200, -200, -196, -6, 52, -200, 84, 200, -192, 128, 200, -200, -200, 200, 88, 168, -32, -84, 172, 52, -172, 0, -40, 68, -186, 42, 96, -200, -198, 200, -56, -176, 88, 0, 86, 16, -124, -46, 40, -16, -4, 54, -184, 200, 58, -200, 77, -200, -44, 102, 0, -50, -10, -92, 100, -86, 8, 20, -20, -200, 38, -200, -49, -4, 2, -200, 78, 0, -40, -92, 32, 0, -164, -88, -38, -138, -118, 29, -34, -200, -200, -200, -71, -200, 200, -200, -108, -200, 0, 192, -24, 104, -200, 200, 190, -28, -200, -200, -200, 128, -96, 200, 200, 200, 200, -200, -200, 177, -24, 200, 132, 200, -190, 200, -130, 200, 148, 200, 200, -200, -100, 200, -196, -200, 90, 200, -200, 200, 200, -200, -200, -200, -200, -200, 118, -200, 85, -200, 166, 199, -200 };
+            //int[] ttt = new int[1212] { 64, 224, 440, 448, 840, 128, 256, 256, 472, 640, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -32, 88, -48, -200, 48, -40, -24, -152, -24, 32, 0, -136, 40, -64, 0, 66, -39, -200, 32, -184, 0, 0, 96, -200, 0, -72, 0, 0, 0, -96, -136, 0, 0, 88, 0, -16, 96, -88, 0, -112, 0, 0, -88, 48, 24, -200, 0, 104, -200, 136, -48, 168, 96, -176, 136, -200, 168, 104, 96, 52, 40, -104, -32, 136, 136, -88, 0, 136, 48, 200, -200, 200, 200, -200, 72, 200, -40, 32, 72, 200, 200, 200, 200, 200, -152, 96, 200, 200, -136, 200, -168, 200, -32, 200, -200, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -200, -200, 0, 200, -200, 112, 200, 200, 160, 200, 72, 200, 0, -200, -104, 200, 64, -136, 200, -200, 0, -200, 72, 200, 200, 0, -72, 200, 0, 0, 64, 200, 64, -200, -136, 200, 120, -64, 200, 64, 168, -136, 104, 0, 0, -200, 0, -200, 200, -200, -200, -56, -116, 200, 0, -136, 64, 200, 0, -96, 200, -136, -48, 200, -8, 0, -72, 200, 200, 200, -72, -200, 0, -72, 136, -32, 0, 112, 200, -152, 200, 200, 200, 200, 0, -200, 64, 200, -200, 168, -24, -200, -80, -72, 200, -112, -200, 200, 136, -32, 200, 200, 200, 200, -200, -200, 144, -200, -56, 168, 200, 0, 200, -200, 200, 200, -200, -200, -200, 118, -200, 36, -200, -200, 88, -200, 62, -200, -104, 64, -200, 164, 0, 200, 32, -200, -200, -200, 0, 104, -136, 200, -104, -200, -200, 200, 0, 184, 136, 0, -22, 136, 136, -104, -136, -200, 64, -200, 200, -200, 32, 72, -96, -200, 0, -56, 40, 200, 72, 64, 64, -10, -96, -200, 200, -64, 48, -200, 72, 200, -64, 200, 200, -168, 96, -136, 0, 200, -168, -200, -200, 168, 200, 48, 88, 64, -168, -200, 72, 200, 200, 200, -200, -136, 200, -136, 200, -200, -104, -200, 200, -128, -200, 8, -200, -200, -64, 0, -200, 104, 200, 200, 200, 200, 200, 200, -200, -200, 200, -200, -200, 104, -200, -200, 200, 200, -200, 168, -200, 200, -72, 200, -200, 120, -200, -88, -120, -200, 200, -200, -200, 200, -152, -56, -200, -200, 0, 64, 0, 200, -200, 128, 128, -200, 64, -120, -200, 0, 44, 64, 0, 48, -32, -168, -64, 72, -200, 200, 32, -64, -200, -24, 200, -96, -104, 104, -40, 136, 200, -200, 200, -136, 136, -88, 0, -200, 136, -200, -152, -200, -136, 200, 116, 64, -64, 200, 48, 0, 32, -32, 168, 0, 200, -200, -72, -104, -200, -56, 0, -120, 128, -200, 200, 72, 200, 136, 200, 200, 104, 200, -136, 200, -72, 200, 200, -200, -64, 136, 168, -116, -84, 0, 200, -72, -96, 200, -64, -200, -168, -136, 200, -64, -104, 200, 0, -200, -200, 72, 200, 0, 200, -136, -200, 0, 64, 80, 136, -80, -200, 200, 128, -96, 200, -200, 200, -200, 200, -128, -200, 200, -200, -200, -200, 200, 200, -72, -64, -200, 128, 200, -64, 200, -200, -200, -200, 200, 200, -200, -200, -200, -72, 200, 0, -8, 104, 200, 200, 200, 0, -200, -16, -200, 112, -200, -200, 200, 0, 56, 0, -72, 0, 200, -64, 200, -64, -104, 80, -200, 200, -200, -200, 200, -200, -200, -120, 136, -115, -200, 64, -200, 0, -200, 88, -200, 72, 200, 0, -200, 0, -200, -136, 72, 136, 200, 0, 72, 0, -200, 0, -200, 200, 200, 32, 200, -104, -200, 32, -200, 200, 200, 24, -104, 104, 200, 200, -64, 200, 200, -200, -200, 72, 200, 200, 200, 200, -200, -200, 80, 200, 200, 200, -8, 136, 104, -104, -200, 200, 136, 160, 200, -200, -200, 56, 200, -64, 200, 40, 200, 64, 200, 200, 200, -200, -200, -72, -48, -80, 128, 0, -200, 0, 32, 152, -200, 200, -64, 200, 200, -200, -136, 96, -64, 96, 104, -80, -72, 120, -136, 96, 8, 0, 200, 24, -136, -200, 200, -200, 64, -160, 152, -200, 136, -72, 200, -72, 72, -136, 200, -200, -120, -200, 0, -200, -200, 200, 104, -200, 200, 104, -48, -128, 200, -200, -112, -200, 200, 200, -64, -200, 64, -200, 32, -200, -200, 200, 0, -72, 200, 200, 200, 200, 136, 200, -72, 200, 200, 200, 200, -96, 200, -200, -200, -200, 200, -200, 200, 200, -200, 200, 200, -200, 200, -200, 200, 200, 200, 200, 200, 0, 0, 200, -8, 200, 200, -200, -200, -200, 200, -200, -200, -200, 120, -200, -200, -200, -200, 0, -200, -200, -200, 0, 0, 0, 0, -200, -104, 0, 0, -24, -32, 144, 200, 0, 72, -20, 104, -32, 0, 84, -168, 0, 74, 0, 0, -16, 0, 44, -168, 32, -32, 48, 48, 64, 0, -40, 184, 104, 16, 32, 88, 0, 112, 0, 80, 0, 0, 40, 40, -72, -16, -56, -32, 200, 8, -168, 200, 132, -24, 0, 0, 0, 0, -200, 200, 0, 0, -64, 176, 168, -200, -32, 0, 48, 200, 32, 104, 0, 168, 0, 72, 0, -32, 0, 64, -32, 96, 0, 0, 0, 0, 0, 44, 0, 104, 0, 0, -32, 64, 72, 32, 0, 104, 136, -32, 0, 0, 8, -200, -136, -32, 16, -200, -120, 80, -64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, -176, 0, 120, 0, 88, -32, 32, 0, -176, 120, 24, 0, -104, 40, 64, 0, 0, 32, 64, 0, 64, 104, -32, 0, 0, 64, -32, 56, 96, 200, 96, 32, 0, 200, 0, 32, 0, 112, 0, 200, 0, 200, 136, 168, 0, 64, -24, 0, 0, 0, 0, -200, -200, 0, 0, 0, -200, 200, -200, -32, 200, 64, -200, 96, 200, -32, -200, 0, 200, 0, -200, 0, 152, -86, 200, 32, -40, 0, 200, 0, 104, 0, -32, 96, -24, 48, 8, 96, 200, -48, 200, 72, 32, 40, -200, 200, 200, -16, 80, 48, 200, 0, 56, 72, -200, 0, 0, 0, 0, 200, 40, 0, 0, 0, -72, -64, -200, 20, 64, -64, 64, -20, -20, 0, 115, -32, 64, -16, 64, 0, 0, 0, -96, -32, 64, 0, 32, -80, 0, 0, 114, 32, -16, 32, 0, -8, 0, 0, 0, -24, 32, -24, -32, 200, 200, 72, 0, -200, 152, 32, -32, -200, -64, 0, 152, 0, 0, 0, 0, -48, -32, 0, 0, 0, 0, 64, 0, 0, -32, -32, 0, 0, 0, -40, 40, 136, 0, 40, 0, -64, -136, 0, 200, 0, 0, 32, 64, 72, -200, 32, 200, 0, 0, 0, -200, -64, -64, 32, 0, -200, 186, -64, -200, -64, -112, 0, 0, 32, 200, 200, -8, -168, 0, -120, -200, -200, 56, -136, 0, 200, -200, 200, 80, 200, 0, -72, 200, 200, 56, -200, 0, -200, 200, -104, 48, -32, 0, 0, 0, 0, 200, 40, 0, 0, 0, 0, -72, -200, 0, 0, 0, 0, -200, -200, 0, 0, 0, 0, -200, -200, 0, 0, 0, 0, 0, -200, 0, 0, 0, 0, 0, -200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            //int[] ttt = new int[778] { 72, 300, 484, 528, 904, 128, 272, 280, 504, 720, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -56, 88, -92, -200, 56, -40, -48, -148, -100, 96, -32, -100, 8, -28, -8, 32, -64, -200, 44, -184, 12, -8, 96, -200, -16, -104, -40, 40, 24, -134, -136, -8, -16, 80, -8, -32, 136, -120, -12, -136, -16, 20, -136, 68, 32, -200, 0, 88, -176, 128, -72, 128, 88, -200, 104, -200, 124, 40, 64, 84, 8, -124, -48, 128, 100, -36, -32, -32, -64, 200, -200, 200, 200, -200, 8, 156, -20, 76, 72, 200, 196, 200, 200, 200, -66, 8, 200, 200, -200, 200, -200, 200, 56, 200, -200, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -200, -200, -28, 200, -200, -22, 200, 192, 172, 200, 12, 120, 12, -200, -200, 200, 18, -194, 200, -200, 46, -168, 52, 200, 176, 56, -56, 200, -40, 32, 8, 200, 70, -176, -112, 200, 168, -48, 192, 76, 192, -72, 136, 46, 64, -200, -24, -200, 172, -200, -200, 88, 24, 200, 112, -68, 200, 200, 168, -120, 200, -88, -12, 200, 76, 40, 56, 200, 200, 200, 64, -200, 138, -56, 200, -16, 96, 136, 200, -112, 200, 200, 200, 200, 101, -200, 176, 200, -200, 200, 120, -200, 54, -128, 200, -24, -200, 200, 200, -72, 200, 200, 200, 200, -200, -200, 176, -200, 80, 176, 200, -24, 112, -200, 200, 200, -200, -200, -200, 128, -200, 112, -200, -200, 200, -200, 16, -200, 16, -80, -200, 184, -8, 200, -32, -200, -176, -200, -56, 200, 56, 200, -104, -152, -200, 200, 32, 200, 112, 8, -24, 160, 92, -76, -120, -200, 64, -200, 200, -200, 32, 136, -140, -144, 24, 8, 16, 200, 132, 24, 40, -24, -62, -200, 200, -15, -8, -116, 148, 200, -76, 200, 200, -200, 96, -200, 8, 200, -148, -200, -200, 188, 200, 86, 64, 80, -180, -200, 64, 200, 200, 200, -200, -132, 184, -184, 200, -156, -136, -200, 200, -104, -184, 60, -200, -184, -32, 0, -169, 96, 200, 200, 200, 200, 200, 200, -200, -200, 200, -200, -200, 68, -200, -200, 200, 200, -200, 176, -200, 200, -56, 200, -200, 152, -200, -168, -46, -200, 200, -200, -200, 192, -200, 68, -200, -200, -16, 16, 4, 200, -168, 112, 176, -200, 92, -128, -200, 16, 34, 144, -68, 24, -40, -200, -64, 40, -128, 152, 48, -24, -200, -35, 200, -56, -88, 4, -96, 128, 200, -200, 200, -100, 200, -80, 32, -172, 200, -200, -40, -200, -78, 200, 96, -24, -26, 200, 80, -32, 200, -76, 200, 48, 200, -200, 16, -148, -200, -64, 32, -72, 120, -180, 200, 84, 200, 136, 200, 200, 200, 200, -52, 200, 72, 200, 200, -200, -64, 200, 200, -144, -136, 40, 200, -104, -8, 200, 88, -200, -173, -112, 200, -88, -40, 200, 32, -200, -200, 72, 200, 68, 200, -156, -200, -40, 128, 4, 144, -88, -200, 200, 174, -136, 200, -200, 184, -176, 200, -56, -200, 200, -200, -152, -200, 160, 200, -171, -96, -200, 88, 200, -62, 72, -200, -200, -200, 200, 194, -200, -200, -200, -140, 200, -32, 56, 88, 200, 200, 200, -53, -200, -38, -200, 84, -200, -200, 200, -8, 100, 3, -140, 38, 172, -48, 200, -20, -160, 80, -200, 200, -200, -200, 200, -200, -200, -56, -52, -72, -124, 80, 80, 88, -8, 104, -88, 104, 200, -24, -200, -8, -200, -80, 22, 164, 200, 152, 80, 104, -200, 88, -104, 200, 200, 25, 200, -112, -200, 56, -200, 200, 200, 100, -80, 176, 200, 200, 104, 200, 200, -200, -200, 24, 200, 200, 200, 200, -200, -200, -30, 200, 200, 200, 48, 200, 200, -76, -200, 200, -184, 200, 200, -200, -200, 174, 200, 108, 192, 128, 200, 80, 200, 200, 40, -200, -200, -48, -84, -88, 64, -24, -200, 8, -16, 160, -200, 176, -100, 200, 200, -200, -174, 48, -112, 72, 44, -136, -84, 44, -104, 64, -16, -96, 200, 64, -200, -200, 200, -200, 80, -200, 144, -200, 144, -192, 152, -104, 24, -200, 200, -200, -136, -8, -112, -200, -200, 200, 112, -200, 200, 48, 0, -200, 144, -200, -136, -48, 200, 200, -134, -200, -56, -200, -28, -192, -200, 200, 92, -200, 200, 134, 200, 200, 144, 200, -94, 200, 120, 200, 200, 200, 200, -200, -200, -200, 200, -200, 200, 200, -200, 200, 200, -197, 200, -200, 200, 197, 200, 200, 200, 0, 0, 200, -200, 200, 200, -200, -200, -200, 200, -200, -200, -200, 128, -200, -200, -200, -200, 0, -200, -200, -200 };
+
+            int[] ttt = new int[778];
+            ttt[0] = 82;
+            ttt[1] = 341;
+            ttt[2] = 416;
+            ttt[3] = 470;
+            ttt[4] = 1106;
+            ttt[5] = 102;
+            ttt[6] = 302;
+            ttt[7] = 304;
+            ttt[8] = 518;
+            ttt[9] = 960;
+
             SetupTexelEvaluationParams(ttt);
         }
 
@@ -4028,6 +4103,9 @@ namespace ChessBot
                 }
             }
 
+
+            return;
+
             //c = 778; >> 290 Stk
             for (int p = 2; p < 7; p++)
             {
@@ -4036,29 +4114,34 @@ namespace ChessBot
                     if (a != 14)
                     {
                         // Diagonal
-                        texelMobilityDiagonalEG[p + 2, a] = pParams[c++];
-                        texelMobilityDiagonalLG[p + 2, a] = pParams[c++];
+                        texelMobilityDiagonalEG[p + 7, a] = -(texelMobilityDiagonalEG[p, a] = pParams[c++]);
+                        texelMobilityDiagonalLG[p + 7, a] = -(texelMobilityDiagonalLG[p, a] = pParams[c++]);
                     }
                     // Straight
-                    texelMobilityStraightEG[p + 2, a] = pParams[c++];
-                    texelMobilityStraightLG[p + 2, a] = pParams[c++];
+                    texelMobilityStraightEG[p + 7, a] = -(texelMobilityStraightEG[p, a] = pParams[c++]);
+                    texelMobilityStraightLG[p + 7, a] = -(texelMobilityStraightLG[p, a] = pParams[c++]);
                 }
 
             }
 
-            //c = 1068; >> 52 Stk
-            for (int i = 0; i < 9; i++)
+            //c = 1068; >> 144 Stk
+            for (int i = 0; i < 12; i++)
             {
-                texelKingSafetyR1EvaluationsEG[i] = pParams[c++];
-                texelKingSafetyR1EvaluationsLG[i] = pParams[c++];
-            }
-            for (int i = 0; i < 17; i++)
-            {
-                texelKingSafetyR2EvaluationsEG[i] = pParams[c++];
-                texelKingSafetyR2EvaluationsLG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT1EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT2EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT3EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT4EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT5EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT6EG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT1LG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT2LG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT3LG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT4LG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT5LG[i] = pParams[c++];
+                texelKingSafetySREvaluationsPT6LG[i] = pParams[c++];
             }
 
-            Console.WriteLine(c);
+            //c = 1212
 
             //texelTuningRuntimePositionalValsV2EG
 
@@ -4699,96 +4782,74 @@ namespace ChessBot
         // 4. Piece Mobility (White / Black Squares?)
         // 5. Pawn Structure (Pawn Hashing)
 
-        // Performance Goal: 3m EvpS (Single Threaded)
+        // Performance Goal: 3m EvpS (Single Threaded) (Es sind 800k EvpS xD; liegt an der Mobility)
         // ==> All Texel Tunable
 
         // FIX BOTH SIDED
 
+        // Absichtlich anders eingerückt; übersichtlicher für das mehr oder weniger Herzstück der Engine
         private int TexelEvaluate()
         {
-            //if (transpositionTable.ContainsKey(zobristKey))
-            //{
-            //
-            //}
-            //pieceCount = ULONG_OPERATIONS.CountBits(allPieceBitboard)
-            //int tAPT = pieceTypeArray[p];
-
-            //tEval += texelPieceEvaluations[
-            //    tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
-            //] + texelTuningRuntimeVals[pieceCount, tPT][p];
-
-            //tEvalEG 
-
-            //tPT = pieceTypeArray[p] + 7 * ((int)(blackPieceBitboard >> p) & 1)
-
-            //switch (pieceTypeArray[p])
-            //{
-            //    case 1:
-            //        oppStaticPieceVision |= blackPawnAttackSquareBitboards[p];
-            //        break;
-            //    case 2:
-            //        oppStaticPieceVision |= knightSquareBitboards[p];
-            //        break;
-            //    case 3:
-            //        //rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
-            //        break;
-            //    case 4:
-            //        //rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
-            //        break;
-            //    case 5:
-            //        //rays.DiagonalRays(allPieceBitboard, p, whiteKingSquare, ref oppDiagonalSliderVision, ref pinnedPieces);
-            //        //rays.StraightRays(allPieceBitboard, p, whiteKingSquare, ref oppStraightSliderVision, ref pinnedPieces);
-            //        break;
-            //    case 6:
-            //        oppStaticPieceVision |= kingSquareBitboards[p];
-            //        break;
-            //}
-
             int tEvalEG = 0, tEvalLG = 0, tProgress = 0;
-
-            ulong[] attkULs = new ulong[2];
-
-            for (int p = 0; p < 64; p++)
-            {
+            ulong[] attkULs = new ulong[14];
+            for (int p = 0; p < 64; p++) {
                 if (((int)(allPieceBitboard >> p) & 1) == 0) continue;
-
-                int side = (int)(blackPieceBitboard >> p) & 1, mobilityDiagonal = 0, mobilityStraight = 0;
-
-                int aPT = pieceTypeArray[p];
-
-                if (aPT == 1)
-                {
-                    mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p, ref attkULs[side]);
-                    mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p, ref attkULs[side]);
-                }
-
-                int tPT = aPT + 7 * side;
-
-                tEvalEG += texelMobilityStraightEG[tPT, mobilityStraight] + texelMobilityDiagonalEG[tPT, mobilityDiagonal] 
-                         + texelTuningRuntimePositionalValsV2EG[tPT][p] + texelPieceEvaluationsV2EG[tPT];
-
-                tEvalLG += texelMobilityStraightLG[tPT, mobilityStraight] + texelMobilityDiagonalLG[tPT, mobilityDiagonal] 
-                         + texelTuningRuntimePositionalValsV2LG[tPT][p] + texelPieceEvaluationsV2LG[tPT];
-
+                int aPT = pieceTypeArray[p], tPT = aPT + 7 * ((int)(blackPieceBitboard >> p) & 1); //, mobilityStraight = 0, mobilityDiagonal = 0;
+                tEvalEG += texelTuningRuntimePositionalValsV2EG[tPT][p] + texelPieceEvaluationsV2EG[tPT];
+                tEvalLG += texelTuningRuntimePositionalValsV2LG[tPT][p] + texelPieceEvaluationsV2LG[tPT];
+                //switch (aPT) {
+                //    case 1: attkULs[tPT] |= tPT == 8 ? blackPawnAttackSquareBitboards[p] : whitePawnAttackSquareBitboards[p]; break;
+                //    case 2:
+                //        mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p);
+                //        mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p);
+                //        attkULs[tPT] |= knightSquareBitboards[p]; break;
+                //    case 3:
+                //        mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p, ref attkULs[tPT]);
+                //        mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p); break;
+                //    case 4:
+                //        mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p);
+                //        mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p, ref attkULs[tPT]); break;
+                //    case 5:
+                //        mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p, ref attkULs[tPT]);
+                //        mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p, ref attkULs[tPT]); break;
+                //    case 6:
+                //        mobilityDiagonal = rays.DiagonalRaySquareCount(allPieceBitboard, p);
+                //        mobilityStraight = rays.StraightRaySquareCount(allPieceBitboard, p);
+                //        attkULs[tPT] |= kingSquareBitboards[p]; break;
+                //}
+                //if (aPT != 1) {
+                //    tEvalEG += texelMobilityStraightEG[tPT, mobilityStraight] + texelMobilityDiagonalEG[tPT, mobilityDiagonal];
+                //    tEvalLG += texelMobilityStraightLG[tPT, mobilityStraight] + texelMobilityDiagonalLG[tPT, mobilityDiagonal];
+                //}
                 tProgress += pieceTypeGameProgressImpact[tPT];
             }
-
-            int wksr1 = ULONG_OPERATIONS.CountBits(kingSafetyRing1[whiteKingSquare] & attkULs[1]), wksr2 = ULONG_OPERATIONS.CountBits(kingSafetyRing2[whiteKingSquare] & attkULs[1]);
-            int bksr1 = ULONG_OPERATIONS.CountBits(kingSafetyRing1[blackKingSquare] & attkULs[0]), bksr2 = ULONG_OPERATIONS.CountBits(kingSafetyRing2[blackKingSquare] & attkULs[0]);
-
-            if (isWhiteToMove)
-            {
-                tEvalEG += texelKingSafetyR1EvaluationsEG[wksr1] + texelKingSafetyR2EvaluationsEG[wksr2] - texelKingSafetyR1EvaluationsEG[bksr1] - texelKingSafetyR2EvaluationsEG[bksr2];
-                tEvalLG += texelKingSafetyR1EvaluationsLG[wksr1] + texelKingSafetyR2EvaluationsLG[wksr2] - texelKingSafetyR1EvaluationsLG[bksr1] - texelKingSafetyR2EvaluationsLG[bksr2];
-            }
-            else
-            {
-                tEvalEG -= texelKingSafetyR1EvaluationsEG[wksr1] - texelKingSafetyR2EvaluationsEG[wksr2] + texelKingSafetyR1EvaluationsEG[bksr1] + texelKingSafetyR2EvaluationsEG[bksr2];
-                tEvalLG -= texelKingSafetyR1EvaluationsLG[wksr1] - texelKingSafetyR2EvaluationsLG[wksr2] + texelKingSafetyR1EvaluationsLG[bksr1] + texelKingSafetyR2EvaluationsLG[bksr2];
-            }
-
+            //ulong ksr1W = kingSafetySpecialRingW[whiteKingSquare], ksr1B = kingSafetySpecialRingB[blackKingSquare];
+            //int wpt1r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[8]), wpt2r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[9]), wpt3r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[10]), 
+            //    wpt4r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[11]), wpt5r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[12]), wpt6r1 = ULONG_OPERATIONS.CountBits(ksr1W & attkULs[13]);
+            //int bpt1r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[1]), bpt2r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[2]), bpt3r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[3]), 
+            //    bpt4r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[4]), bpt5r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[5]), bpt6r1 = ULONG_OPERATIONS.CountBits(ksr1B & attkULs[6]);
+            //if (isWhiteToMove) {
+            //    tEvalEG += texelKingSafetySREvaluationsPT1EG[wpt1r1] + texelKingSafetySREvaluationsPT2EG[wpt2r1] + texelKingSafetySREvaluationsPT3EG[wpt3r1]
+            //            + texelKingSafetySREvaluationsPT4EG[wpt4r1] + texelKingSafetySREvaluationsPT5EG[wpt5r1]  + texelKingSafetySREvaluationsPT6EG[wpt6r1] 
+            //            - texelKingSafetySREvaluationsPT1EG[bpt1r1]  - texelKingSafetySREvaluationsPT2EG[bpt2r1] - texelKingSafetySREvaluationsPT3EG[bpt3r1]
+            //            - texelKingSafetySREvaluationsPT4EG[bpt4r1] - texelKingSafetySREvaluationsPT5EG[bpt5r1] - texelKingSafetySREvaluationsPT6EG[bpt6r1];
+            //        
+            //    tEvalLG += texelKingSafetySREvaluationsPT1LG[wpt1r1] + texelKingSafetySREvaluationsPT2LG[wpt2r1] + texelKingSafetySREvaluationsPT3LG[wpt3r1]
+            //            + texelKingSafetySREvaluationsPT4LG[wpt4r1] + texelKingSafetySREvaluationsPT5LG[wpt5r1] + texelKingSafetySREvaluationsPT6LG[wpt6r1]
+            //            - texelKingSafetySREvaluationsPT1LG[bpt1r1] - texelKingSafetySREvaluationsPT2LG[bpt2r1] - texelKingSafetySREvaluationsPT3LG[bpt3r1]
+            //            - texelKingSafetySREvaluationsPT4LG[bpt4r1] - texelKingSafetySREvaluationsPT5LG[bpt5r1] - texelKingSafetySREvaluationsPT6LG[bpt6r1];
+            //} else {
+            //    tEvalEG -= texelKingSafetySREvaluationsPT1EG[wpt1r1] - texelKingSafetySREvaluationsPT2EG[wpt2r1] - texelKingSafetySREvaluationsPT3EG[wpt3r1]
+            //            - texelKingSafetySREvaluationsPT4EG[wpt4r1] - texelKingSafetySREvaluationsPT5EG[wpt5r1] - texelKingSafetySREvaluationsPT6EG[wpt6r1]
+            //            + texelKingSafetySREvaluationsPT1EG[bpt1r1] + texelKingSafetySREvaluationsPT2EG[bpt2r1] + texelKingSafetySREvaluationsPT3EG[bpt3r1]
+            //            + texelKingSafetySREvaluationsPT4EG[bpt4r1] + texelKingSafetySREvaluationsPT5EG[bpt5r1] + texelKingSafetySREvaluationsPT6EG[bpt6r1];
+            //
+            //    tEvalLG -= texelKingSafetySREvaluationsPT1LG[wpt1r1] - texelKingSafetySREvaluationsPT2LG[wpt2r1] - texelKingSafetySREvaluationsPT3LG[wpt3r1] 
+            //            - texelKingSafetySREvaluationsPT4LG[wpt4r1] - texelKingSafetySREvaluationsPT5LG[wpt5r1] - texelKingSafetySREvaluationsPT6LG[wpt6r1] 
+            //            + texelKingSafetySREvaluationsPT1LG[bpt1r1] + texelKingSafetySREvaluationsPT2LG[bpt2r1] + texelKingSafetySREvaluationsPT3LG[bpt3r1] 
+            //            + texelKingSafetySREvaluationsPT4LG[bpt4r1] + texelKingSafetySREvaluationsPT5LG[bpt5r1] + texelKingSafetySREvaluationsPT6LG[bpt6r1];
+            //}
             if (tProgress > 24) tProgress = 24;
-
             return (int)(earlyGameMultipliers[tProgress] * tEvalEG + lateGameMultipliers[tProgress] * tEvalLG);
         }
 
@@ -5037,6 +5098,7 @@ namespace ChessBot
         };
 
         private ulong[] kingSafetyRing1 = new ulong[64], kingSafetyRing2 = new ulong[64];
+        private ulong[] kingSafetySpecialRingW = new ulong[64], kingSafetySpecialRingB = new ulong[64];
 
         private ulong[] rowPrecalcs = new ulong[8], columnPrecalcs = new ulong[8];
 
@@ -5071,6 +5133,15 @@ namespace ChessBot
 
                 kingSafetyRing1[i] = ULONG_OPERATIONS.SetBitToZero(tULR & tULC, i);
                 kingSafetyRing2[i] = ULONG_OPERATIONS.SetBitsToZero(tULR2 & tULC2, i, i + 1, i - 1, i + 7, i + 8, i + 9, i - 7, i - 8, i - 9);
+            }
+
+            for (int i = 0; i < 64; i++)
+            {
+                if (i < 56) kingSafetySpecialRingW[i] = ULONG_OPERATIONS.SetBitToZero(kingSafetyRing1[i] | kingSafetyRing1[i + 8], i);
+                else kingSafetySpecialRingW[i] = kingSafetyRing1[i];
+
+                if (i > 7) kingSafetySpecialRingB[i] = ULONG_OPERATIONS.SetBitToZero(kingSafetyRing1[i] | kingSafetyRing1[i - 8], i);
+                else kingSafetySpecialRingB[i] = kingSafetyRing1[i];
             }
         }
 

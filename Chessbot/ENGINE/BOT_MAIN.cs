@@ -42,14 +42,16 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V01_00_017");
+            //MEM_CreateSnapshot("SNAPSHOT_V01_00_018");
+
+            _ = new ReLe_AIHandler();
 
             //MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
-            MEM_SnapshotClash();
+            //MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |
@@ -71,12 +73,12 @@ namespace ChessBot
             isFirstBoardManagerInitialized = true;
 
             IBoardManager[] oppBoards = new SNAPSHOT_V01_00_015[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V01_00_017[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V01_00_018[16];
 
             for (int i = 0; i < 16; i++)
             {
                 oppBoards[i] = new SNAPSHOT_V01_00_015(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V01_00_017(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V01_00_018(ENGINE_VALS.DEFAULT_FEN);
             }
 
             LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 64);
@@ -221,270 +223,6 @@ namespace ChessBot
             return s;
         }
     }
-
-    #region | REINFORCEMENT LEARNING |
-
-    public static class ReLe_AI_VARS
-    {
-        public const double MUTATION_PROPABILITY = 0.01;
-
-        public const int GENERATION_SIZE = 12;
-        public const int GENERATION_SURVIVORS = 4; //n^2-n = spots
-
-        public const int GENERATION_GOAL_COUNT = 150; //n^2-n = spots
-    }
-
-    public class ReLe_AIHandler
-    {
-        private System.Random rng = new System.Random();
-        private ReLe_AIGeneration curGen;
-
-        public ReLe_AIHandler()
-        {
-            ReLe_AIEvaluator.fens = File.ReadAllLines(@"C:\Users\tpmen\Desktop\4 - Programming\41 - Unity & C#\MiluvaV3\Miluva-v3\Chessbot\FENS.txt");
-
-            for (int i = 0; i < 3; i++)
-                for (int j = 0; j < 6; j++)
-                    ReLe_AIEvaluator.oppAIValues[i,j] = new int[64] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-            
-            curGen = new ReLe_AIGeneration(rng);
-            for (int i = 0; i < ReLe_AI_VARS.GENERATION_GOAL_COUNT; i++)
-            {
-                ReLe_AIInstance[] topPerformingAIs = curGen.GetTopAIInstances();
-                ClearTextFile();
-                AppendToText("- - - { Generation " + (i + 1) + ": } - - -\n\n");
-                foreach (ReLe_AIInstance instance in topPerformingAIs)
-                {
-                    AppendToText(instance.ToString() + "\n");
-                    AppendToText(GetAIArrayValues(instance) + "\n");
-                    //Console.WriteLine(instance.ToString());
-                    //Console.WriteLine(GetAIArrayValues(instance));
-                }
-                Console.WriteLine(ReLe_AIEvaluator.boardManager.GetAverageDepth());
-                curGen = new ReLe_AIGeneration(rng, topPerformingAIs);
-            }
-        }
-
-        private string GetAIArrayValues(ReLe_AIInstance pAI)
-        {
-            string r = "int[,][] ReLe_AI_RESULT_VALS = new int[3, 6][] {";
-            int[,][] tVals = pAI.digitArray;
-
-            for (int i = 0; i < 3; i++)
-            {
-                r += "{";
-                for (int j = 0; j < 5; j++)
-                {
-                    r += GetIntArray64LStringRepresentation(tVals[i, j]) + ",";
-                }
-                r += GetIntArray64LStringRepresentation(tVals[i, 5]) + "},";
-            }
-
-            return r.Substring(0, r.Length - 1) + "};";
-        }
-
-        private string GetIntArray64LStringRepresentation(int[] p64LArr)
-        {
-            string r = "new int[64]{";
-            for (int i = 0; i < 63; i++)
-            {
-                r += p64LArr[i] + ",";
-            }
-            return r + p64LArr[63] + "}";
-        }
-
-        private static void AppendToText(string pText)
-        {
-            File.AppendAllText(@"C:\Users\tpmen\Desktop\ReLeResults.txt", pText);
-        }
-
-        private static void ClearTextFile()
-        {
-            File.WriteAllText(@"C:\Users\tpmen\Desktop\ReLeResults.txt", "");
-        }
-    }
-
-    public class ReLe_AIGeneration
-    {
-        public ReLe_AIInstance[] generationInstances = new ReLe_AIInstance[ReLe_AI_VARS.GENERATION_SIZE];
-        private double[] generationInstanceEvaluations = new double[ReLe_AI_VARS.GENERATION_SIZE];
-
-        //Create Generation Randomly
-        public ReLe_AIGeneration(System.Random rng)
-        {
-            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
-            {
-                generationInstances[i] = new ReLe_AIInstance(rng);
-            }
-        }
-
-        //Create Generation based on best previous results
-        public ReLe_AIGeneration(System.Random rng, ReLe_AIInstance[] topInstancesOfLastGeneration) //Length needs to be optimally equal to the square root of the generation size
-        {
-            int a = 0;
-            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SURVIVORS; i++)
-            {
-                for (int j = 0; j < ReLe_AI_VARS.GENERATION_SURVIVORS; j++)
-                {
-                    if (j == i) continue;
-
-                    generationInstances[a] = CombineTwoAIInstances(topInstancesOfLastGeneration[i], topInstancesOfLastGeneration[j], rng);
-                    ++a;
-                }
-            }
-
-            for (int i = a; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
-            {
-                generationInstances[i] = new ReLe_AIInstance(rng);
-            }
-        }
-
-        private ReLe_AIInstance CombineTwoAIInstances(ReLe_AIInstance ai1, ReLe_AIInstance ai2, System.Random rng)
-        {
-            int[,][] tempDigitArray = new int[3, 6][];
-            for (int i = 0; i < 3; i++)
-            {
-                for (int j = 0; j < 6; j++)
-                {
-                    tempDigitArray[i, j] = new int[64];
-                    for (int k = 0; k < 64; k++)
-                    {
-                        ReLe_AIInstance tAI = rng.NextDouble() < 0.5f ? ai1 : ai2;
-
-                        //Mutations
-                        if (rng.NextDouble() < ReLe_AI_VARS.MUTATION_PROPABILITY)
-                        {
-                            tempDigitArray[i, j][k] = Math.Clamp(tAI.digitArray[i, j][k] + rng.Next(-20, 20), 0, 150);
-                            continue;
-                        }
-
-                        //Combination
-                        //tempDigitArray[i, j][k] = (rng.NextDouble() < 0.5) ? ai1.digitArray[i, j][k] : ai2.digitArray[i, j][k];
-
-                        tempDigitArray[i, j][k] = Math.Clamp(tAI.digitArray[i, j][k] + rng.Next(-3, 3), 0, 150);
-
-                        //tempDigitArray[i, j][k] = Math.Clamp((ai1.digitArray[i, j][k] + ai2.digitArray[i, j][k]) / 2 + rng.Next(-3, 3), 0, 150);
-                    }
-                }
-            }
-            return new ReLe_AIInstance(tempDigitArray);
-        }
-
-        public ReLe_AIInstance[] GetTopAIInstances()
-        {
-            //Evaluate every single instance
-            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SIZE; i++)
-            {
-                generationInstanceEvaluations[i] = ReLe_AIEvaluator.EvaluateAIInstance(generationInstances[i]);
-            }
-
-            //Sort all instances by the evaluation theyve gotten 
-            Array.Sort(generationInstanceEvaluations, generationInstances);
-
-            //Create the array with the length definited in the static var class
-
-            int tL = generationInstanceEvaluations.Length - 1;
-            ReLe_AIInstance[] returnInstances = new ReLe_AIInstance[ReLe_AI_VARS.GENERATION_SURVIVORS];
-            for (int i = 0; i < ReLe_AI_VARS.GENERATION_SURVIVORS; i++)
-            {
-                returnInstances[i] = generationInstances[tL - i];
-            }
-            return returnInstances;
-        }
-    }
-
-    public static class ReLe_AIEvaluator
-    {
-        public static int[,][] oppAIValues = new int[3, 6][];
-        public static BoardManager boardManager;
-
-        public static string[] fens = new string[10] {
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-            "r1bq1rk1/pp3ppp/2n1p3/3n4/1b1P4/2N2N2/PP2BPPP/R1BQ1RK1 w - - 0 10",
-            "rn1q1rk1/pp2b1pp/3pbn2/4p3/8/1N1BB3/PPPN1PPP/R2Q1RK1 w - - 8 11",
-            "1rbq1rk1/p3ppbp/3p1np1/2pP4/1nP5/RP3NP1/1BQNPPBP/4K2R w K - 1 13",
-            "r1b2rk1/pppp1pp1/2n2q1p/8/1bP5/2N2N2/PP2PPPP/R2QKB1R w KQ - 0 9",
-            "r2q1rk1/bppb1pp1/p2p2np/2PPp3/1P2P1n1/P3BN2/2Q1BPPP/RN3RK1 w - - 2 15",
-            "rnbq1rk1/pp2b1pp/2p2n2/3p1p2/4p3/3PP1PP/PPPNNPB1/R1BQ1RK1 w - - 5 9",
-            "rnbqk2r/5ppp/p2bpn2/1p6/2BP4/7P/PP2NPP1/RNBQ1RK1 w kq - 0 10",
-            "rn2kb1r/1bqp1ppp/p3pn2/1p6/3NP3/2P1BB2/PP3PPP/RN1QK2R w KQkq - 6 9",
-            "r1b1k2r/pp2bp1p/1qn1p3/2ppPp2/5P2/2PP1N1P/PP4P1/RNBQ1RK1 w kq - 1 11"
-        };
-
-        private static Random evalRNG = new Random();
-
-        public static double EvaluateAIInstance(ReLe_AIInstance ai)
-        {
-            double eval = 0d;
-
-            for (int i = 0; i < 10; i++)
-            {
-                string gameFen = fens[evalRNG.Next(fens.Length)];
-
-                //double t1, t2;
-                boardManager.LoadFenString(gameFen);
-                eval += boardManager.ReLePlayGame(ai.digitArray, oppAIValues, 500L);
-                boardManager.LoadFenString(gameFen);
-                eval -= boardManager.ReLePlayGame(oppAIValues, ai.digitArray, 500L);
-                //Console.WriteLine(eval + "|" + t1 + " & " + t2);
-            }
-            ai.SetEvaluationResults(eval);  
-            return eval;
-        }
-    }
-
-    public class ReLe_AIInstance
-    {
-        public int[,][] digitArray { private set; get; } = new int[3, 6][];
-
-
-        private double evalResult;
-
-        public ReLe_AIInstance(System.Random rng)
-        {
-            for (int i = 0; i < 3; i++) 
-                for (int j = 0; j < 6; j++)
-                    digitArray[i,j] = Get64IntArray(rng, 40);
-        }
-
-        private int[] Get64IntArray(System.Random rng, int pMax)
-        {
-            return new int[64] {
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax),
-                rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax), rng.Next(0, pMax)
-            };
-        }
-
-        public ReLe_AIInstance(int[,][] pDigitArray)
-        {
-            SetCharToDigitList(pDigitArray);
-        }
-
-        public void SetCharToDigitList(int[,][] digitRefArr)
-        {
-            digitArray = digitRefArr;
-        }
-
-        public void SetEvaluationResults(double eval)
-        {
-            evalResult = eval;
-        }
-
-        public override string ToString()
-        {
-            string s = "";
-            s += "Result: " + evalResult;
-            return s;
-        }
-    }
-
-    #endregion
 
     #region | TLM_NuCRe |
 

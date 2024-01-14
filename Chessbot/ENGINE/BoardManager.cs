@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Threading.Tasks;
 
 #pragma warning disable CS8618
 #pragma warning disable CS8602
@@ -59,7 +60,7 @@ namespace ChessBot
 
         private const int BESTMOVE_SORT_VAL = -2_000_000_000;
         private const int CAPTURE_SORT_VAL = -1_000_000_000;
-        private const int KILLERMOVE_SORT_VAL = -1000;
+        private const int KILLERMOVE_SORT_VAL = -300;
 
         private readonly int[,] MVVLVA_TABLE = new int[7, 7] {
             { 0, 0, 0, 0, 0, 0, 0 },  // Nichts
@@ -346,17 +347,24 @@ namespace ChessBot
             //TexelEvaluate();
             //
             //Stopwatch sw = Stopwatch.StartNew();
-            ////
-            //for (int i = 0; i < 1_000_000; i++)
+            //////
+            //for (int i = 0; i < 10_000_000; i++)
             //{
-            //    TexelEvaluate();
+            //    CustomKillerHeuristicFunction(i);
             //}
-            //
-            //sw.Stop();
             ////
+            //sw.Stop();
+            //////
             //Console.WriteLine(sw.ElapsedMilliseconds);
+            //
+            //for (int i = 0; i < 1001; i++)
+            //{
+            //    Console.WriteLine(CustomKillerHeuristicFunction(i));
+            //}
 
-            //PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 30_000_000L);
+            //rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 1
+            //1r2kb1r/2pq1ppp/2np1n2/1p1Pp3/4P3/1QP2N2/1P3PPP/RNB2RK1 b k - 0 9
+            //PlayGameOnConsoleAgainstHuman("rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 1", true, 30_000_000L);
 
 
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(10802606085532904069));
@@ -371,7 +379,7 @@ namespace ChessBot
             //LoadBestTexelParamsIn();
             //PlayGameOnConsoleAgainstHuman();
 
-            TuneWithTxtFile("DATABASES/SELF_PLAY_GAMES");
+            //TuneWithTxtFile("DATABASES/SELF_PLAY_GAMES");
 
             //TuneWithTxtFile("SELF_PLAY_GAMES", 500d, 10);
 
@@ -2143,9 +2151,11 @@ namespace ChessBot
 
         private int curSearchDepth = 0, curSubSearchDepth = -1;
 
+        private int cutoffs = 0;
+
         public int MinimaxRoot(long pTime)
         {
-            evalCount = 0;
+            cutoffs = evalCount = 0;
             searches++;
             int baseLineLen = 0;
             long tTimestamp = globalTimer.ElapsedTicks + pTime;
@@ -2161,7 +2171,7 @@ namespace ChessBot
                 Array.Copy(curSearchZobristKeyLine, tZobristKeyLine, baseLineLen);
             }
 
-            int perftScore, tattk = isWhiteToMove ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
+            int curEval, tattk = isWhiteToMove ? PreMinimaxCheckCheckWhite() : PreMinimaxCheckCheckBlack(), pDepth = 1;
 
             (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMove(moveHashList);
 
@@ -2189,6 +2199,8 @@ namespace ChessBot
                 }
             }
 
+            int aspirationAlpha = BLACK_CHECKMATE_VAL - 100, aspirationBeta = WHITE_CHECKMATE_VAL + 100;
+
             do
             {
                 curSearchDepth = pDepth;
@@ -2197,21 +2209,33 @@ namespace ChessBot
                 for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
                 curSearchZobristKeyLine = completeZobristHistory;
 
-                if (isWhiteToMove)
+                curEval = int.MaxValue;
+
+                while (curEval <= aspirationAlpha || curEval >= aspirationBeta)
                 {
-                    if (tattk == -1) perftScore = MinimaxWhite(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
-                    else perftScore = MinimaxWhite(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
+                    curEval = MinimaxRootCall(pDepth, baseLineLen, tattk, aspirationAlpha, aspirationBeta);
+                    aspirationAlpha -= 30;
+                    aspirationBeta += 30;
                 }
-                else
-                {
-                    if (tattk == -1) perftScore = MinimaxBlack(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
-                    else perftScore = MinimaxBlack(0, BLACK_CHECKMATE_VAL - 100, WHITE_CHECKMATE_VAL + 100, pDepth, baseLineLen, tattk, NULL_MOVE);
-                }
+
+                aspirationAlpha = curEval - 30;
+                aspirationBeta = curEval + 30;
+                //if (curEval <= aspirationAlpha || curEval >= aspirationBeta)
+                //{
+                //    aspirationAlpha = BLACK_CHECKMATE_VAL - 100;
+                //    aspirationBeta = WHITE_CHECKMATE_VAL + 100;
+                //}
+                //else
+                //{
+                //    aspirationAlpha = curEval - 20;
+                //    aspirationBeta = curEval + 20;
+                //}
 
                 if (debugSearchDepthResults && pTime != 1L)
                 {
                     int tNpS = Convert.ToInt32((double)evalCount * 10_000_000d / (double)(pTime - tTimestamp + globalTimer.ElapsedTicks));
-                    int tSearchEval = perftScore;
+                    int tSearchEval = curEval;
+                    int tCutoffs = cutoffs;
                     int timeForSearchSoFar = (int)((pTime - tTimestamp + globalTimer.ElapsedTicks) / 10000d);
                     Move tBestMove = transpositionTable[zobristKey].bestMove;
 
@@ -2219,6 +2243,7 @@ namespace ChessBot
                     Console.Write(" " + tBestMove + "  [");
                     Console.Write("Depth = " + pDepth + ", ");
                     Console.Write("Evals = " + GetThreeDigitSeperatedInteger(evalCount) + ", ");
+                    Console.Write("Cutoffs = " + GetThreeDigitSeperatedInteger(cutoffs) + ", ");
                     Console.Write("Time = " + GetThreeDigitSeperatedInteger(timeForSearchSoFar) + "ms, ");
                     Console.WriteLine("NpS = " + GetThreeDigitSeperatedInteger(tNpS) + "]");
                 }
@@ -2226,6 +2251,14 @@ namespace ChessBot
                 pDepth++;
             } while (globalTimer.ElapsedTicks < tTimestamp && pDepth < 179);
 
+
+            //int tmax = 0;
+            //for (int i = 0; i < 262_144; i++)
+            //{
+            //    if (killerHeuristic[i] > tmax) tmax = killerHeuristic[i];
+            //}
+            //
+            //Console.WriteLine(tmax);
 
 
             depths += pDepth - 1;
@@ -2235,7 +2268,21 @@ namespace ChessBot
 
             curSearchZobristKeyLine = tZobristKeyLine;
 
-            return perftScore;
+            return curEval;
+        }
+
+        private int MinimaxRootCall(int pDepth, int pBaseLineLen, int pAttkSq, int pAspirationAlpha, int pAspirationBeta)
+        {
+            if (isWhiteToMove)
+            {
+                if (pAttkSq < 0) return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, pBaseLineLen, pAttkSq, NULL_MOVE);
+                else return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, pBaseLineLen, pAttkSq, NULL_MOVE);
+            }
+            else
+            {
+                if (pAttkSq < 0) return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, pBaseLineLen, pAttkSq, NULL_MOVE);
+                else return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, pBaseLineLen, pAttkSq, NULL_MOVE);
+            }
         }
 
         private int[] squareToRankArray = new int[64]
@@ -2299,24 +2346,23 @@ namespace ChessBot
             {
                 for (int m = 0; m < molc; m++)
                 {
+                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
-                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
-                    //moveSortingArray[m] = 
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                 }
             }
             else
             {
                 for (int m = 0; m < molc; m++)
                 {
+                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove == transposEntry.bestMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
                     else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
-                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                     if (transposEntry.moveGenOrderedEvalLength > m) moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
@@ -2612,8 +2658,11 @@ namespace ChessBot
                 {
                     if (!curMove.isCapture)
                     {
-                        killerMoveHeuristic[curMove.moveHash] = true;
-                        if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
+                        //killerMoveHeuristic[curMove.situationalMoveHash][pPly] = true;
+                        cutoffs++;
+                        if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                        //counterMoveHeuristic[pLastMove.situationalMoveHash][0] = true;
+                        //if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
                     }
                     //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] += KILLERMOVE_SORT_VAL;
                     //if (pDepth >= curSubSearchDepth) Console.WriteLine("* Beta Cutoff");
@@ -2656,6 +2705,20 @@ namespace ChessBot
 
             #endregion
 
+            #region QMoveSort()
+
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            for (int m = 0; m < molc; m++)
+            {
+                moveSortingArrayIndexes[m] = m;
+                Move curMove = moveOptionList[m];
+                moveSortingArray[m] = -MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+            #endregion
+
             //#region MoveSort()
             //
             //double[] moveSortingArray = new double[molc];
@@ -2674,7 +2737,8 @@ namespace ChessBot
 
             for (int m = 0; m < molc; m++)
             {
-                Move curMove = moveOptionList[m];
+                int tActualIndex = moveSortingArrayIndexes[m];
+                Move curMove = moveOptionList[tActualIndex];
 
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
@@ -2893,24 +2957,23 @@ namespace ChessBot
             {
                 for (int m = 0; m < molc; m++)
                 {
+                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
-                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
-                    //moveSortingArray[m] = 
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                 }
             }
             else
             {
                 for (int m = 0; m < molc; m++)
                 {
+                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove == transposEntry.bestMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
                     else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if (killerMoveHeuristic[curMove.moveHash]) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
-                    else moveSortingArray[m] = -historyHeuristic[curMove.moveHash];
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                     if (transposEntry.moveGenOrderedEvalLength > m) moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
@@ -3207,8 +3270,10 @@ namespace ChessBot
                 {
                     if (!curMove.isCapture)
                     {
-                        killerMoveHeuristic[curMove.moveHash] = true;
-                        if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
+                        cutoffs++;
+                        if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                        //counterMoveHeuristic[pLastMove.situationalMoveHash][0] = true;
+                        //if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
                     }
                     //if (pDepth > 0) historyHeuristic[lastMadeMove.moveHash] += pDepth * pDepth;
                     //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] += KILLERMOVE_SORT_VAL;
@@ -3253,6 +3318,20 @@ namespace ChessBot
 
             #endregion
 
+            #region QMoveSort()
+
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            for (int m = 0; m < molc; m++)
+            {
+                moveSortingArrayIndexes[m] = m;
+                Move curMove = moveOptionList[m];
+                moveSortingArray[m] = -MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+            #endregion
+
             //#region MoveSort()
             //
             //double[] moveSortingArray = new double[molc];
@@ -3271,7 +3350,9 @@ namespace ChessBot
 
             for (int m = 0; m < molc; m++)
             {
-                Move curMove = moveOptionList[m];
+                int tActualIndex = moveSortingArrayIndexes[m];
+                Move curMove = moveOptionList[tActualIndex];
+
                 int tPieceType = curMove.pieceType, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPTI = pieceTypeArray[tEndPos], tCheckPos = -1, tI, tPossibleAttackPiece;
 
                 #region MakeMove()
@@ -3465,16 +3546,34 @@ namespace ChessBot
 
         #region | HEURISTICS |
 
-        private bool[] killerMoveHeuristic = new bool[262_144];
-        private int[] historyHeuristic = new int[262_144];
+        private int[] killerHeuristic = new int[262_144];
 
         public void ClearHeuristics()
         {
             for (int i = 0; i < 262_144; i++)
             {
-                killerMoveHeuristic[i] = false;
-                historyHeuristic[i] = 0;
+                killerHeuristic[i] = 0;
             }
+        }
+
+        private static int CustomKillerHeuristicFunction(int pVal)
+        {
+            return pVal < 100_000 ? pVal : 100_001;
+            //if (pVal < 400) return (int)Math.Log(0.1 * pVal + 1d, 1.05);
+            //return pVal < 5_000_000 ? (int)(0.02 * pVal + 68.11d) : 1_000_000;
+        }
+
+        private static int Quantmoid4Function(int pVal)
+        {
+            int t = MinF(pVal, 127) - 127;
+            if (pVal > 0) return t * t / 256;
+            return 126 - t * t / 256;
+        }
+
+        private static int MinF(int pVal, int pVal2)
+        {
+            int absd = (pVal < 0 ? -pVal : pVal);
+            return absd > pVal2 ? pVal2 : absd;
         }
 
         #endregion
@@ -4092,7 +4191,7 @@ namespace ChessBot
             //int[] ttt = new int[1212] { 64, 224, 440, 448, 840, 128, 256, 256, 472, 640, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -32, 88, -48, -200, 48, -40, -24, -152, -24, 32, 0, -136, 40, -64, 0, 66, -39, -200, 32, -184, 0, 0, 96, -200, 0, -72, 0, 0, 0, -96, -136, 0, 0, 88, 0, -16, 96, -88, 0, -112, 0, 0, -88, 48, 24, -200, 0, 104, -200, 136, -48, 168, 96, -176, 136, -200, 168, 104, 96, 52, 40, -104, -32, 136, 136, -88, 0, 136, 48, 200, -200, 200, 200, -200, 72, 200, -40, 32, 72, 200, 200, 200, 200, 200, -152, 96, 200, 200, -136, 200, -168, 200, -32, 200, -200, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -200, -200, 0, 200, -200, 112, 200, 200, 160, 200, 72, 200, 0, -200, -104, 200, 64, -136, 200, -200, 0, -200, 72, 200, 200, 0, -72, 200, 0, 0, 64, 200, 64, -200, -136, 200, 120, -64, 200, 64, 168, -136, 104, 0, 0, -200, 0, -200, 200, -200, -200, -56, -116, 200, 0, -136, 64, 200, 0, -96, 200, -136, -48, 200, -8, 0, -72, 200, 200, 200, -72, -200, 0, -72, 136, -32, 0, 112, 200, -152, 200, 200, 200, 200, 0, -200, 64, 200, -200, 168, -24, -200, -80, -72, 200, -112, -200, 200, 136, -32, 200, 200, 200, 200, -200, -200, 144, -200, -56, 168, 200, 0, 200, -200, 200, 200, -200, -200, -200, 118, -200, 36, -200, -200, 88, -200, 62, -200, -104, 64, -200, 164, 0, 200, 32, -200, -200, -200, 0, 104, -136, 200, -104, -200, -200, 200, 0, 184, 136, 0, -22, 136, 136, -104, -136, -200, 64, -200, 200, -200, 32, 72, -96, -200, 0, -56, 40, 200, 72, 64, 64, -10, -96, -200, 200, -64, 48, -200, 72, 200, -64, 200, 200, -168, 96, -136, 0, 200, -168, -200, -200, 168, 200, 48, 88, 64, -168, -200, 72, 200, 200, 200, -200, -136, 200, -136, 200, -200, -104, -200, 200, -128, -200, 8, -200, -200, -64, 0, -200, 104, 200, 200, 200, 200, 200, 200, -200, -200, 200, -200, -200, 104, -200, -200, 200, 200, -200, 168, -200, 200, -72, 200, -200, 120, -200, -88, -120, -200, 200, -200, -200, 200, -152, -56, -200, -200, 0, 64, 0, 200, -200, 128, 128, -200, 64, -120, -200, 0, 44, 64, 0, 48, -32, -168, -64, 72, -200, 200, 32, -64, -200, -24, 200, -96, -104, 104, -40, 136, 200, -200, 200, -136, 136, -88, 0, -200, 136, -200, -152, -200, -136, 200, 116, 64, -64, 200, 48, 0, 32, -32, 168, 0, 200, -200, -72, -104, -200, -56, 0, -120, 128, -200, 200, 72, 200, 136, 200, 200, 104, 200, -136, 200, -72, 200, 200, -200, -64, 136, 168, -116, -84, 0, 200, -72, -96, 200, -64, -200, -168, -136, 200, -64, -104, 200, 0, -200, -200, 72, 200, 0, 200, -136, -200, 0, 64, 80, 136, -80, -200, 200, 128, -96, 200, -200, 200, -200, 200, -128, -200, 200, -200, -200, -200, 200, 200, -72, -64, -200, 128, 200, -64, 200, -200, -200, -200, 200, 200, -200, -200, -200, -72, 200, 0, -8, 104, 200, 200, 200, 0, -200, -16, -200, 112, -200, -200, 200, 0, 56, 0, -72, 0, 200, -64, 200, -64, -104, 80, -200, 200, -200, -200, 200, -200, -200, -120, 136, -115, -200, 64, -200, 0, -200, 88, -200, 72, 200, 0, -200, 0, -200, -136, 72, 136, 200, 0, 72, 0, -200, 0, -200, 200, 200, 32, 200, -104, -200, 32, -200, 200, 200, 24, -104, 104, 200, 200, -64, 200, 200, -200, -200, 72, 200, 200, 200, 200, -200, -200, 80, 200, 200, 200, -8, 136, 104, -104, -200, 200, 136, 160, 200, -200, -200, 56, 200, -64, 200, 40, 200, 64, 200, 200, 200, -200, -200, -72, -48, -80, 128, 0, -200, 0, 32, 152, -200, 200, -64, 200, 200, -200, -136, 96, -64, 96, 104, -80, -72, 120, -136, 96, 8, 0, 200, 24, -136, -200, 200, -200, 64, -160, 152, -200, 136, -72, 200, -72, 72, -136, 200, -200, -120, -200, 0, -200, -200, 200, 104, -200, 200, 104, -48, -128, 200, -200, -112, -200, 200, 200, -64, -200, 64, -200, 32, -200, -200, 200, 0, -72, 200, 200, 200, 200, 136, 200, -72, 200, 200, 200, 200, -96, 200, -200, -200, -200, 200, -200, 200, 200, -200, 200, 200, -200, 200, -200, 200, 200, 200, 200, 200, 0, 0, 200, -8, 200, 200, -200, -200, -200, 200, -200, -200, -200, 120, -200, -200, -200, -200, 0, -200, -200, -200, 0, 0, 0, 0, -200, -104, 0, 0, -24, -32, 144, 200, 0, 72, -20, 104, -32, 0, 84, -168, 0, 74, 0, 0, -16, 0, 44, -168, 32, -32, 48, 48, 64, 0, -40, 184, 104, 16, 32, 88, 0, 112, 0, 80, 0, 0, 40, 40, -72, -16, -56, -32, 200, 8, -168, 200, 132, -24, 0, 0, 0, 0, -200, 200, 0, 0, -64, 176, 168, -200, -32, 0, 48, 200, 32, 104, 0, 168, 0, 72, 0, -32, 0, 64, -32, 96, 0, 0, 0, 0, 0, 44, 0, 104, 0, 0, -32, 64, 72, 32, 0, 104, 136, -32, 0, 0, 8, -200, -136, -32, 16, -200, -120, 80, -64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, -176, 0, 120, 0, 88, -32, 32, 0, -176, 120, 24, 0, -104, 40, 64, 0, 0, 32, 64, 0, 64, 104, -32, 0, 0, 64, -32, 56, 96, 200, 96, 32, 0, 200, 0, 32, 0, 112, 0, 200, 0, 200, 136, 168, 0, 64, -24, 0, 0, 0, 0, -200, -200, 0, 0, 0, -200, 200, -200, -32, 200, 64, -200, 96, 200, -32, -200, 0, 200, 0, -200, 0, 152, -86, 200, 32, -40, 0, 200, 0, 104, 0, -32, 96, -24, 48, 8, 96, 200, -48, 200, 72, 32, 40, -200, 200, 200, -16, 80, 48, 200, 0, 56, 72, -200, 0, 0, 0, 0, 200, 40, 0, 0, 0, -72, -64, -200, 20, 64, -64, 64, -20, -20, 0, 115, -32, 64, -16, 64, 0, 0, 0, -96, -32, 64, 0, 32, -80, 0, 0, 114, 32, -16, 32, 0, -8, 0, 0, 0, -24, 32, -24, -32, 200, 200, 72, 0, -200, 152, 32, -32, -200, -64, 0, 152, 0, 0, 0, 0, -48, -32, 0, 0, 0, 0, 64, 0, 0, -32, -32, 0, 0, 0, -40, 40, 136, 0, 40, 0, -64, -136, 0, 200, 0, 0, 32, 64, 72, -200, 32, 200, 0, 0, 0, -200, -64, -64, 32, 0, -200, 186, -64, -200, -64, -112, 0, 0, 32, 200, 200, -8, -168, 0, -120, -200, -200, 56, -136, 0, 200, -200, 200, 80, 200, 0, -72, 200, 200, 56, -200, 0, -200, 200, -104, 48, -32, 0, 0, 0, 0, 200, 40, 0, 0, 0, 0, -72, -200, 0, 0, 0, 0, -200, -200, 0, 0, 0, 0, -200, -200, 0, 0, 0, 0, 0, -200, 0, 0, 0, 0, 0, -200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             //int[] ttt = new int[778] { 72, 300, 484, 528, 904, 128, 272, 280, 504, 720, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -56, 88, -92, -200, 56, -40, -48, -148, -100, 96, -32, -100, 8, -28, -8, 32, -64, -200, 44, -184, 12, -8, 96, -200, -16, -104, -40, 40, 24, -134, -136, -8, -16, 80, -8, -32, 136, -120, -12, -136, -16, 20, -136, 68, 32, -200, 0, 88, -176, 128, -72, 128, 88, -200, 104, -200, 124, 40, 64, 84, 8, -124, -48, 128, 100, -36, -32, -32, -64, 200, -200, 200, 200, -200, 8, 156, -20, 76, 72, 200, 196, 200, 200, 200, -66, 8, 200, 200, -200, 200, -200, 200, 56, 200, -200, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -200, -200, -28, 200, -200, -22, 200, 192, 172, 200, 12, 120, 12, -200, -200, 200, 18, -194, 200, -200, 46, -168, 52, 200, 176, 56, -56, 200, -40, 32, 8, 200, 70, -176, -112, 200, 168, -48, 192, 76, 192, -72, 136, 46, 64, -200, -24, -200, 172, -200, -200, 88, 24, 200, 112, -68, 200, 200, 168, -120, 200, -88, -12, 200, 76, 40, 56, 200, 200, 200, 64, -200, 138, -56, 200, -16, 96, 136, 200, -112, 200, 200, 200, 200, 101, -200, 176, 200, -200, 200, 120, -200, 54, -128, 200, -24, -200, 200, 200, -72, 200, 200, 200, 200, -200, -200, 176, -200, 80, 176, 200, -24, 112, -200, 200, 200, -200, -200, -200, 128, -200, 112, -200, -200, 200, -200, 16, -200, 16, -80, -200, 184, -8, 200, -32, -200, -176, -200, -56, 200, 56, 200, -104, -152, -200, 200, 32, 200, 112, 8, -24, 160, 92, -76, -120, -200, 64, -200, 200, -200, 32, 136, -140, -144, 24, 8, 16, 200, 132, 24, 40, -24, -62, -200, 200, -15, -8, -116, 148, 200, -76, 200, 200, -200, 96, -200, 8, 200, -148, -200, -200, 188, 200, 86, 64, 80, -180, -200, 64, 200, 200, 200, -200, -132, 184, -184, 200, -156, -136, -200, 200, -104, -184, 60, -200, -184, -32, 0, -169, 96, 200, 200, 200, 200, 200, 200, -200, -200, 200, -200, -200, 68, -200, -200, 200, 200, -200, 176, -200, 200, -56, 200, -200, 152, -200, -168, -46, -200, 200, -200, -200, 192, -200, 68, -200, -200, -16, 16, 4, 200, -168, 112, 176, -200, 92, -128, -200, 16, 34, 144, -68, 24, -40, -200, -64, 40, -128, 152, 48, -24, -200, -35, 200, -56, -88, 4, -96, 128, 200, -200, 200, -100, 200, -80, 32, -172, 200, -200, -40, -200, -78, 200, 96, -24, -26, 200, 80, -32, 200, -76, 200, 48, 200, -200, 16, -148, -200, -64, 32, -72, 120, -180, 200, 84, 200, 136, 200, 200, 200, 200, -52, 200, 72, 200, 200, -200, -64, 200, 200, -144, -136, 40, 200, -104, -8, 200, 88, -200, -173, -112, 200, -88, -40, 200, 32, -200, -200, 72, 200, 68, 200, -156, -200, -40, 128, 4, 144, -88, -200, 200, 174, -136, 200, -200, 184, -176, 200, -56, -200, 200, -200, -152, -200, 160, 200, -171, -96, -200, 88, 200, -62, 72, -200, -200, -200, 200, 194, -200, -200, -200, -140, 200, -32, 56, 88, 200, 200, 200, -53, -200, -38, -200, 84, -200, -200, 200, -8, 100, 3, -140, 38, 172, -48, 200, -20, -160, 80, -200, 200, -200, -200, 200, -200, -200, -56, -52, -72, -124, 80, 80, 88, -8, 104, -88, 104, 200, -24, -200, -8, -200, -80, 22, 164, 200, 152, 80, 104, -200, 88, -104, 200, 200, 25, 200, -112, -200, 56, -200, 200, 200, 100, -80, 176, 200, 200, 104, 200, 200, -200, -200, 24, 200, 200, 200, 200, -200, -200, -30, 200, 200, 200, 48, 200, 200, -76, -200, 200, -184, 200, 200, -200, -200, 174, 200, 108, 192, 128, 200, 80, 200, 200, 40, -200, -200, -48, -84, -88, 64, -24, -200, 8, -16, 160, -200, 176, -100, 200, 200, -200, -174, 48, -112, 72, 44, -136, -84, 44, -104, 64, -16, -96, 200, 64, -200, -200, 200, -200, 80, -200, 144, -200, 144, -192, 152, -104, 24, -200, 200, -200, -136, -8, -112, -200, -200, 200, 112, -200, 200, 48, 0, -200, 144, -200, -136, -48, 200, 200, -134, -200, -56, -200, -28, -192, -200, 200, 92, -200, 200, 134, 200, 200, 144, 200, -94, 200, 120, 200, 200, 200, 200, -200, -200, -200, 200, -200, 200, 200, -200, 200, 200, -197, 200, -200, 200, 197, 200, 200, 200, 0, 0, 200, -200, 200, 200, -200, -200, -200, 200, -200, -200, -200, 128, -200, -200, -200, -200, 0, -200, -200, -200 };
 
-            //int[] ttt = new int[778];
+            int[] ttt = new int[778];
             //ttt[0] = 82;
             //ttt[1] = 341;
             //ttt[2] = 416;
@@ -4104,7 +4203,7 @@ namespace ChessBot
             //ttt[8] = 518;
             //ttt[9] = 960;
 
-            //SetupTexelEvaluationParams(ttt);
+            SetupTexelEvaluationParams(ttt);
         }
 
         // === CUR ===
@@ -4117,18 +4216,18 @@ namespace ChessBot
             //texelPieceEvaluations[12] = -(texelPieceEvaluations[5] = pParams[4]);
 
             // 10 Stk
-            texelPieceEvaluationsV2EG[8] = -(texelPieceEvaluationsV2EG[1] = pParams[0]);
-            texelPieceEvaluationsV2EG[9] = -(texelPieceEvaluationsV2EG[2] = pParams[1]);
-            texelPieceEvaluationsV2EG[10] = -(texelPieceEvaluationsV2EG[3] = pParams[2]);
-            texelPieceEvaluationsV2EG[11] = -(texelPieceEvaluationsV2EG[4] = pParams[3]);
-            texelPieceEvaluationsV2EG[12] = -(texelPieceEvaluationsV2EG[5] = pParams[4]);
-            texelPieceEvaluationsV2LG[8] = -(texelPieceEvaluationsV2LG[1] = pParams[5]);
-            texelPieceEvaluationsV2LG[9] = -(texelPieceEvaluationsV2LG[2] = pParams[6]);
-            texelPieceEvaluationsV2LG[10] = -(texelPieceEvaluationsV2LG[3] = pParams[7]);
-            texelPieceEvaluationsV2LG[11] = -(texelPieceEvaluationsV2LG[4] = pParams[8]);
-            texelPieceEvaluationsV2LG[12] = -(texelPieceEvaluationsV2LG[5] = pParams[9]);
-            //
-            int c = 10; // 768 Stk
+            //texelPieceEvaluationsV2EG[8] = -(texelPieceEvaluationsV2EG[1] = pParams[0]);
+            //texelPieceEvaluationsV2EG[9] = -(texelPieceEvaluationsV2EG[2] = pParams[1]);
+            //texelPieceEvaluationsV2EG[10] = -(texelPieceEvaluationsV2EG[3] = pParams[2]);
+            //texelPieceEvaluationsV2EG[11] = -(texelPieceEvaluationsV2EG[4] = pParams[3]);
+            //texelPieceEvaluationsV2EG[12] = -(texelPieceEvaluationsV2EG[5] = pParams[4]);
+            //texelPieceEvaluationsV2LG[8] = -(texelPieceEvaluationsV2LG[1] = pParams[5]);
+            //texelPieceEvaluationsV2LG[9] = -(texelPieceEvaluationsV2LG[2] = pParams[6]);
+            //texelPieceEvaluationsV2LG[10] = -(texelPieceEvaluationsV2LG[3] = pParams[7]);
+            //texelPieceEvaluationsV2LG[11] = -(texelPieceEvaluationsV2LG[4] = pParams[8]);
+            //texelPieceEvaluationsV2LG[12] = -(texelPieceEvaluationsV2LG[5] = pParams[9]);
+            ////
+            //int c = 10; // 768 Stk
             //for (int p = 1; p < 7; p++)
             //{
             //    for (int s = 0; s < 64; s++)
@@ -4179,79 +4278,79 @@ namespace ChessBot
             //    texelTuningRuntimePositionalValsV2LG[13][s] = -kingLG;
             //}
 
-            //for (int s = 0; s < 64; s++)
+            for (int s = 0; s < 64; s++)
+            {
+                int pawnEG = T_Pawns[0, s], pawnLG = T_Pawns[2, s];
+                int knightEG = T_Knights[0, s], knightLG = T_Knights[2, s];
+                int bishopEG = T_Bishops[0, s], bishopLG = T_Bishops[2, s];
+                int rookEG = T_Rooks[0, s], rookLG = T_Rooks[2, s];
+                int queenEG = T_Queens[0, s], queenLG = T_Queens[2, s];
+                int kingEG = T_Kings[0, s], kingLG = T_Kings[2, s];
+            
+                int bsSq = blackSidedSquares[s];
+            
+                texelTuningRuntimePositionalValsV2EG[1][bsSq] = pawnEG;
+                texelTuningRuntimePositionalValsV2LG[1][bsSq] = pawnLG;
+                texelTuningRuntimePositionalValsV2EG[8][s] = -pawnEG;
+                texelTuningRuntimePositionalValsV2LG[8][s] = -pawnLG;
+                texelTuningRuntimePositionalValsV2EG[2][bsSq] = knightEG;
+                texelTuningRuntimePositionalValsV2LG[2][bsSq] = knightLG;
+                texelTuningRuntimePositionalValsV2EG[9][s] = -knightEG;
+                texelTuningRuntimePositionalValsV2LG[9][s] = -knightLG;
+                texelTuningRuntimePositionalValsV2EG[3][bsSq] = bishopEG;
+                texelTuningRuntimePositionalValsV2LG[3][bsSq] = bishopLG;
+                texelTuningRuntimePositionalValsV2EG[10][s] = -bishopEG;
+                texelTuningRuntimePositionalValsV2LG[10][s] = -bishopLG;
+                texelTuningRuntimePositionalValsV2EG[4][bsSq] = rookEG;
+                texelTuningRuntimePositionalValsV2LG[4][bsSq] = rookLG;
+                texelTuningRuntimePositionalValsV2EG[11][s] = -rookEG;
+                texelTuningRuntimePositionalValsV2LG[11][s] = -rookLG;
+                texelTuningRuntimePositionalValsV2EG[5][bsSq] = queenEG;
+                texelTuningRuntimePositionalValsV2LG[5][bsSq] = queenLG;
+                texelTuningRuntimePositionalValsV2EG[12][s] = -queenEG;
+                texelTuningRuntimePositionalValsV2LG[12][s] = -queenLG;
+                texelTuningRuntimePositionalValsV2EG[6][bsSq] = kingEG;
+                texelTuningRuntimePositionalValsV2LG[6][bsSq] = kingLG;
+                texelTuningRuntimePositionalValsV2EG[13][s] = -kingEG;
+                texelTuningRuntimePositionalValsV2LG[13][s] = -kingLG;
+            }
+
+            //return;
+            //
+            ////c = 778; >> 290 Stk
+            //for (int p = 2; p < 7; p++)
             //{
-            //    int pawnEG = T_Pawns[0, s], pawnLG = T_Pawns[2, s];
-            //    int knightEG = T_Knights[0, s], knightLG = T_Knights[2, s];
-            //    int bishopEG = T_Bishops[0, s], bishopLG = T_Bishops[2, s];
-            //    int rookEG = T_Rooks[0, s], rookLG = T_Rooks[2, s];
-            //    int queenEG = T_Queens[0, s], queenLG = T_Queens[2, s];
-            //    int kingEG = T_Kings[0, s], kingLG = T_Kings[2, s];
+            //    for (int a = 0; a < 15; a++)
+            //    {
+            //        if (a != 14)
+            //        {
+            //            // Diagonal
+            //            texelMobilityDiagonalEG[p + 7, a] = -(texelMobilityDiagonalEG[p, a] = pParams[c++]);
+            //            texelMobilityDiagonalLG[p + 7, a] = -(texelMobilityDiagonalLG[p, a] = pParams[c++]);
+            //        }
+            //        // Straight
+            //        texelMobilityStraightEG[p + 7, a] = -(texelMobilityStraightEG[p, a] = pParams[c++]);
+            //        texelMobilityStraightLG[p + 7, a] = -(texelMobilityStraightLG[p, a] = pParams[c++]);
+            //    }
             //
-            //    int bsSq = blackSidedSquares[s];
-            //
-            //    texelTuningRuntimePositionalValsV2EG[1][bsSq] = pawnEG;
-            //    texelTuningRuntimePositionalValsV2LG[1][bsSq] = pawnLG;
-            //    texelTuningRuntimePositionalValsV2EG[8][s] = -pawnEG;
-            //    texelTuningRuntimePositionalValsV2LG[8][s] = -pawnLG;
-            //    texelTuningRuntimePositionalValsV2EG[2][bsSq] = knightEG;
-            //    texelTuningRuntimePositionalValsV2LG[2][bsSq] = knightLG;
-            //    texelTuningRuntimePositionalValsV2EG[9][s] = -knightEG;
-            //    texelTuningRuntimePositionalValsV2LG[9][s] = -knightLG;
-            //    texelTuningRuntimePositionalValsV2EG[3][bsSq] = bishopEG;
-            //    texelTuningRuntimePositionalValsV2LG[3][bsSq] = bishopLG;
-            //    texelTuningRuntimePositionalValsV2EG[10][s] = -bishopEG;
-            //    texelTuningRuntimePositionalValsV2LG[10][s] = -bishopLG;
-            //    texelTuningRuntimePositionalValsV2EG[4][bsSq] = rookEG;
-            //    texelTuningRuntimePositionalValsV2LG[4][bsSq] = rookLG;
-            //    texelTuningRuntimePositionalValsV2EG[11][s] = -rookEG;
-            //    texelTuningRuntimePositionalValsV2LG[11][s] = -rookLG;
-            //    texelTuningRuntimePositionalValsV2EG[5][bsSq] = queenEG;
-            //    texelTuningRuntimePositionalValsV2LG[5][bsSq] = queenLG;
-            //    texelTuningRuntimePositionalValsV2EG[12][s] = -queenEG;
-            //    texelTuningRuntimePositionalValsV2LG[12][s] = -queenLG;
-            //    texelTuningRuntimePositionalValsV2EG[6][bsSq] = kingEG;
-            //    texelTuningRuntimePositionalValsV2LG[6][bsSq] = kingLG;
-            //    texelTuningRuntimePositionalValsV2EG[13][s] = -kingEG;
-            //    texelTuningRuntimePositionalValsV2LG[13][s] = -kingLG;
             //}
-
-            return;
-
-            //c = 778; >> 290 Stk
-            for (int p = 2; p < 7; p++)
-            {
-                for (int a = 0; a < 15; a++)
-                {
-                    if (a != 14)
-                    {
-                        // Diagonal
-                        texelMobilityDiagonalEG[p + 7, a] = -(texelMobilityDiagonalEG[p, a] = pParams[c++]);
-                        texelMobilityDiagonalLG[p + 7, a] = -(texelMobilityDiagonalLG[p, a] = pParams[c++]);
-                    }
-                    // Straight
-                    texelMobilityStraightEG[p + 7, a] = -(texelMobilityStraightEG[p, a] = pParams[c++]);
-                    texelMobilityStraightLG[p + 7, a] = -(texelMobilityStraightLG[p, a] = pParams[c++]);
-                }
-
-            }
-
-            //c = 1068; >> 144 Stk
-            for (int i = 0; i < 12; i++)
-            {
-                texelKingSafetySREvaluationsPT1EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT2EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT3EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT4EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT5EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT6EG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT1LG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT2LG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT3LG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT4LG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT5LG[i] = pParams[c++];
-                texelKingSafetySREvaluationsPT6LG[i] = pParams[c++];
-            }
+            //
+            ////c = 1068; >> 144 Stk
+            //for (int i = 0; i < 12; i++)
+            //{
+            //    texelKingSafetySREvaluationsPT1EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT2EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT3EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT4EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT5EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT6EG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT1LG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT2LG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT3LG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT4LG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT5LG[i] = pParams[c++];
+            //    texelKingSafetySREvaluationsPT6LG[i] = pParams[c++];
+            //}
 
             //c = 1212
 
@@ -4918,6 +5017,7 @@ namespace ChessBot
         // Absichtlich anders eingerückt; übersichtlicher für das mehr oder weniger Herzstück der Engine
         private int TexelEvaluate()
         {
+            evalCount++;
             int tEvalEG = 0, tEvalLG = 0, tProgress = 0;
             //ulong[] attkULs = new ulong[14];
             for (int p = 0; p < 64; p++) {

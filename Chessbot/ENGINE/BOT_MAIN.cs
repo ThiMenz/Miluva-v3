@@ -42,16 +42,16 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V01_00_018");
+            //MEM_CreateSnapshot("SNAPSHOT_V01_01_000");
 
-            _ = new ReLe_AIHandler();
+            //_ = new ReLe_AIHandler();
 
             //MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
-            //MEM_SnapshotClash();
+            MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |
@@ -68,20 +68,27 @@ namespace ChessBot
             LegacyEngineManager.CreateNewBoardManagerSnapshot(pName);
         }
 
+        /*
+         * V01_00_018: PeStO Piece Square Tables
+         * V01_01_000: Aspiration Windows & Custom Killer Heuristic
+         * 
+         * 
+         */
+
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V01_00_015[16];
+            IBoardManager[] oppBoards = new SNAPSHOT_V01_01_000[16];
             IBoardManager[] ownBoards = new SNAPSHOT_V01_00_018[16];
 
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V01_00_015(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V01_01_000(ENGINE_VALS.DEFAULT_FEN);
                 ownBoards[i] = new SNAPSHOT_V01_00_018(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 64);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 2_000_000L, 16);
         }
 
         private static void MEM_SelfPlay()
@@ -386,6 +393,7 @@ namespace ChessBot
         public int promotionType { get; private set; } = 0;
         public int moveTypeID { get; private set; } = 0;
         public int moveHash { get; private set; }
+        public int situationalMoveHash { get; private set; }
         public bool isCapture { get; private set; } = false;
         public bool isSliderMove { get; private set; }
         public bool isEnPassant { get; private set; } = false;
@@ -422,6 +430,15 @@ namespace ChessBot
             ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(0ul, startPos), endPos);
             if (isRochade) ownPieceBitboardXOR = ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(ownPieceBitboardXOR, rochadeEndPos), rochadeStartPos);
 
+            if (isPromotion)
+            {
+                int t = (endPos % 8) | ((promotionType - 2) << 3) | (startPos > endPos ? 0b100000 : 0b0);
+                situationalMoveHash = t | (t << 6);
+            }
+            else
+            {
+                situationalMoveHash = startPos | (endPos << 6) | (pieceType << 12);
+            }
             moveHash = startPos | (endPos << 6) | (pieceType << 12) | (promotionType << 15);
             MOVE_HASH_EXTRACTOR.moveLookupTable[moveHash] = this;
 

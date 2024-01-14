@@ -32,8 +32,8 @@ namespace ChessBot
         private System.Random rng = new System.Random();
         private ReLe_AIGeneration curGen;
 
-        private const int TGAME_COUNT = 700000;
-        private const int TPARAM_COUNT = 1000;
+        private const int TGAME_COUNT = 10000;
+        private const int TPARAM_COUNT = 10;
         private const int TQUANTITY_NotIncl_MAX = 4;
 
         private readonly int[] TQUANTITIES = new int[50]
@@ -105,7 +105,7 @@ namespace ChessBot
             //TLM_RandomTuning(pArr);
             pArr = TLM_TrailAndErrorTuning(pArr);
 
-            TLM_RandomTuning(pArr);
+            //TLM_RandomTuning(pArr);
         }
 
         private int[] TLM_RandomTuning(int[] startArr) //95.4%
@@ -248,20 +248,20 @@ namespace ChessBot
                     {
                         pParams[p] += a;
                         double cEval = REval(pParams, 0, TGAME_COUNT);
-                        if (cEval > bestEval)
+                        if (cEval >= bestEval)
                         {
                             Console.WriteLine("+");
-                            improved = true;
+                            if(cEval != bestEval) improved = true;
                             bestEval = cEval;
                         }
                         else
                         {
                             pParams[p] -= a * 2;
                             cEval = REval(pParams, 0, TGAME_COUNT);
-                            if (cEval > bestEval)
+                            if (cEval >= bestEval)
                             {
                                 Console.WriteLine("-");
-                                improved = true;
+                                if (cEval != bestEval) improved = true;
                                 bestEval = cEval;
                             }
                             else

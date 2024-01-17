@@ -1,11 +1,13 @@
 #define stepPin 2
 #define dirPin 5 
+#define testLEDPin 8 
 
 const int m_rpmMax = 200;
  
 void setup() {
-  pinMode(stepPin,OUTPUT); 
-  pinMode(dirPin,OUTPUT);
+  pinMode(stepPin, OUTPUT); 
+  pinMode(dirPin, OUTPUT);
+  pinMode(testLEDPin, OUTPUT);
 
   Serial.begin(9600);
 }
@@ -30,10 +32,8 @@ void TURN(int pSteps, int pRPM, bool pClockwise) {
 }
 
 void loop() {
-  TURN(200, 50, true);
-  delay(2500);
-  TURN(400, 100, false);
-  delay(2500);
-  TURN(800, 300, true);
-  delay(2500);
+  TURN(300, 100, true);
+  delay(100);
+  TURN(300, 50, false);
+  delay(100);
 }

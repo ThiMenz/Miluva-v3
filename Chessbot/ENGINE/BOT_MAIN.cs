@@ -42,6 +42,8 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
+            FirmataArdControl.TEST();
+
             //MEM_CreateSnapshot("SNAPSHOT_V01_01_000");
 
             //_ = new ReLe_AIHandler();
@@ -51,7 +53,7 @@ namespace ChessBot
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
-            MEM_SnapshotClash();
+            //MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |

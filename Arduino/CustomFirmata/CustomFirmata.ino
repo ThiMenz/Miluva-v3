@@ -44,6 +44,7 @@
 #define stepPin 2
 #define dirPin 5 
 #define testLEDPin 8 
+#define btnPin 0
 
 // the minimum interval for sampling analog input
 #define MINIMUM_SAMPLING_INTERVAL   1
@@ -378,7 +379,9 @@ void setPinModeCallback(byte pin, int mode)
  */
 
 int dataCount = 0;
-int actualData = 0;
+long actualData = 0;
+long actionQueue[50];
+int countOfQActions;
 
 void setPinValueCallback(byte pin, int value)
 {
@@ -386,22 +389,41 @@ void setPinValueCallback(byte pin, int value)
     if (Firmata.getPinMode(pin) == OUTPUT) {
       Firmata.setPinState(pin, value);
       if (pin == 9) {
-          if (dataCount == 0) digitalWrite(10, HIGH);
-          actualData = actualData | (value << dataCount++);
+          //if (dataCount == 0) digitalWrite(10, HIGH);
+          actualData = actualData | ((long)value << dataCount++);
       } 
-      else if (pin == 10 && value == 0) {
-        processCustomNumberData();
-        actualData = dataCount = 0;
+      else if (pin == 10) {
+        //processCustomNumberData();
+        if (value == 0) {
+          actionQueue[countOfQActions++] = actualData;
+          actualData = 0;
+          dataCount = 0;
+        }
+        else {
+          executeAllEnqueuedActions();
+        }
       }
-      digitalWrite(PIN_TO_DIGITAL(pin), value);
+      else digitalWrite(PIN_TO_DIGITAL(pin), value);
     }
   }
 }
 
-void processCustomNumberData() {
-  if (actualData != 0) {
-    TURN(actualData, 170, true);
+void processCustomNumberData(long pData) {
+  if (pData != 0) {
+    TURN(pData >> 9, (pData >> 1) & 255, pData & 1);
   }
+  else {
+    TURN_UNTIL_BTN_PRESS(btnPin, 100, true);
+  }
+  delay(100);
+}
+
+void executeAllEnqueuedActions() {
+  for (int i = 0; i < countOfQActions; i++ ) {
+    processCustomNumberData(actionQueue[i]);
+  }
+  countOfQActions = 0;
+  digitalWrite(10, HIGH);
 }
 
 int Clamp(int pVal, int pMin, int pMax) {
@@ -410,17 +432,27 @@ int Clamp(int pVal, int pMin, int pMax) {
   return pVal;
 }
 
-void TURN(int pSteps, int pRPM, bool pClockwise) {
-  pRPM = Clamp(pRPM, 1, MAX_RPM);
-  int microSecondDelay = (int)(30000000 / ((double)pRPM * 200.0)); //30 Mio, da es 60 Mio Mikro-Sek pro Minute gibt und zweimal das delay eingeschalten wird 30 Mio * 2 = 60 Mio
-
+void TURN_UNTIL_BTN_PRESS(int pAnlgBtnPin, int pRPM, bool pClockwise) {
+  int microSecondDelay = CALC_MICROSEC_DELAY(pRPM);
   digitalWrite(dirPin, !pClockwise);
-  for(int c = 0; c < pSteps; c++) {
-    digitalWrite(stepPin, HIGH); 
-    delayMicroseconds(microSecondDelay);
-    digitalWrite(stepPin, LOW); 
-    delayMicroseconds(microSecondDelay); 
-  }
+  while (analogRead(pAnlgBtnPin) < 100) STEPPER_PULSE(stepPin, microSecondDelay);
+}
+
+void TURN(int pSteps, int pRPM, bool pClockwise) {
+  int microSecondDelay = CALC_MICROSEC_DELAY(pRPM);
+  digitalWrite(dirPin, !pClockwise);
+  for(int c = 0; c < pSteps; c++) STEPPER_PULSE(stepPin, microSecondDelay);
+}
+
+int CALC_MICROSEC_DELAY(int pRPM) {
+  return (int)(30000000 / ((double)Clamp(pRPM, 1, MAX_RPM) * 200.0));
+}
+
+void STEPPER_PULSE(int pPin, int pDelay) {
+  digitalWrite(pPin, HIGH); 
+  delayMicroseconds(pDelay);
+  digitalWrite(pPin, LOW); 
+  delayMicroseconds(pDelay); 
 }
 
 void analogWriteCallback(byte pin, int value)

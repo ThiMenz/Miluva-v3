@@ -65,6 +65,14 @@ namespace ChessBot
 
             WaitForTickCount(10_000_000L);
 
+            //SendNumberToArduino((200 << 1) | 1);
+            SendNumberToArduino(0);
+            //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
+            //SendNumberToArduino((200 << 9) | (200 << 1) | 1);
+            //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
+
+            SESSION.SetDigitalPin(10, true);
+
             //CONNECTION.WriteLine("Test");
 
             Console.WriteLine(":)");
@@ -98,7 +106,7 @@ namespace ChessBot
             Console.WriteLine(":)");
         }
 
-        private static void SendNumberToArduino(ushort pNum)
+        private static void SendNumberToArduino(ulong pNum)
         {
             if (SESSION == null)
             {
@@ -106,10 +114,12 @@ namespace ChessBot
             }
 
             int m = 1;
-            for (int i = 1; i < 16; i++)
+            for (int i = 1; i < 64; i++)
             {
                 if (ULONG_OPERATIONS.IsBitOne(pNum, i)) m = i + 1;
-            } 
+            }
+
+            Console.WriteLine(m);
 
             for (int i = 0; i < m; i++)
             {

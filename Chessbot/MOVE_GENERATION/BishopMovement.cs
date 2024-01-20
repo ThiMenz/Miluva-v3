@@ -53,19 +53,19 @@ namespace ChessBot
         {
             BishopPreCalcs trpc = precalculatedMoves[startSquare][allPieceBitboard & bishopMasks[startSquare]];
             boardManager.moveOptionList.AddRange(trpc.classicMoves);
-
-            // Auch wenn etwas unschön, diese repetitive Code Struktur macht die Methode merkbar schneller
             if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
             if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
             if (((opposingSideBitboard >> trpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove3);
             if (((opposingSideBitboard >> trpc.possibleCapture4) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove4);
+
+            // Aus irgendwelchen unerklärbaren Gründen ist dies in meinen Tests nicht effizienter gewesen:
+            //    boardManager.moveOptionList.AddRange(trpc.captureDict[trpc.captureBitbaord & opposingSideBitboard]);
         }
 
         public void AddMoveOptionsToMoveList(int startSquare, int ownKingPosFilter, ulong opposingSideBitboard, ulong allPieceBitboard)
         {
             BishopPreCalcsKingPin trpc = precalculatedMoves[startSquare][allPieceBitboard & bishopMasks[startSquare]].classicMovesOnKingPin[ownKingPosFilter];
             boardManager.moveOptionList.AddRange(trpc.moves);
-
             if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
             if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
         }
@@ -277,6 +277,8 @@ namespace ChessBot
         public int possibleCapture1, possibleCapture2, possibleCapture3, possibleCapture4;
         public Move captureMove1, captureMove2, captureMove3, captureMove4;
 
+        //public Dictionary<ulong, List<Move>> captureDict = new Dictionary<ulong, List<Move>>();
+
         public BishopPreCalcs(List<Move> pMoves, int[] pCapt, Move[] pCapMoves, int pSq, ulong pVisMask, BishopPreCalcsKingPin[] pMovesPin, Move[] pqCapMoves)
         {
             classicMoves = pMoves;
@@ -299,6 +301,22 @@ namespace ChessBot
 
             captureBitbaord = ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(
                 ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(0ul, possibleCapture1), possibleCapture2), possibleCapture3), possibleCapture4), pSq);
+
+            //int tL = classicMoves.Count;
+            //
+            //for (int i = 0; i < 16; i++) {
+            //    ulong tul = 0ul;
+            //    List<Move> tList = new List<Move>();
+            //    for (int c = 0; c < 4; c++)
+            //    {
+            //        if (((i >> c) & 1) == 0) continue;
+            //        if (pCapt[c] == pSq) continue;
+            //        tul = ULONG_OPERATIONS.SetBitToOne(tul, pCapt[c]);
+            //        tList.Add(pCapMoves[c]);
+            //    }
+            //    for (int j = 0; j < tL; j++) tList.Add(classicMoves[j]);
+            //    captureDict.TryAdd(tul, tList);
+            //}
         }
     }
 

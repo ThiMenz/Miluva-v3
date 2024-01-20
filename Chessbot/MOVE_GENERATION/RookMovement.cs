@@ -49,8 +49,11 @@ namespace ChessBot
         public void AddMoveOptionsToMoveList(int startSquare, ulong opposingSideBitboard, ulong allPieceBitboard)
         {
             RookPreCalcs trpc = precalculatedMoves[startSquare][allPieceBitboard & rookMasks[startSquare]];
-            boardManager.moveOptionList.AddRange(trpc.classicMoves);
 
+            //boardManager.moveOptionList.AddRange(trpc.captureDict[trpc.captureBitbaord & opposingSideBitboard]);
+
+            boardManager.moveOptionList.AddRange(trpc.classicMoves);
+            
             // Auch wenn etwas unschön, diese repetitive Code Struktur macht die Methode merkbar schneller
             if (((opposingSideBitboard >> trpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove1);
             if (((opposingSideBitboard >> trpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(trpc.captureMove2);
@@ -255,6 +258,8 @@ namespace ChessBot
         public int possibleCapture1, possibleCapture2, possibleCapture3, possibleCapture4;
         public Move captureMove1, captureMove2, captureMove3, captureMove4;
 
+        //public Dictionary<ulong, List<Move>> captureDict = new Dictionary<ulong, List<Move>>();
+
         public RookPreCalcs(List<Move> pMoves, int[] pCapt, Move[] pCapMoves, int pSq, ulong pVisMask, RookPreCalcsKingPin[] pMovesPin, Move[] pqCapMoves)
         {
             classicMoves = pMoves;
@@ -277,6 +282,23 @@ namespace ChessBot
 
             captureBitbaord = ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(
                 ULONG_OPERATIONS.SetBitToOne(ULONG_OPERATIONS.SetBitToOne(0ul, possibleCapture1), possibleCapture2), possibleCapture3), possibleCapture4), pSq);
+
+            //int tL = classicMoves.Count;
+            //
+            //for (int i = 0; i < 16; i++)
+            //{
+            //    ulong tul = 0ul;
+            //    List<Move> tList = new List<Move>();
+            //    for (int c = 0; c < 4; c++)
+            //    {
+            //        if (((i >> c) & 1) == 0) continue;
+            //        if (pCapt[c] == pSq) continue;
+            //        tul = ULONG_OPERATIONS.SetBitToOne(tul, pCapt[c]);
+            //        tList.Add(pCapMoves[c]);
+            //    }
+            //    for (int j = 0; j < tL; j++) tList.Add(classicMoves[j]);
+            //    captureDict.TryAdd(tul, tList);
+            //}
         }
     }
 

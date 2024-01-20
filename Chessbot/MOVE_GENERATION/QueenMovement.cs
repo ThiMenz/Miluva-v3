@@ -71,8 +71,9 @@ namespace ChessBot
         public void AddMoveOptionsToMoveList(int startSquare, ulong opposingSideBitboard, ulong allPieceBitboard)
         {
             BishopPreCalcs tbpc = precalculatedMovesDiagonal[startSquare][allPieceBitboard & diagonalMasks[startSquare]];
+            //boardManager.moveOptionList.AddRange(tbpc.captureDict[tbpc.captureBitbaord & opposingSideBitboard]);
             boardManager.moveOptionList.AddRange(tbpc.classicMoves);
-
+            
             if (((opposingSideBitboard >> tbpc.possibleCapture1) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove1);
             if (((opposingSideBitboard >> tbpc.possibleCapture2) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove2);
             if (((opposingSideBitboard >> tbpc.possibleCapture3) & 1) == 1) boardManager.moveOptionList.Add(tbpc.captureMove3);

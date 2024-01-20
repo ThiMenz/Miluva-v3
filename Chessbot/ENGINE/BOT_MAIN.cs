@@ -42,13 +42,13 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            FirmataArdControl.TEST();
+            //FirmataArdControl.TEST();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V01_01_000");
+            //MEM_CreateSnapshot("SNAPSHOT_V01_01_001");
 
             //_ = new ReLe_AIHandler();
 
-            //MEM_TempStuff();
+            MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
@@ -73,7 +73,7 @@ namespace ChessBot
         /*
          * V01_00_018: PeStO Piece Square Tables
          * V01_01_000: Aspiration Windows & Custom Killer Heuristic
-         * 
+         * V01_01_001: Check Ext-3 & LG For-Loop Precalcs
          * 
          */
 
@@ -82,15 +82,15 @@ namespace ChessBot
             isFirstBoardManagerInitialized = true;
 
             IBoardManager[] oppBoards = new SNAPSHOT_V01_01_000[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V01_00_018[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V01_01_001[16];
 
             for (int i = 0; i < 16; i++)
             {
                 oppBoards[i] = new SNAPSHOT_V01_01_000(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V01_00_018(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V01_01_001(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 2_000_000L, 16);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 64);
         }
 
         private static void MEM_SelfPlay()

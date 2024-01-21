@@ -73,6 +73,8 @@ namespace ChessBot
 
             SESSION.SetDigitalPin(10, true);
 
+            //SESSION.CreateAnalogStateMonitor();
+
             //CONNECTION.WriteLine("Test");
 
             Console.WriteLine(":)");

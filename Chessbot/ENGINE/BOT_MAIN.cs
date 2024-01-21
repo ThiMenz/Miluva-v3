@@ -44,16 +44,23 @@ namespace ChessBot
 
             //FirmataArdControl.TEST();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V01_01_001");
+           // MEM_CreateSnapshot("SNAPSHOT_V02_00_010");
 
             //_ = new ReLe_AIHandler();
 
-            MEM_TempStuff();
+            //SNAPSHOT_V01_00_018 sn = new SNAPSHOT_V01_00_018(ENGINE_VALS.DEFAULT_FEN);
+            //sn.LoadFenString("8/6p1/p2p2k1/1p1N2b1/4P1n1/R6B/PPr5/K7 w - - 0 2");
+            //Move? tm;
+            //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
+
+            //MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
-            //MEM_SnapshotClash();
+            //MEM_UpdateSnapshotCS();
+
+            MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |
@@ -70,27 +77,36 @@ namespace ChessBot
             LegacyEngineManager.CreateNewBoardManagerSnapshot(pName);
         }
 
+        private static void MEM_UpdateSnapshotCS()
+        {
+            LegacyEngineManager.CreateSnapshotCSFile();
+        }
+
         /*
-         * V01_00_018: PeStO Piece Square Tables
-         * V01_01_000: Aspiration Windows & Custom Killer Heuristic
-         * V01_01_001: Check Ext-3 & LG For-Loop Precalcs
-         * 
-         */
+         * ! V01_00_018: PeStO Piece Square Tables
+         * ! V01_01_000: Aspiration Windows & Custom Killer Heuristic
+         * ! V01_01_001: Check Ext-3 & LG For-Loop Precalcs
+         * ! V02_00_000: Time Formats & Basic Management
+         * $ V02_00_005: No CheckExt, but fixed Time Management & ApirWindows
+         * $ --> Different CheckExt Vals
+         * + V02_00_009: Scaling CheckExt
+         * $ V02_00_010: QSearch InEff Checkmate Checks
+         */ 
 
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V01_01_000[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V01_01_001[16];
-
+            IBoardManager[] oppBoards = new SNAPSHOT_V02_00_010[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V02_00_009[16];
+            
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V01_01_000(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V01_01_001(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V02_00_010(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V02_00_009(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, 500_000L, 64);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 30_000_000L, Increment = 100_000L }, 128);
         }
 
         private static void MEM_SelfPlay()
@@ -561,6 +577,62 @@ namespace ChessBot
         {
             return (pSqNot[0] - 97) + 8 * (pSqNot[1] - 49);
         }
+    }
+
+    public class ChessClock
+    {
+        public long Increment, FullTime;
+        public long curRemainingTime;
+
+        public bool disabled;
+
+        public void Set(long pTime, long pIncr)
+        {
+            Increment = pIncr;
+            curRemainingTime = FullTime = pTime;
+        }
+
+        public void Set(TimeFormat pTF)
+        {
+            Increment = pTF.Increment;
+            curRemainingTime = FullTime = pTF.Time;
+            disabled = pTF.Time == -1;
+        }
+
+        public void Enable()
+        {
+            disabled = false;
+        }
+        public void Disable()
+        {
+            disabled = true;
+        }
+
+        public bool HasTimeLeft()
+        {
+            return disabled || curRemainingTime > 0L;
+        }
+
+        public void Reset()
+        {
+            curRemainingTime = FullTime;
+        }
+
+        public void MoveFinished(long tTimeTaken)
+        {
+            curRemainingTime -= tTimeTaken;
+            if (HasTimeLeft()) curRemainingTime += Increment;
+        }
+
+        public override string ToString()
+        {
+            return (curRemainingTime / 10_000_000d) + " / " + (FullTime / 10_000_000d) + " [+" + (Increment / 10_000_000d) + "]";
+        }
+    }
+
+    public class TimeFormat
+    {
+        public long Time, Increment;
     }
 
     #endregion

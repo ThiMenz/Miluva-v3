@@ -60,7 +60,7 @@ namespace ChessBot
             return spl[spl.Length - 1];
         }
 
-        public static void PlayBetweenTwoSnapshots(IBoardManager[] pBM1, IBoardManager[] pBM2, long pTime, int pFENCount)
+        public static void PlayBetweenTwoSnapshots(IBoardManager[] pBM1, IBoardManager[] pBM2, TimeFormat pTime, int pFENCount)
         {
             GlickoEntity ge1 = GetGlickoEntity(GetTypeOfIBoardManagerArray(pBM1));
             GlickoEntity ge2 = GetGlickoEntity(GetTypeOfIBoardManagerArray(pBM2));
@@ -127,7 +127,7 @@ namespace ChessBot
             return (d < 0 ? "" : "+") + d.ToString();
         }
 
-        public static (int, int, int) PlayTwoGamesBetweenTwoSnapshots(IBoardManager pBM1, IBoardManager pBM2, long pTime, string startFen)
+        public static (int, int, int) PlayTwoGamesBetweenTwoSnapshots(IBoardManager pBM1, IBoardManager pBM2, TimeFormat pTime, string startFen)
         {
             (int, int, int) tRes = PlayGameBetweenTwoSnapshots(pBM1, pBM2, pTime, startFen);
             (int, int, int) tRes2 = PlayGameBetweenTwoSnapshots(pBM2, pBM1, pTime, startFen);
@@ -135,8 +135,10 @@ namespace ChessBot
             return (tRes.Item1 + tRes2.Item3, tRes.Item2 + tRes2.Item2, tRes.Item3 + tRes2.Item1);
         }
 
-        private static (int, int, int) PlayGameBetweenTwoSnapshots(IBoardManager pWhite, IBoardManager pBlack, long pTime, string pFEN)
+        private static (int, int, int) PlayGameBetweenTwoSnapshots(IBoardManager pWhite, IBoardManager pBlack, TimeFormat pTime, string pFEN)
         {
+            pWhite.SetTimeFormat(pTime);
+            pBlack.SetTimeFormat(pTime);
             pWhite.LoadFenString(pFEN);
             pBlack.LoadFenString(pFEN);
             pWhite.SetJumpState();
@@ -147,11 +149,11 @@ namespace ChessBot
 
             do
             {
-                tMove = pWhite.ReturnNextMove(tMove, pTime);
+                tMove = pWhite.ReturnNextMove(tMove, 1L);
                 tState = pWhite.GameState(false);
                 Console.WriteLine(pWhite.CreateFenString());
                 if (tState != 3) break;
-                tMove = pBlack.ReturnNextMove(tMove, pTime);
+                tMove = pBlack.ReturnNextMove(tMove, 1L);
                 tState = pBlack.GameState(true);
                 Console.WriteLine(pWhite.CreateFenString());
             } while (tMove != null);
@@ -309,11 +311,11 @@ namespace ChessBot
     {
         private List<string> fens = new List<string>();
         private IBoardManager bm1, bm2;
-        private long thinkingTime;
+        private TimeFormat time;
 
-        public EngineClashThreadObject(IBoardManager pBM1, IBoardManager pBM2, long pTime, List<string> pFens)
+        public EngineClashThreadObject(IBoardManager pBM1, IBoardManager pBM2, TimeFormat pTime, List<string> pFens)
         {
-            thinkingTime = pTime;
+            time = pTime;
             bm1 = pBM1;
             bm2 = pBM2;
             fens = pFens;
@@ -326,7 +328,7 @@ namespace ChessBot
 
             for (int i = 0; i < fens.Count; i++)
             {
-                (int, int, int) tRes_ts = LegacyEngineManager.PlayTwoGamesBetweenTwoSnapshots(bm1, bm2, thinkingTime, fens[i]);
+                (int, int, int) tRes_ts = LegacyEngineManager.PlayTwoGamesBetweenTwoSnapshots(bm1, bm2, time, fens[i]);
                 Console.WriteLine(tRes_ts);
                 tRes = (tRes_ts.Item1 + tRes.Item1, tRes_ts.Item2 + tRes.Item2, tRes_ts.Item3 + tRes.Item3);
             }

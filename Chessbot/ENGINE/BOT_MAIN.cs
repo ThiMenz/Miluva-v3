@@ -42,9 +42,12 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
+            //MEM_TempStuff();
+            //Console.WriteLine(CGFF.GetGame("rnbq1rk1/ppp2pbp/3p1np1/8/8/2N2NP1/PPPPQPBP/R1B1K2R w KQ - 2 9;Ď7,4"));
+
             //FirmataArdControl.TEST();
 
-           // MEM_CreateSnapshot("SNAPSHOT_V02_00_010");
+            //MEM_CreateSnapshot("SNAPSHOT_V02_01_004");
 
             //_ = new ReLe_AIHandler();
 
@@ -91,22 +94,24 @@ namespace ChessBot
          * $ --> Different CheckExt Vals
          * + V02_00_009: Scaling CheckExt
          * $ V02_00_010: QSearch InEff Checkmate Checks
+         * ! V02_02_003: Bugged Full-TT-Impl & Custom Sort Removal
+         * ? V02_02_004: TT-Improvs
          */ 
 
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V02_00_010[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V02_00_009[16];
+            IBoardManager[] oppBoards = new SNAPSHOT_V02_00_009[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V02_01_004[16];
             
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V02_00_010(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V02_00_009(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V02_00_009(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V02_01_004(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 30_000_000L, Increment = 100_000L }, 128);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 30_000_000L, Increment = 100_000L }, 32);
         }
 
         private static void MEM_SelfPlay()
@@ -337,11 +342,14 @@ namespace ChessBot
     {
         public static readonly string FILE_BEGIN = "TLM_ChessGame: \nStart FEN: ";
 
-        public static readonly string[] GAME_RESULT_STRINGS = new string[3]
+        public static readonly string[] GAME_RESULT_STRINGS = new string[6]
         {
             "Result: Black Has Won",
             "Result: Draw",
-            "Result: White Has Won"
+            "Result: White Has Won",
+            "Result: ?",
+            "Result: ?",
+            "Result: ?"
         };
 
         public static TLM_ChessGame GetGame(string pStr)
@@ -399,6 +407,27 @@ namespace ChessBot
             moveGenOrderedEvalLength = moveGenOrderedEvals.Length;
         }
     }
+
+    public class TranspositionEntryV2
+    {
+        public Move bestMove;
+        public int bestMoveHash;
+        public int[] moveGenOrderedEvals;
+        public int moveGenOrderedEvalLength, depth, eval;
+        public ulong allPieceBitboard;
+
+        public TranspositionEntryV2(Move pBestMove, int[] pMoveGenOrderedEvals, int pDepth, int pEval, ulong pAllPieceBitboard)
+        {
+            bestMove = pBestMove;
+            bestMoveHash = pBestMove.moveHash;
+            moveGenOrderedEvals = pMoveGenOrderedEvals;
+            moveGenOrderedEvalLength = moveGenOrderedEvals.Length;
+            depth = pDepth;
+            eval = pEval;
+            allPieceBitboard = pAllPieceBitboard;
+        }
+    }
+
 
     public class Move
     {

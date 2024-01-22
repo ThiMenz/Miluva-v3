@@ -318,7 +318,7 @@ namespace ChessBot
             //PerftRoot(10_000_000L);
             //r1b2rk1/p3qpp1/1pn1p2p/2p5/3P4/2PQPN2/P1B2PPP/R4RK1 b - - 2 15
             //r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/2PQPN2/P1B2PPP/R4RK1 b - - 3 15
-            //LoadFenString("r1b2rk1/p3qpp1/1pn1p2p/2p5/3P4/2PQPN2/P1B2PPP/R4RK1 b - - 2 15");
+            //LoadFenString("2r3k1/Q2n2b1/4q1p1/4ppBp/7P/2P2NP1/Pr2PP2/R3K2R w Q - 0 18");
             //MinimaxRoot(500_000L);
             //MinimaxRoot(1_000_000L);
             //debugSearchDepthResults = true;
@@ -338,7 +338,8 @@ namespace ChessBot
             //PrintDefinedTexelParams(ttt);
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
-            //PlayGameOnConsoleAgainstHuman("rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+
+            PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, false, 40_000_000L);
 
             //-0.125x + 4
 
@@ -2250,6 +2251,7 @@ namespace ChessBot
                                 Console.WriteLine("TLM_DB_Count: " + bookMoveTuple.Item2);
                                 Console.WriteLine(">> " + tMoves[i]);
                             }
+                            BestMove = tMoves[i];
                             //transpositionTable.Add(zobristKey, new TranspositionEntryV2(BestMove = tMoves[i], Array.Empty<int>(), 0, 0, 0ul));
                             chessClock.MoveFinished(globalTimer.ElapsedTicks - tTime);
                             return 0;
@@ -2370,13 +2372,10 @@ namespace ChessBot
             if (_ttKey == zobristKey)
             {
                 tthits++;
-                //if (_ttDepth >= pDepth && _ttFlag != (_ttEval >= pBeta ? 0 : 2))
+                //if (_ttDepth >= pDepth && _ttFlag == 1) //(_ttEval >= pBeta ? 2 : 0)
                 //{
                 //    iutthits++;
-                //    if (pPly == 0)
-                //    {
-                //        BestMove = _ttMove;
-                //    }
+                //    if (pPly == 0) BestMove = _ttMove;
                 //    return _ttEval;
                 //}
             }
@@ -2760,9 +2759,8 @@ namespace ChessBot
 
             if (molc == 0 && pCheckingSquare == -1) curEval = 0;
 
-            if (pPly == 0 && globalTimer.ElapsedTicks > limitTimestamp && pDepth != 1) return curEval;
-
-            if (pDepth > _ttDepth) TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (byte)pDepth, tttflag);
+            if (globalTimer.ElapsedTicks > limitTimestamp && pPly == 0 && pDepth != 1) return curEval;
+            else if (pDepth > _ttDepth && molc != 0) TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (byte)pDepth, tttflag);
 
             if (pPly == 0) BestMove = bestMove;
 
@@ -3040,7 +3038,7 @@ namespace ChessBot
             if (_ttKey == zobristKey)
             {
                 tthits++;
-                //if (_ttDepth >= pDepth && _ttFlag != (_ttEval <= pAlpha ? 0 : 2))
+                //if (_ttDepth >= pDepth && _ttFlag == 1) //(_ttEval <= pAlpha ? 2 : 0)
                 //{
                 //    iutthits++;
                 //    if (pPly == 0) BestMove = _ttMove;
@@ -3427,9 +3425,8 @@ namespace ChessBot
 
             if (molc == 0 && pCheckingSquare == -1) curEval = 0;
 
-            if (pPly == 0 && globalTimer.ElapsedTicks > limitTimestamp && pDepth != 1) return curEval;
-
-            if (pDepth > _ttDepth) TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (byte)pDepth, tttflag);
+            if (globalTimer.ElapsedTicks > limitTimestamp && pPly == 0 && pDepth != 1) return curEval;
+            else if (pDepth > _ttDepth && molc != 0) TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (byte)pDepth, tttflag);
 
             if (pPly == 0) BestMove = bestMove;
 

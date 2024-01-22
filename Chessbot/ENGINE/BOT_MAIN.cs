@@ -43,11 +43,11 @@ namespace ChessBot
             TLMDatabase.InitDatabase();
 
             //MEM_TempStuff();
-            //Console.WriteLine(CGFF.GetGame("rnbq1rk1/ppp2pbp/3p1np1/8/8/2N2NP1/PPPPQPBP/R1B1K2R w KQ - 2 9;Ď7,4"));
+            //Console.WriteLine(CGFF.GetGame("r4rk1/pppn2b1/4q1p1/4ppBp/4Q2P/2P2NP1/PP2PP2/R3K2R w Q - 0 15;}},»o,ô},Āo,S},¼c,Ç£,*c,Qv,¯u,Ćm,Ôs,0"));
 
             //FirmataArdControl.TEST();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V02_01_004");
+            //MEM_CreateSnapshot("SNAPSHOT_V02_01_009");
 
             //_ = new ReLe_AIHandler();
 
@@ -56,14 +56,14 @@ namespace ChessBot
             //Move? tm;
             //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
 
-            //MEM_TempStuff();
+            MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
             //MEM_UpdateSnapshotCS();
 
-            MEM_SnapshotClash();
+            //MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |
@@ -102,12 +102,12 @@ namespace ChessBot
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V02_00_009[16];
+            IBoardManager[] oppBoards = new SNAPSHOT_V02_01_009[16];
             IBoardManager[] ownBoards = new SNAPSHOT_V02_01_004[16];
             
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V02_00_009(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V02_01_009(ENGINE_VALS.DEFAULT_FEN);
                 ownBoards[i] = new SNAPSHOT_V02_01_004(ENGINE_VALS.DEFAULT_FEN);
             }
 

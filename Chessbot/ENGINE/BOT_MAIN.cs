@@ -42,8 +42,24 @@ namespace ChessBot
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //MEM_TempStuff();
-            //Console.WriteLine(CGFF.GetGame("r4rk1/pppn2b1/4q1p1/4ppBp/4Q2P/2P2NP1/PP2PP2/R3K2R w Q - 0 15;}},»o,ô},Āo,S},¼c,Ç£,*c,Qv,¯u,Ćm,Ôs,0"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //TLMDatabase.OptimizeSizeOfDatabase();
+
+            MEM_TempStuff();
+
+            //for (int i = 0; i < 100; i++)
+            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(TLMDatabase.SearchForNextBookMoveV2(new List<int>()).Item1));
+
+           // MEM_TempStuff();
+            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("K9"));
+            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("g9"));
+            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("II"));
+
+            //Console.WriteLine(CGFF.GetGame(";-8,U:,gF,üK,fY,Q;,BW,ÁL,Ç¤,^^,&b,´9,yU,ÿ²,Í5,K9,g9,II,6J,KJ,%j,õ;,D7,k[,Eb,lx,Ñ6,Gv,#V,ýX,Cu,Yp,AC,]l,0"));
 
             //FirmataArdControl.TEST();
 
@@ -56,7 +72,7 @@ namespace ChessBot
             //Move? tm;
             //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
 
-            MEM_TempStuff();
+            //MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
@@ -356,11 +372,21 @@ namespace ChessBot
         {
             string[] tSpl = pStr.Split(';');
             string startFen = tSpl[0];
-            if (startFen.Replace(" ", "") == "") startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+            if (startFen.Replace(" ", "") == "")
+            {
+                pStr = pStr.Substring(1, pStr.Length - 1);
+                startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+                Console.WriteLine(pStr);
+                Console.WriteLine(pStr.Replace(startFen + ";", ""));
+            }
             TLM_ChessGame rCG = new TLM_ChessGame(startFen);
             string[] tSpl2 = pStr.Replace(startFen + ";", "").Split(',');
             int tSpl2Len = tSpl2.Length - 1;
-            for (int i = 0; i < tSpl2Len; i++) rCG.hashedMoves.Add(NuCRe.GetNumber(tSpl2[i]));
+            for (int i = 0; i < tSpl2Len; i++)
+            {
+                Console.WriteLine(tSpl2[i]);
+                rCG.hashedMoves.Add(NuCRe.GetNumber(tSpl2[i]));
+            }
             int outcome = Convert.ToInt32(tSpl2[tSpl2Len]);
             rCG.gameResult = outcome;
             return rCG;
@@ -385,7 +411,10 @@ namespace ChessBot
             string tS = CGFF.FILE_BEGIN + startFen + "\n";
             int tL = hashedMoves.Count;
             for (int i = 0; i < tL; i++)
+            {
+                Console.WriteLine(i);
                 tS += "Move " + (i + 1) + ": " + MOVE_HASH_EXTRACTOR.moveLookupTable[hashedMoves[i]] + "\n";
+            }
             return tS + CGFF.GAME_RESULT_STRINGS[gameResult];
         }
     }

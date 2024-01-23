@@ -2233,7 +2233,7 @@ namespace ChessBot
 
             if (shouldSearchForBookMove)
             {
-                (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMove(moveHashList);
+                (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMoveV2(moveHashList);
 
                 if (bookMoveTuple.Item2 != 0)
                 {

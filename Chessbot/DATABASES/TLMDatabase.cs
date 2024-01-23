@@ -18,6 +18,9 @@ namespace ChessBot
         private static string[] DATABASE = Array.Empty<string>();
         private static int DATABASE_SIZE = 0;
 
+        private static string[] DATABASEV2 = Array.Empty<string>();
+        private static int DATABASEV2_SIZE = 0;
+
         public const int chunkSize = 10_000_000;
         public const int threadMargin = 10000;
         public const int minElo = 2100;
@@ -56,12 +59,49 @@ namespace ChessBot
             string tPath2 = PathManager.GetTXTPath("DATABASES/TLM_DB1");
             DATABASE = File.ReadAllLines(tPath2);
             DATABASE_SIZE = DATABASE.Length;
+            DATABASEV2 = File.ReadAllLines(PathManager.GetTXTPath("DATABASES/TLM_DB2"));
+            DATABASEV2_SIZE = DATABASEV2.Length;
             bM = BOT_MAIN.boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1];
 
             Console.WriteLine("[TLM_DB] LOADED IN");
         }
 
         #region | RUNTIME METHODS |
+
+        public static (string, int) SearchForNextBookMoveV2(List<int> pMoveHashes)
+        {
+            int tL = pMoveHashes.Count;
+            string tStr = tL == 0 ? "" : ";";
+            for (int i = 0; i < tL; i++)
+            {
+                tStr += NuCRe.GetNuCRe(pMoveHashes[i]);
+                if (i + 1 == tL) break;
+                tStr += ",";
+            }
+
+            tL = tStr.Length;
+            int resCount = 0;
+
+            List<(string, int)> tResL = new List<(string, int)>();
+
+            for (int i = 0; i < DATABASEV2_SIZE; i++)
+            {
+                string s = DATABASEV2[i];
+                if (STRING_STARTS_WITH(s, tStr, tL))
+                {
+                    string sBook = GET_NEXT_BOOK_MOVE(s, tL);
+                    resCount++;
+                    ADD_BOOK_MOVE_TO_LIST(sBook, ref tResL);
+                }
+            }
+
+            if (tResL.Count == 0) return ("", 0);
+
+            SORT_RESULT_TUPLES(ref tResL, resCount, false);
+            return GET_RANDOM_BOOK_MOVE(tResL);
+
+            //return tResL[databaseRNG.Next(0, tResL.Count)];
+        }
 
         public static (string, int) SearchForNextBookMove(string pNuCReMoveOpening)
         {
@@ -80,7 +120,7 @@ namespace ChessBot
                 }
             }
 
-            SORT_RESULT_TUPLES(ref tResL, resCount);
+            SORT_RESULT_TUPLES(ref tResL, resCount, true);
             return GET_RANDOM_BOOK_MOVE(tResL);
         }
 
@@ -145,7 +185,7 @@ namespace ChessBot
             return tM;
         }
 
-        private static void SORT_RESULT_TUPLES(ref List<(string, int)> pRefList, double pTotal)
+        private static void SORT_RESULT_TUPLES(ref List<(string, int)> pRefList, double pTotal, bool pSortOut)
         {
             int tL = pRefList.Count;
             for (int i = 0; i < tL; i++)
@@ -158,6 +198,7 @@ namespace ChessBot
                     pRefList[j + 1] = temp;
                 }
             }
+            if (!pSortOut) return;
             for (int i = 0; i < tL; i++)
             {
                 int c = pRefList[i].Item2;
@@ -188,6 +229,58 @@ namespace ChessBot
         #endregion
 
         #region | CREATION |
+
+        private static int tOCount = 0;
+        private static List<string> optimizedSizeDatabaseStrings = new List<string>();
+
+        public static void OptimizeSizeOfDatabase()
+        {
+            RecursiveOpeningBookSearch(0, "", DATABASE.ToList(), new List<int>());
+            Console.WriteLine("Optmized Line Count: " + tOCount);
+            File.WriteAllLines(PathManager.GetTXTPath("DATABASES/TLM_DB2"), optimizedSizeDatabaseStrings);
+        }
+
+        private static void RecursiveOpeningBookSearch(int pDepth, string pStr, List<string> pSearchL, List<int> pPlayCounts)
+        {
+            int tL = pStr.Length, resCount = 0, tSLC = pSearchL.Count;
+
+            List<(string, int)> tResL = new List<(string, int)>();
+            List<string> newEntryList = new List<string>();
+
+            for (int i = 0; i < tSLC; i++)
+            {
+                string s = pSearchL[i];
+                if (STRING_STARTS_WITH(s, pStr, tL))
+                {
+                    newEntryList.Add(s);
+                    string sBook = GET_NEXT_BOOK_MOVE(s, tL);
+                    resCount++;
+                    ADD_BOOK_MOVE_TO_LIST(sBook, ref tResL);
+                }
+            }
+
+            SORT_RESULT_TUPLES(ref tResL, resCount, true);
+
+            if (tResL.Count == 0)
+            {
+                //string[] tStrs = pStr.Substring(1, tL - 1).Split(',');
+                //int t_ti_L = pPlayCounts.Count;
+                //List<string> tStringCompL = new List<string>();
+                //for (int i = 0; i < t_ti_L; i++)
+                //    tStringCompL.Add(tStrs[i] + "," + NuCRe.GetNuCRe(pPlayCounts[i]) + ",");
+                //optimizedSizeDatabaseStrings.Add(String.Concat(tStringCompL));
+                optimizedSizeDatabaseStrings.Add(pStr);
+                tOCount++;
+                return;
+            }
+
+            int tResLC = tResL.Count;
+            for (int j = 0; j < tResLC; j++) {
+                pPlayCounts.Add(tResL[j].Item2);
+                RecursiveOpeningBookSearch(pDepth + 1, pStr + (pDepth == 0 ? ";" : ",") + tResL[j].Item1, newEntryList, pPlayCounts);
+                pPlayCounts.RemoveAt(pDepth);
+            }
+        }
 
         public static void ProcessCreatedDatabase()
         {

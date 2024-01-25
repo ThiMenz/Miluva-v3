@@ -1555,3 +1555,43 @@ rn2k2r/pb3pp1/1ppbpq1p/1B6/3P4/4BN2/PPPQ1PPP/R3K2R w KQkq - 0 11;BT,ÿ²,ăa,ļM
 r2q1rk1/1p1b1ppp/p1n1pn2/bB1p4/Q2P4/P1N1PN2/1P1B1PPP/R4RK1 w - - 0 12;BT,M:,<:,KJ,yu,¶Y,sI,§F,mV,ģS,ĤG,ǂY,r},»o,R{,¼c,fa,ãU,bc,sS,aa,ČW,ė7,NH,bm,þ¡,17,ýu,It,ĕw,Ĵm,<w,öm,9q,ďq,ăq,ĘQ,Ào,n6,}L,ÆS,ĺ:,g¦,Ħ7,õg,ļo,.¦,Ī8,Ñ6,Ģ6,kZ,ù<,ĨV,Ğ5,ď¥,ľi,xR,ā°,ĈU,İM,ǂ¦,TJ,4X,Di,Ýc,¸:,}],£i,R[,¤k,īU,¹®,Ē8,¬e,čc,Ôe,v8,ħE,Ďe,Õc,Ėc,čc,ď¥,N®,ǂ¦,į«,-¨,D®,ė©,į­,Þ©,î­,ĝ©,ĭ­,Ğ§,Į«,4¨,D®,ė©,į­,1
 r1bq1rk1/pp2ppbp/2n2np1/3p4/2PP4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 1 9;ĝ9,İI,ĕI,ľy,&b,Ħ¡,tR,ĭG,ĘG,ĹW,ĈU,U:,4X,^p,dv,Q;,ğY,ľ},ÅZ,|S,ăa,¶z,vu,[\,rs,įY,Ći,èz,Dj,]j,*z,Gz,%j,ûo,g¤,ýa,Eb,Åc,)7,ā°,ea,+c,bm,I9,ôm,)g,&¦,9a,Ē8,A7,Ñ8,95,-¨,13,Sm,!b,ė§,ća,4¨,$b,u¨,)Ó#,Qa,%a,á:,¹²,Ø¨,ăb,Ùª,^°,á¨,U®,Ùª,M¬,á¨,Eª,n6,=¨,v8,5ª,Ùª,Êb,ġ¨,}¨,Ě¦,Éh,Ģ:,¡h,Ī<,Ġh,Ò¤,Ģf,g¤,Ěb,0
 r4rk1/pppq1ppp/2nb4/4p3/1P6/P1P2NPb/4PPBP/R1BQR1K1 w - - 1 12;đV,Ķv,ØJ,Ěz,z9,KN,-8,Īq,ća,ĺ<,©F,Q;,B;,R;,Õ7,Ļo,#V,õ9,aa,¸:,bm,F8,ĘC,·J,ǂH,ĨG,ėW,ĥ7,Ý9,®_,å;,Àn,ßI,I9,17,þo,CH,¸p,Æa,ü],´e,Ŷo,ßI,ľk,ĥM,Ll,É¦,E8,ri,=6,.6,<6,¶K,µ[,¤k,54,#b,Ł°,¬c,ïk,*d,íg,%a,Ýc,!c,+d,)d,ýg,-c,ú®,o¦,±¬,.¨,F¬,ė§,ħ«,Ē6,œ:,4¨,ù:,ė§,Ī8,Ù8,{g,Ö¥,Dª,Í§,}ª,)e,:h,ĕ¥,ğg,ǂ¦,<h,m¦,ßg,qf,>ª,6f,ğ«,5e,Dª,1f,ğ«,ėe,æ«,4f,;g,5j,¥©,çj,9e,Ð¦,1c,Ñ¤,A7,ĩj,95,á:,Ëc,Īh,Ü§,Ģp,Ía,g¦,13,Ăo,s¥,½o,*§,Zo,q§,é<,)Ó#,Ya,#a,Ě8,!c,n¨,)a,v¦,!c,n¨,)a,Ģ:,Ãb,6ª,ĉb,ñ>,Êb,Ī<,Éj,œ>,én,ĺâ#,Wn,}¬,·n,è®,¸d,Ă¢,2§,_¡,q¥,»¡,Ì¥,ü},č¥,Sz,nb,çz,Î§,Gv,s©,ėw,z§,Ğu,r©,tr,Ü«,Ĉu,¥©,Ėy,Ü§,±®,s©,æ{,z§,íy,r¥,åw,*§,{y,1¥,¤w,)£,ð¬,!¥,é®,)£,ñ¬,!¥,é®,)£,ñ°,!¥,¹°,)£,Ĝs,a£,¸®,"£,°°,a£,¸®,"£,lw,!¥,ð¬,)£,é®,!¥,±°,)£,ø®,!¥,ñ¬,)£,Ĝs,a£,é®,"£,ñ¬,a£,é®,"£,±®,a£,Îu,"¥,ð°,i£,ĕs,"£,lw,!¥,Üu,i£,ĕs,"£,¹®,a£,Îu,"¥,sw,)£,zy,!¥,ð¬,)§,©¬,1¥,¤w,)£,¨®,!¥,°¬,)£,zy,!¥,¨®,)§,°¬,1¥,1
+
+
+
+
+
+{25.01.2024} SNAPSHOT_V02_01_017 [1500] vs SNAPSHOT_V02_01_016 [4264]  (32 Games): 0\0\32
+
+
+r1bq1rk1/ppp2pbp/3p1np1/3Pp2P/2PnP3/2N5/PP2BPP1/R1BQK1NR w KQ - 1 9;ê<,ú<,ÅZ,õ9,æ;,ô;,©\,¹\,mR,»o,aa,[\,ć¥,¼g,)5,ze,Äa,ðZ,Ď§,¾{,du,¬u,Ċp,Ł²,n8,©X,Åc,Ôs,0
+r1b2r2/pp1nqpkp/2p2np1/4p3/4P3/2NB1N2/PPPQ1PPP/2KR3R w - - 0 12;Ē8,´9,Îz,ĺ<,Gv,¤7,ė|,Ĺ®,ą¥,Ü5,Ì5,÷y,ǂ¦,åu,-¨,öI,5¦,NH,$a,ĥE,aa,tD,6J,[[,ħE,Õs,m¤,īU,È¤,kq,ĉ¦,Ąr,0
+r4rk1/pp2ppb1/1qpp1npp/8/2P2Pb1/2NPPNP1/PP1Q2BP/1R3RK1 w - - 9 14;g¦,¡V,oV,U:,3H,§8,w8,Ļo,ßE,^p,Ð¦,]f,6T,Į9,ĝ9,İI,ĕI,ĭ9,Ē6,ĹW,ǂv,<V,đ¦,¬w,Ò¨,Ĝs,w¨,uX,Øª,Ġ[,¡¨,lx,Ø¦,àv,đ¤,ęt,0
+r3nrk1/1pqb1pbp/6p1/p1pP4/P1B5/2N2N1P/1PQ2PP1/3R1RK1 w - - 3 18;Ćc,ŴK,sI,¶Y,y9,¹S,ks,îG,¤;,ĵ{,Èa,{C,Åc,*G,Íi,îy,ĉ¦,yK,Ħ;,Ļo,Ò¨,A7,Ďg,95,Ğh,13,ĘG,)Ó#,Ùª,ăw,á¨,|t,ę¦,ĥ{,¢h,®x,Ē¤,.r,0
+r4rk1/pb1q2pp/1pnb1n2/5pB1/3p4/3P1N2/PP1N1PPP/R2QRBK1 w - - 2 15;lE,®W,©\,:R,ÔI,ì9,İX,%Y,aa,Yp,Ñ6,Ķy,Äa,KJ,&T,§F,mV,¦v,dv,´V,#a,ģS,)7,ù:,âZ,ÎZ,Ē8,ĩS,g¤,]d,99,^p,È¤,-b,ĉ¦,%a,Ù8,lX,Ē¨,è8,0
+r4rk1/pp1nqppp/2p1p1b1/3pPn2/1P1P4/2P2N2/P2NBPPP/R2Q1RK1 w - - 1 12;aa,Ļo,bc,Q;,Ñ8,ĨH,Ē6,ĺ<,ĘH,ķx,É¦,¸<,lF,OX,§<,ù<,đ¦,¢|,ĘC,°x,Ò¤,¶L,ǂH,NH,Æs,ā°,-[,R;,&b,ßJ,%d,ĩF,ĉ¤,àx,Ċ¦,ár,Ē¨,Àf,Ěª,Éz,0
+r1bqk2r/3nppbp/p2p1np1/1p6/3NP3/1P1B4/PBP2PPP/RN1QR1K1 w kq - 0 10;n6,U:,ÞK,¾{,%f,Jv,ĉ¤,½],KI,ÿ±,£M,½¯,)7,B7,4[,R­,!g,«¯,ÄE,¶K,9a,Į9,dr,Âp,3D,D8,68,NH,!c,ľa,Ĉq,}D,Ê¤,ĐA,ĉ¤,dD,Ê¤,ĐF,ĉ¤,×r,ÏB,xD,0
+r1bqr1k1/1p3pbp/p2p1np1/2pPn3/P3P3/2N2B2/1P1N1PPP/R1BQ1RK1 w - - 5 13;$t,ĺ<,!c,§F,o6,ĽV,ĉ¤,xR,lB,ľ},ÈF,Ķv,ąS,Ļo,)a,]j,Ê¤,Ep,Ïw,ñ:,ĉ¤,é8,=:,¡6,{r,ðH,Èr,L:,wB,E8,3C,¹S,aa,ČW,Éx,Úx,ÈF,|T,Ď\,ġv,bm,Út,0
+rn1qr1k1/pppb1pbp/3p1np1/4p3/2PP4/2N1PN1P/PP2BPP1/R1BQ1RK1 w - - 0 9;ĕI,E8,æM,þ},ĘD,üK,ÏX,ðH,Ú8,­G,ąS,ĜE,j5,T\,aa,Į9,ĝ9,įY,n8,Ļo,ĉ¤,ĺ<,~:,S~,è<,ø<,Ê¤,÷},fp,¿p,r7,Àd,"a,õv,dr,Đc,ĉ¤,¾p,pF,}6,Ĉu,Ùt,0
+r1bq1rk1/p1n2pbp/3p2p1/1ppP4/4P3/P4N1P/1PQ1BPP1/R1B1K2R w KQ - 0 13;ąS,^p,Ç¤,\~,mY,µI,Íq,·|,ØJ,ĺ<,=:,]j,©F,ħi,Åw,äM,ĝy,ĵI,ǂY,ĽV,!c,ÚX,ĘD,ġZ,&b,¦H,Ñ6,ĠF,ĉ¤,°t,ãU,ùU,Ì5,.s,Õ7,it,17,.r,Ê¦,ÚJ,Ù8,»o,pB,¼c,Ñ¤,©F,ĉ¤,er,0
+r3k2r/pp3ppp/2p1bn2/4p3/NP1qP3/P4PP1/3PQ1BP/2R1K2R w Kkq - 0 16;Åc,¯U,yK,³;,Ía,ÿ²,-v,Ye,ėw,ħ7,Ç¤,1g,#a,yg,Ù8,ÔW,aa,zi,bi,{Y,Ď5,İM,Ĉa,TJ,$a,Ào,g¦,ħE,Ð¤,tH,!m,Ğ5,Qa,Ė3,oR,BW,!g,ĎÓ#,9m,dv,Ē6,6v,ĉ¤,5r,Ê¤,>D,ĉ¦,et,Ē¤,Ðr,0
+r2q1rk1/3nbppp/bppp1n2/p3p3/4P3/PP1P1NP1/1BPNQPBP/R4RK1 w - - 3 12;-v,þ},×z,öI,Gv,Ļo,ăa,A7,27,CG,ÎG,ëW,Ö7,yC,Ćk,ĵ{,5t,L|,&b,UU,ØJ,ïw,Ïw,ÌG,oV,ľc,6T,Îc,ďU,Íe,ÖW,Õg,%f,ÓQ,ĩN,Ł°,ue,¬9,Ĕe,NH,É¦,Ýc,Ėa,kd,đ¤,ąS,Æb,ǂV,'b,Ŷo,ea,ľc,Ê¤,Đd,g¤,Ēb,0
+r2q1rk1/pp1bbppp/2nppn2/8/4P1P1/2N4P/PPP1NPB1/R1BQK2R w KQ - 3 10;Ç¤,ûo,aa,ĺ<,cX,M:,àV,^p,Äa,Q;,ca,þ},Äa,Ľo,ĕI,İI,ğ9,KI,wX,§8,mH,÷Z,>L,V<,n8,µ{,ĉ¤,©\,D<,T\,ca,ãG,$r,;F,et,MS,Äa,°S,ąa,ìy,.v,Cv,~:,ËW,ff,5t,Øf,ďq,Ċ¦,*Z,o],$r,Í5,çV,Ò¦,et,đ¤,]b,0
+rn1k2nr/pp4pp/2pbbp2/4p3/4P3/2N5/PPPBNPPP/R3KB1R w KQ - 4 9;Ç£,þ¯,c£,ŁL,Ď\,Ĺ<,3G,´9,mH,§8,ÛE,ło,Ćk,ĵ­,Ä£,¤7,3D,L¬,c£,ľa,ÏA,ïW,ÈW,Ćb,Ē6,Êb,j5,Eª,n6,=¨,ĝU,ė¥,Ė^,Éa,b¥,Åb,ºZ,Éd,èX,od,Ě8,ZK,¡Z,ëI,)5,:5,*§,nf,èX,Øe,q©,»o,:§,¥E,k5,¼e,1¥,2e,i£,se,0
+r4rk1/pp3ppp/1np1pq2/5b2/8/3P1N2/PPPQBPPP/3R1RK1 w - - 0 15;$b,°s,Í5,Čs,ĘC,ĬI,ǂH,Ļo,Õ7,¦H,Ñ8,>D,%d,èX,n6,¡Z,ßI,´;,ďc,ì9,Ĉa,ľg,g¦,ĺ:,Ē8,Ào,$b,ĨU,Ça,Þg,Åg,ÖW,.¨,ĝY,)7,¼g,Ďd,:g,pd,9e,ė¥,¦V,Î¥,1c,č§,id,4¨,nb,uª,ĘY,>¬,å7,ħ©,Èa,Þ«,ąb,¥©,Á²,Ü§,Ċh,s©,Ģf,:«,Ý5,A­,Õ3,I¯,xe,Q±,ÍÓ#,Y¯,#u,0
+r2q1rk1/pp1bbppp/2n1pn2/2pp4/3P4/2PBPN2/PP3PPP/RNBQR1K1 w - - 8 9;Þ9,÷Y,ĄC,M:,aa,E8,4X,D8,ĘH,C^,n6,ù:,ǂH,ĩ8,}D,¶Z,Ć¡,Ļo,58,F\,"a,KJ,ą\,^p,Ē6,÷Y,PV,CV,%f,ľc,5b,lc,ĐA,*c,aa,įV,bc,ic,dC,Ě],Ça,Ģ6,đ6,§F,g¦,ØJ,Ě8,GH,Ð¦,ßE,ČE,]d,tD,3H,o¨,md,6¨,¶Z,ė§,ğC,4¨,ðH,ė©,lE,Þ§,ÔA,Ģ:,ā°,Õ©,Ĺ®,ĝ©,Ðc,Ğ«,Ík,Ħ©,#D,Ğ«,?F,D¬,Kl,0
+r1bq1rk1/ppp2pbp/3p1np1/3Pp2P/2PnP3/2N5/PP2BPP1/R1BQK1NR w KQ - 1 9;Ī<,<D,ò>,^p,'D,ā°,Ç¤,õ;,ÅZ,ýX,Æs,İI,ĩ_,¦G,ku,Į9,ľX,Q9,ğ9,ĭ9,ĝ9,ĜI,Ĕy,?T,3D,Ym,n8,ù²,>:,]l,Ħ¡,Mp,\¢,ā°,¿~,Ĺ®,¸x,ò°,~¢,2
+r4rk1/pp2ppb1/1qpp1npp/8/2P2Pb1/2NPPNP1/PP1Q2BP/1R3RK1 w - - 9 14;Ė7,¡V,oV,ì},Îs,Ào,~:,±:,kz,İN,Ąa,í9,ĕI,üo,æM,ým,Þ9,î9,Ćm,ĵm,Ĩ},Yp,T¢,ºP,ĘY,U<,¿~,Ł²,DX,´;,V~,ŶN,U¢,ºP,fp,¹`,¿¢,2
+r3k2r/pp3ppp/2p1bn2/4p3/NP1qP3/P4PP1/3PQ1BP/2R1K2R w Kkq - 0 16;ÛI,¿²,¥M,»o,RI,¼i,ãK,|s,Ç¤,NH,my,ğK,äy,¸<,ĥ{,À°,L~,ø®,U|,*u,KJ,ñ¬,ïx,ĩ®,§N,2
+r1bqr1k1/1p3pbp/p2p1np1/2pPn3/P3P3/2N2B2/1P1N1PPP/R1BQ1RK1 w - - 5 13;$t,§F,lF,İI,ĕI,ýX,Ē6,¹S,ms,á_,ą\,]j,6J,L:,*z,¸<,¦L,Á°,İN,\~,ç~,V®,ù|,M¬,ăa,·~,n8,¸x,²X,2
+r3nrk1/1pqb1pbp/6p1/p1pP4/P1B5/2N2N1P/1PQ2PP1/3R1RK1 w - - 3 18;3H,¿L,Ħ;,ĵ¡,ßI,¶Z,ĝU,ĨU,ču,¾¡,&b,´;,CK,Yk,4{,ļ¡,Į=,ľ},Ćm,İM,%n,öI,«{,CG,Jy,yC,ķm,ČE,Ķe,ĺ:,Ėm,^o,A¡,Ł°,¶n,ĺ®,û¢,Ī8,ā~,œ¬,Ĺ¢,2
+r1bqk2r/3nppbp/p2p1np1/1p6/3NP3/1P1B4/PBP2PPP/RN1QR1K1 w kq - 0 10;)7,U:,ÞK,þ},y9,«9,!o,õ{,Yi,í},£i,ÿ²,ÄE,İJ,ĕI,S},DN,Ł²,ÖW,¶L,÷O,Āo,Ć{,NH,%h,Ĺ\,Bj,³t,g¦,ýp,ħj,¸<,j\,ò^,ð^,ān,®¢,ùp,Ā¢,2
+r4rk1/pp1nqppp/2p1p1b1/3pPn2/1P1P4/2P2N2/P2NBPPP/R2Q1RK1 w - - 1 12;Ñ8,TJ,6J,ĨG,ĕ7,Q9,:9,¸<,çL,ú<,Æs,í9,Þ9,Ħ7,Í|,Yi,ǂH,ãi,ßI,÷y,mV,Àn,Ãa,¥¢,&b,°:,O|,è8,Åo,Ā¡,ï¡,Ł°,ĘY,Ğ5,¦^,ù<,ý¢,ĺ®,ā|,2
+rn1qr1k1/pppb1pbp/3p1np1/4p3/2PP4/2N1PN1P/PP2BPP1/R1BQ1RK1 w - - 0 9;Ğ9,İI,ĝ9,ĺ<,58,Ĺ`,ą\,Ł°,du,ĺ®,r},þ¡,R¡,Ŵo,Y},ñ:,Qv,Â\,Ě8,œ°,â:,ð^,ăa,õ;,ďU,ĭ9,ĕI,T\,¦L,ĺ²,5t,MS,ĘC,¹\,©<,[|,ďz,Ă²,êz,Á²,ĩ|,^²,tY,üK,ä[,ľm,œ¢,2
+r1bq1rk1/p1n2pbp/3p2p1/1ppP4/4P3/P4N1P/1PQ1BPP1/R1B1K2R w KQ - 0 13;Ç¤,ĵI,ğ9,ĽV,đ6,¾¡,#V,¤7,q7,¥7,čs,Ŷo,Èa,Q9,Åk,z5,u[,þo,!i,Yi,JY,¸<,£W,Ł²,Ĝ[,ýp,®_,Áo,ĘG,Ă²,ÏW,Zo,Ħ;,Ł²,Į=,Ya,É¦,!o,ío,¹`,[o,ñ:,Ķá#,Ă°,¾¢,ù®,{^,2
+r1b2r2/pp1nqpkp/2p2np1/4p3/4P3/2NB1N2/PPPQ1PPP/2KR3R w - - 0 12;(b,í9,c£,å7,ÖW,NH,%h,Ĺ²,Ď|,¸:,6J,÷~,ò~,Ă°,ħM,F8,¶P,¹²,Ćo,^°,ľp,»o,łn,·®,3H,°¬,ßI,´;,ºn,èª,n6,ġª,CH,¼m,¸h,Ģ¬,~p,ñ:,Āo,Ī®,ğK,Ĵm,®J,ò®,ýk,±¬,;\,¨ª,į],>¨,íl,u¦,ñj,Ð¤,Ē8,g¦,Ģ:,.¦,Ī<,-¨,œ>,uª,él,>¨,ĺâ#,u¦,łw,.¦,¶Y,-¤,Ol,2
+r4rk1/pp3ppp/1np1pq2/5b2/8/3P1N2/PPPQBPPP/3R1RK1 w - - 0 15;Ė7,èS,Îs,İ|,ďU,ĬM,ku,Āo,r},í9,Ĵ},ĥ7,Ķw,½o,4X,M:,6J,òz,=_,Zo,$b,Gz,%j,Ł²,<},»p,³~,ĺ<,¸¢,ł°,Àz,ù<,Ĩ},ú²,Ep,2
+r2q1rk1/pp1bbppp/2n1pn2/2pp4/3P4/2PBPN2/PP3PPP/RNBQR1K1 w - - 8 9;Þ9,÷Y,j7,­G,s7,¥W,ąS,ĜS,ĄC,þ¡,Ãa,½¡,58,D8,ǂH,ö_,}L,¹<,Ćs,M:,Ď|,½Z,tZ,Ŷo,Ĩ^,Ł²,ú\,Ă²,œ~,Á²,º~,2
+r4rk1/pb1q2pp/1pnb1n2/5pB1/3p4/3P1N2/PP1N1PPP/R2QRBK1 w - - 2 15;$w,ĮT,ĉ¦,İI,ĘG,¶~,ÞK,ø},KJ,ù<,Ãa,ĵ{,ÎG,ô[,Û{,î{,çK,Ł²,%j,ĺ<,ĩ\,¦L,²`,ðH,Ò¤,?J,;J,»p,çL,Ă°,±P,¹²,KM,^²,óO,¬9,ĽK,Ŵ¯,®J,T®,Åi,¤7,¥i,¯®,ĨG,z5,i5,N°,ĉ¦,ķ±,¤m,þ±,ôn,Ľ±,&T,þ±,ďZ,½±,ÞK,ü±,êX,2
+r2q1rk1/3nbppp/bppp1n2/p3p3/4P3/PP1P1NP1/1BPNQPBP/R4RK1 w - - 3 12;ăa,NH,ǂH,¸<,Í7,«],Ė7,ħ7,ĘG,\¢,<L,R[,ïM,¿¡,SO,Į9,Ïx,ļ¡,?|,Ł²,ï{,\¡,ĭ},Àn,ğK,ķ[,¶~,»¢,Řy,LU,*U,Ā¢,Ħ¡,ĺ<,¾{,ë_,Ćo,[\,þp,ï`,ì},A7,q`,Á^,µ~,ł°,ø~,2
+r2q1rk1/pp1bbppp/2nppn2/8/4P1P1/2N4P/PPP1NPB1/R1BQK2R w KQ - 3 10;Ç¤,ðH,Ú8,­O,ÏF,¾{,aa,ì},#V,Āo,)7,TW,3G,üK,ÛE,­O,sI,õs,Äa,Íq,×Q,ļM,#V,Q;,ĤK,ým,uX,ù:,LP,©8,ÿM,Ļo,ęJ,¶L,du,ðH,SL,V<,2|,Á²,ïx,^²,¡x,I9,êN,Ŵ¯,Èa,ķ[,~~,L^,V|,2
+rn1k2nr/pp4pp/2pbbp2/4p3/4P3/2N5/PPPBNPPP/R3KB1R w KQ - 4 9;ÏF,Q9,Ç£,´9,ǂV,ľ¯,×Y,ïX,n6,T²,ĥ[,á_,)5,¤7,q7,£7,®W,ļM,c£,¿°,wJ,V²,ĨK,Ŵ±,®N,\²,ŘP,í9,sI,Ŵ±,ÜY,ŁL,¥`,»o,Ā^,òP,ÂN,\°,ŘK,¶K,ĈU,ĬM,ÖW,ķ±,Ý`,½],®M,¼m,¹\,\²,ĤK,¿²,®M,¶L,āW,^°,Ćk,ĺ<,Ċa,œ:,ôI,NP,Ll,·°,Ćm,¸²,Mp,^²,{^,¿²,CL,2

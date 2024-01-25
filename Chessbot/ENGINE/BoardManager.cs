@@ -299,7 +299,7 @@ namespace ChessBot
 
         public void TempStuff()
         {
-            //debugSearchDepthResults = true;
+            debugSearchDepthResults = true;
             //SetTimeFormat(new TimeFormat() { Time = 30_000_000L, Increment = 100_000L });
             //for (int i = 0; i < 100; i++)
             //{
@@ -317,8 +317,8 @@ namespace ChessBot
             //MinimaxRoot(500_000L);
             //MinimaxRoot(1_000_000L);
             //debugSearchDepthResults = true;
-            //LoadFenString("8/5p2/7p/R3P1pP/2k3P1/5P2/p6K/r7 w - - 47 88");
-            //MinimaxRoot(100_000_000L);
+            LoadFenString("r2qk2r/1pb2ppp/n1n5/p3pP2/P1PpP3/3P2P1/6BP/R1BQNRK1 b kq - 0 16");
+            MinimaxRoot(100_000_000L);
 
             //for (int p = 0; p < 64; p += forLoopBBSkipPrecalcs[(whitePieceBitboard >> p >> 1) & sixteenFBits])
             //{
@@ -2194,7 +2194,7 @@ namespace ChessBot
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
         private Move BestMove;
 
-        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0;
+        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0, nodeCount = 0;
         private long limitTimestamp = 0;
         private bool shouldSearchForBookMove = true;
 
@@ -2277,6 +2277,8 @@ namespace ChessBot
                     //Console.WriteLine("A: " + aspirationAlpha + " | B: " + aspirationBeta);
                     curEval = MinimaxRootCall(pDepth, baseLineLen, tattk, aspirationAlpha, aspirationBeta);
 
+                    Console.WriteLine(curEval);
+
                     if (aspirationAlpha < curEval && curEval < aspirationBeta || globalTimer.ElapsedTicks > limitTimestamp) break;
                 }
 
@@ -2292,13 +2294,13 @@ namespace ChessBot
 
                 if (debugSearchDepthResults && pTime != 1L)
                 {
-                    int tNpS = Convert.ToInt32((double)evalCount * 10_000_000d / (double)(pTime - limitTimestamp + globalTimer.ElapsedTicks));
+                    int tNpS = Convert.ToInt32((double)nodeCount * 10_000_000d / (double)(pTime - limitTimestamp + globalTimer.ElapsedTicks));
                     int tSearchEval = curEval;
                     int timeForSearchSoFar = (int)((pTime - limitTimestamp + globalTimer.ElapsedTicks) / 10000d);
 
                     Console.WriteLine((tSearchEval >= 0 ? "+" : "") + tSearchEval
                         + " " + BestMove + "  [Depth = " + pDepth 
-                        + ", Evals = " + GetThreeDigitSeperatedInteger(evalCount) 
+                        + ", Nodes = " + GetThreeDigitSeperatedInteger(nodeCount) 
                         + ", Cutoffs = " + GetThreeDigitSeperatedInteger(cutoffs) 
                         + ", TTHits = " + GetThreeDigitSeperatedInteger(tthits) 
                         + ", Time = " + GetThreeDigitSeperatedInteger(timeForSearchSoFar) 
@@ -2320,16 +2322,22 @@ namespace ChessBot
 
         private int MinimaxRootCall(int pDepth, int pBaseLineLen, int pAttkSq, int pAspirationAlpha, int pAspirationBeta)
         {
-            if (isWhiteToMove)
-            {
-                if (pAttkSq < 0) return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
-                else return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
-            }
-            else
-            {
-                if (pAttkSq < 0) return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
-                else return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
-            }
+            //Console.WriteLine("a = " + pAspirationAlpha + "|  b = " + pAspirationBeta);
+
+            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove);
+            //return isWhiteToMove 
+            //    ? MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE)
+            //    : MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
+            //if (isWhiteToMove)
+            //{
+            //    if (pAttkSq < 0) return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
+            //    else return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
+            //}
+            //else
+            //{
+            //    if (pAttkSq < 0) return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
+            //    else return MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
+            //}
         }
 
         private bool WhiteIsPositionTheSpecialCase(Move pLastMove, int pCheckingSquare)
@@ -2350,6 +2358,724 @@ namespace ChessBot
                 if (pCheckingSquare > -1 && squareToRankArray[pLastMove.startPos] == squareToRankArray[pCheckingSquare] && pLastMove.endPos == blackKingSquare + 8) return true;
             }
             return false;
+        }
+
+        private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW)
+        {
+            //
+            if (IsDrawByRepetition(pRepetitionHistoryPly - 3) || (globalTimer.ElapsedTicks > limitTimestamp && pPly != 0)) return 0;
+
+
+            //
+            if (pDepth < 1 || pCheckExtC > maxCheckExtension)
+                return NegamaxQSearch(pPly, pAlpha, pBeta, pDepth, pCheckingSquare, pLastMove, pIW);
+
+            nodeCount++;
+
+            //
+            var (_ttKey, _ttMove, _ttEval, _ttDepth, _ttFlag, _ttAge) = TTV2[zobristKey % TTSize];
+            if (_ttKey == zobristKey)
+            {
+                tthits++;
+                if (_ttDepth >= (pDepth - pCheckExtC) && pPly != 0)
+                {
+                    switch (_ttFlag)
+                    {
+                        case 0: if (_ttEval <= pAlpha) return pAlpha; break;
+                        case 1: return _ttEval;
+                        case 2: if (_ttEval >= pBeta) return pBeta; break;
+                    }
+                }
+            }
+
+
+            // 
+            List<Move> moveOptionList = new List<Move>();
+            if (pIW) {
+                if (WhiteIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalWhiteMovesSpecialDoubleCheckCase(ref moveOptionList);
+                else GetLegalWhiteMoves(pCheckingSquare, ref moveOptionList);
+            } else {
+                if (BlackIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalBlackMovesSpecialDoubleCheckCase(ref moveOptionList);
+                else GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
+            }
+
+
+            // 
+            Move bestMove = NULL_MOVE;
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly;
+            ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
+            byte tttflag = 0b0;
+            enPassantSquare = 65;
+            isWhiteToMove = pIW;
+
+
+            // 
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            if (_ttKey == zobristKey) {
+                for (int m = 0; m < molc; m++) {
+                    int k;
+                    moveSortingArrayIndexes[m] = m;
+                    Move curMove = moveOptionList[m];
+                    if (curMove == _ttMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
+                    else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                }
+            } else {
+                for (int m = 0; m < molc; m++) {
+                    int k;
+                    moveSortingArrayIndexes[m] = m;
+                    Move curMove = moveOptionList[m];
+                    if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                }
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+
+            // 
+            for (int m = 0; m < molc; m++)
+            {
+                int tActualIndex = moveSortingArrayIndexes[m], tCheckPos = -1;
+                Move curMove = moveOptionList[tActualIndex];
+
+                int tPTI = pieceTypeArray[curMove.endPos];
+
+                NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
+                curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
+
+                int tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1, pCheckExtC, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW);
+
+                NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
+
+                if (tEval > curEval)
+                {
+                    bestMove = curMove;
+                    curEval = tEval;
+
+                    if (curEval > pAlpha)
+                    {
+                        pAlpha = curEval;
+                        tttflag = 1;
+
+                        if (curEval >= pBeta)
+                        {
+                            if (!curMove.isCapture)
+                            {
+                                cutoffs++;
+                                if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                            }
+
+                            tttflag = 2;
+                            break;
+                        }
+                    }
+                }
+            }
+
+
+            //
+            isWhiteToMove = pIW;
+            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
+            allPieceBitboard = tAPB;
+            whitePieceBitboard = tWPB;
+            blackPieceBitboard = tBPB;
+            fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
+
+
+            //
+            if (molc == 0 && pCheckingSquare == -1) curEval = 0;
+
+
+            //
+            if (pPly == 0 && globalTimer.ElapsedTicks > limitTimestamp && pDepth != 1) return curEval;
+
+
+            //
+            else if (pDepth > _ttDepth || happenedHalfMoves > _ttAge) 
+                TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (short)(pDepth - pCheckExtC), tttflag, (short)(happenedHalfMoves + TTAgePersistance));
+
+
+            //
+            if (pPly == 0) BestMove = bestMove;
+            return curEval;
+        }
+
+        private int NegamaxQSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove, bool pIW)
+        {
+            nodeCount++;
+
+            //
+            int standPat = TexelEvaluate() * (pIW ? 1 : -1);
+            if (standPat >= pBeta || pDepth < MAX_QUIESCENCE_TOTAL_LENGTH) return pBeta;
+            if (standPat > pAlpha) pAlpha = standPat;
+
+
+            //
+            List<Move> moveOptionList = new List<Move>();
+            if (pIW)
+            {
+                if (WhiteIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalWhiteCapturesSpecialDoubleCheckCase(ref moveOptionList);
+                else GetLegalWhiteCaptures(pCheckingSquare, ref moveOptionList);
+            }
+            else
+            {
+                if (BlackIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalBlackCapturesSpecialDoubleCheckCase(ref moveOptionList);
+                else GetLegalBlackCaptures(pCheckingSquare, ref moveOptionList);
+            }
+
+
+            // 
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly;
+            ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
+            enPassantSquare = 65;
+            isWhiteToMove = pIW;
+
+
+            //
+            double[] moveSortingArray = new double[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
+            for (int m = 0; m < molc; m++)
+            {
+                moveSortingArrayIndexes[m] = m;
+                Move curMove = moveOptionList[m];
+                moveSortingArray[m] = -MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
+            }
+            Array.Sort(moveSortingArray, moveSortingArrayIndexes);
+
+
+            //
+            for (int m = 0; m < molc; m++)
+            {
+                int tActualIndex = moveSortingArrayIndexes[m], tCheckPos = -1;
+                Move curMove = moveOptionList[tActualIndex];
+
+                int tPTI = pieceTypeArray[curMove.endPos];
+
+                NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
+
+                int tEval = -NegamaxQSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1, tCheckPos, curMove, !pIW);
+
+                NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
+
+                if (tEval >= pBeta) return pBeta;
+                if (pAlpha < tEval) pAlpha = tEval;
+            }
+
+
+            //
+            isWhiteToMove = pIW;
+            zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
+            allPieceBitboard = tAPB;
+            whitePieceBitboard = tWPB;
+            blackPieceBitboard = tBPB;
+            fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
+
+
+            return pAlpha;
+        }
+
+        private void NegamaxSearchMakeMove(Move curMove, int tFiftyMoveRuleCounter, ulong tWPB, ulong tBPB, ulong tZobristKey, int tPTI, bool pIW, ref int tCheckPos)
+        {
+            int tPossibleAttackPiece, tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPieceType = curMove.pieceType, tI;
+            fiftyMoveRuleCounter = tFiftyMoveRuleCounter;
+            pieceTypeArray[tEndPos] = tPieceType;
+            pieceTypeArray[tStartPos] = 0;
+            if (pIW) {
+                whitePieceBitboard = tWPB ^ curMove.ownPieceBitboardXOR;
+                zobristKey = tZobristKey ^ pieceHashesWhite[tStartPos, tPieceType] ^ pieceHashesWhite[tEndPos, tPieceType];
+                switch (curMove.moveTypeID)
+                {
+                    case 0: // Standard-Standard-Move
+                        blackPieceBitboard = tBPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 1: // Standard-Pawn-Move
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePawnAttackSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 2: // Standard-Knight-Move
+                        blackPieceBitboard = tBPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(knightSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 3: // Standard-King-Move
+                        whiteKingSquare = tEndPos;
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        blackPieceBitboard = tBPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 4: // Standard-Rook-Move
+                        blackPieceBitboard = tBPB;
+                        if (whiteCastleRightQueenSide && tStartPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tStartPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 5: // Standard-Pawn-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePawnAttackSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 6: // Standard-Knight-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(knightSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 7: // Standard-King-Capture
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[whiteKingSquare = tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 8: // Standard-Rook-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tStartPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tStartPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 9: // Standard-Standard-Capture
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                        blackPieceBitboard = tBPB;
+                        fiftyMoveRuleCounter = 0;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePawnAttackSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 11: // Rochade
+                        if (whiteCastleRightKingSide) zobristKey ^= whiteKingSideRochadeRightHash;
+                        if (whiteCastleRightQueenSide) zobristKey ^= whiteQueenSideRochadeRightHash;
+                        whiteCastleRightQueenSide = whiteCastleRightKingSide = false;
+                        whiteKingSquare = tEndPos;
+                        blackPieceBitboard = tBPB;
+                        pieceTypeArray[curMove.rochadeEndPos] = 4;
+                        pieceTypeArray[curMove.rochadeStartPos] = 0;
+                        zobristKey ^= pieceHashesWhite[curMove.rochadeStartPos, 4] ^ pieceHashesWhite[curMove.rochadeEndPos, 4];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | curMove.rochadeEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << curMove.rochadeEndPos)) tCheckPos = curMove.rochadeEndPos;
+                        break;
+                    case 12: // En-Passant
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[curMove.enPassantOption] = 0;
+                        zobristKey ^= pieceHashesBlack[curMove.enPassantOption, 1];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePawnAttackSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | curMove.enPassantOption] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 13: // Standard-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        zobristKey ^= pieceHashesWhite[tEndPos, 1] ^ pieceHashesWhite[tEndPos, curMove.promotionType];
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (tPieceType == 2 && ((int)(knightSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        break;
+                    case 14: // Capture-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        blackPieceBitboard = tBPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        zobristKey ^= pieceHashesBlack[tEndPos, tPTI] ^ pieceHashesWhite[tEndPos, 1] ^ pieceHashesWhite[tEndPos, curMove.promotionType];
+                        if (blackCastleRightQueenSide && tEndPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tEndPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(whitePieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[blackKingSquare][squareConnectivesPrecalculationRayArray[tI = blackKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = blackKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (tPieceType == 2 && ((int)(knightSquareBitboards[tEndPos] >> (blackKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        break;
+                }
+            } else { 
+                blackPieceBitboard = tBPB ^ curMove.ownPieceBitboardXOR;
+                zobristKey = tZobristKey ^ pieceHashesBlack[tStartPos, tPieceType] ^ pieceHashesBlack[tEndPos, tPieceType];
+                switch (curMove.moveTypeID)
+                {
+                    case 0: // Standard-Standard-Move
+                        whitePieceBitboard = tWPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 1: // Standard-Pawn-Move
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPawnAttackSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 2: // Standard-Knight-Move
+                        whitePieceBitboard = tWPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(knightSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 3: // Standard-King-Move
+                        blackKingSquare = tEndPos;
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        whitePieceBitboard = tWPB;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 4: // Standard-Rook-Move
+                        whitePieceBitboard = tWPB;
+                        if (blackCastleRightQueenSide && tStartPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tStartPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 5: // Standard-Pawn-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPawnAttackSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 6: // Standard-Knight-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(knightSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 7: // Standard-King-Capture
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[blackKingSquare = tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 8: // Standard-Rook-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (blackCastleRightQueenSide && tStartPos == 56)
+                        {
+                            zobristKey ^= blackQueenSideRochadeRightHash;
+                            blackCastleRightQueenSide = false;
+                        }
+                        else if (blackCastleRightKingSide && tStartPos == 63)
+                        {
+                            zobristKey ^= blackKingSideRochadeRightHash;
+                            blackCastleRightKingSide = false;
+                        }
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 9: // Standard-Standard-Capture
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        zobristKey ^= enPassantSquareHashes[enPassantSquare = curMove.enPassantOption];
+                        whitePieceBitboard = tWPB;
+                        fiftyMoveRuleCounter = 0;
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPawnAttackSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 11: // Rochade
+                        if (blackCastleRightKingSide) zobristKey ^= blackKingSideRochadeRightHash;
+                        if (blackCastleRightQueenSide) zobristKey ^= blackQueenSideRochadeRightHash;
+                        blackCastleRightKingSide = blackCastleRightQueenSide = false;
+                        blackKingSquare = tEndPos;
+                        whitePieceBitboard = tWPB;
+                        pieceTypeArray[curMove.rochadeEndPos] = 4;
+                        pieceTypeArray[curMove.rochadeStartPos] = 0;
+                        zobristKey ^= pieceHashesBlack[curMove.rochadeStartPos, 4] ^ pieceHashesBlack[curMove.rochadeEndPos, 4];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | curMove.rochadeEndPos] == 1 && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << curMove.rochadeEndPos)) tCheckPos = curMove.rochadeEndPos;
+                        break;
+                    case 12: // En-Passant
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[curMove.enPassantOption] = 0;
+                        zobristKey ^= pieceHashesWhite[curMove.enPassantOption, 1];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPawnAttackSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | curMove.enPassantOption] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        break;
+                    case 13: // Standard-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        zobristKey ^= pieceHashesBlack[tEndPos, 1] ^ pieceHashesBlack[tEndPos, curMove.promotionType];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (tPieceType == 2 && ((int)(knightSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        break;
+                    case 14: // Capture-Promotion
+                        fiftyMoveRuleCounter = 0;
+                        whitePieceBitboard = tWPB ^ curMove.oppPieceBitboardXOR;
+                        pieceTypeArray[tEndPos] = tPieceType = curMove.promotionType;
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI];
+                        if (whiteCastleRightQueenSide && tEndPos == 0)
+                        {
+                            zobristKey ^= whiteQueenSideRochadeRightHash;
+                            whiteCastleRightQueenSide = false;
+                        }
+                        else if (whiteCastleRightKingSide && tEndPos == 7)
+                        {
+                            zobristKey ^= whiteKingSideRochadeRightHash;
+                            whiteCastleRightKingSide = false;
+                        }
+                        zobristKey ^= pieceHashesWhite[tEndPos, tPTI] ^ pieceHashesBlack[tEndPos, 1] ^ pieceHashesBlack[tEndPos, curMove.promotionType];
+                        allPieceBitboard = blackPieceBitboard | whitePieceBitboard;
+                        if (((int)(blackPieceBitboard >> (tPossibleAttackPiece = rayCollidingSquareCalculations[whiteKingSquare][squareConnectivesPrecalculationRayArray[tI = whiteKingSquare << 6 | tStartPos] & allPieceBitboard])) & 1) == 1 && pieceTypeAbilities[pieceTypeArray[tPossibleAttackPiece], squareConnectivesPrecalculationArray[tI]]) tCheckPos = tPossibleAttackPiece;
+                        else if (pieceTypeAbilities[tPieceType, squareConnectivesPrecalculationArray[tI = whiteKingSquare << 6 | tEndPos]] && (squareConnectivesPrecalculationLineArray[tI] & allPieceBitboard) == (1ul << tEndPos)) tCheckPos = tEndPos;
+                        else if (tPieceType == 2 && ((int)(knightSquareBitboards[tEndPos] >> (whiteKingSquare)) & 1) == 1) tCheckPos = tEndPos;
+                        break;
+                }
+            }
+        }
+
+        private void NegamaxSearchUndoMove(Move curMove, bool tWKSCR, bool tWQSCR, bool tBKSCR, bool tBQSCR, int tWhiteKingSquare, int tBlackKingSquare, int tPTI, bool pIW)
+        {
+            int tStartPos = curMove.startPos, tEndPos = curMove.endPos, tPieceType = curMove.pieceType;
+            pieceTypeArray[tEndPos] = tPTI;
+            pieceTypeArray[tStartPos] = tPieceType;
+            whiteCastleRightKingSide = tWKSCR;
+            whiteCastleRightQueenSide = tWQSCR;
+            blackCastleRightKingSide = tBKSCR;
+            blackCastleRightQueenSide = tBQSCR;
+
+            if (pIW) {
+                switch (curMove.moveTypeID)
+                {
+                    case 3: // Standard-King-Move
+                        whiteKingSquare = tWhiteKingSquare;
+                        break;
+                    case 7: // Standard-King-Capture
+                        whiteKingSquare = tWhiteKingSquare;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        enPassantSquare = 65;
+                        break;
+                    case 11: // Rochade
+                        whiteKingSquare = tWhiteKingSquare;
+                        pieceTypeArray[curMove.rochadeStartPos] = 4;
+                        pieceTypeArray[curMove.rochadeEndPos] = 0;
+                        break;
+                    case 12: // En-Passant
+                        pieceTypeArray[curMove.enPassantOption] = 1;
+                        break;
+                    case 13: // Standard-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                    case 14: // Capture-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                }
+            } else {
+                switch (curMove.moveTypeID)
+                {
+                    case 3: // Standard-King-Move
+                        blackKingSquare = tBlackKingSquare;
+                        break;
+                    case 7: // Standard-King-Capture
+                        blackKingSquare = tBlackKingSquare;
+                        break;
+                    case 10: // Double-Pawn-Move
+                        enPassantSquare = 65;
+                        break;
+                    case 11: // Rochade
+                        blackKingSquare = tBlackKingSquare;
+                        pieceTypeArray[curMove.rochadeStartPos] = 4;
+                        pieceTypeArray[curMove.rochadeEndPos] = 0;
+                        break;
+                    case 12: // En-Passant
+                        pieceTypeArray[curMove.enPassantOption] = 1;
+                        break;
+                    case 13: // Standard-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                    case 14: // Capture-Promotion
+                        pieceTypeArray[tStartPos] = 1;
+                        break;
+                }
+            }
         }
 
         private int MinimaxWhite(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove)
@@ -2394,7 +3120,7 @@ namespace ChessBot
             #region MoveSort()
 
             double[] moveSortingArray = new double[molc];
-            int[] moveSortingArrayIndexes = new int[molc], thisSearchMoveSortingArrayForTransposEntry = new int[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
 
             if (_ttKey == zobristKey)
             {
@@ -2659,11 +3385,18 @@ namespace ChessBot
 
                 debugMoveList[pPly] = curMove;
 
-                int tincr = 0;
+                int tincr = 0, tEval;
                 if (pDepth == 1 && (tCheckPos != -1 || pCheckingSquare != -1)) tincr = 1;
 
-                int tEval = MinimaxBlack(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
-                thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
+                tEval = MinimaxBlack(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //if (m == 0) tEval = MinimaxBlack(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //else
+                //{
+                //    tEval = MinimaxBlack(pPly + 1, pAlpha - 1, pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //    if (tEval > pAlpha) tEval = MinimaxBlack(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //}
+
+                //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
 
                 //if (curSearchDepth == pDepth) Console.WriteLine(tEval + " >> " + curMove);
                 //else if (curSubSearchDepth == pDepth) Console.WriteLine("" + tEval + " > " + curMove);
@@ -3050,6 +3783,7 @@ namespace ChessBot
             Move bestMove = NULL_MOVE;
             if (BlackIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalBlackMovesSpecialDoubleCheckCase(ref moveOptionList);
             else GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
+            
             int molc = moveOptionList.Count, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = WHITE_CHECKMATE_VAL - pPly;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare];
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -3063,7 +3797,7 @@ namespace ChessBot
             #region MoveSort()
 
             double[] moveSortingArray = new double[molc];
-            int[] moveSortingArrayIndexes = new int[molc], thisSearchMoveSortingArrayForTransposEntry = new int[molc];
+            int[] moveSortingArrayIndexes = new int[molc];
 
             if (_ttKey == zobristKey)
             {
@@ -3327,13 +4061,21 @@ namespace ChessBot
 
                 #endregion
 
-                int tincr = 0;
+                int tincr = 0, tEval;
                 if (pDepth == 1 && (tCheckPos != -1 || pCheckingSquare != -1)) tincr = 1;
 
                 debugMoveList[pPly] = curMove;
 
-                int tEval = MinimaxWhite(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
-                thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
+                tEval = MinimaxWhite(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+
+                //if (m == 0) tEval = MinimaxWhite(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //else
+                //{
+                //    tEval = MinimaxWhite(pPly + 1, pBeta - 1, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //    if (tEval < pBeta) tEval = MinimaxWhite(pPly + 1, pAlpha, pBeta, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove);
+                //}
+                
+                //thisSearchMoveSortingArrayForTransposEntry[tActualIndex] = tEval;
 
                 //if (curSearchDepth == pDepth) Console.WriteLine("=== " + tEval + " >> " + curMove);
                 //else if (curSubSearchDepth == pDepth) Console.WriteLine("" + tEval + " > " + curMove);
@@ -5851,7 +6593,6 @@ namespace ChessBot
         // Absichtlich anders eingerückt; übersichtlicher für das mehr oder weniger Herzstück der Engine
         private int TexelEvaluate()
         {
-            evalCount++;
             int tEvalEG = 0, tEvalLG = 0, tProgress = 0;
             //ulong[] attkULs = new ulong[14];
             for (int p = 0; p < 64; p++) {

@@ -49,12 +49,12 @@ namespace ChessBot
             //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
             //TLMDatabase.OptimizeSizeOfDatabase();
 
-            //MEM_TempStuff();
+            MEM_TempStuff();
 
             //for (int i = 0; i < 100; i++)
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(TLMDatabase.SearchForNextBookMoveV2(new List<int>()).Item1));
 
-            MEM_TempStuff();
+            //MEM_TempStuff();
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("K9"));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("g9"));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("II"));
@@ -63,7 +63,7 @@ namespace ChessBot
 
             //FirmataArdControl.TEST();
 
-            // MEM_CreateSnapshot("SNAPSHOT_V02_01_016");
+            // MEM_CreateSnapshot("SNAPSHOT_V02_01_017");
 
             //_ = new ReLe_AIHandler();
 
@@ -112,6 +112,7 @@ namespace ChessBot
          * $ V02_00_010: QSearch InEff Checkmate Checks
          * ! V02_01_003: Bugged Full-TT-Impl & Custom Sort Removal
          * ? V02_01_004: TT-Improvs
+         * ? V02_01_017: TT-Improvs
          */ 
 
         private static void MEM_SnapshotClash()
@@ -119,12 +120,12 @@ namespace ChessBot
             isFirstBoardManagerInitialized = true;
 
             IBoardManager[] oppBoards = new SNAPSHOT_V02_01_016[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V02_01_004[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V02_01_017[16];
             
             for (int i = 0; i < 16; i++)
             {
                 oppBoards[i] = new SNAPSHOT_V02_01_016(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V02_01_004(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V02_01_017(ENGINE_VALS.DEFAULT_FEN);
             }
 
             LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 70_000_000L, Increment = 100_000L }, 16);

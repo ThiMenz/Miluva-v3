@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Linq;
 
 #pragma warning disable CS8618
 #pragma warning disable CS8602
@@ -69,6 +70,12 @@ namespace ChessBot
             { 0, 5500, 5400, 5300, 5200, 5100, 5000 },  // Türme
             { 0, 9500, 9400, 9300, 9200, 9100, 9000 },  // Dame
             { 0, 0, 0, 0, 0, 0, 0 }}; // König
+
+        private readonly int[] RAZORING_MARGINS = new int[3] {
+            000,
+            100,
+            160
+        };
 
         private readonly int[] maxCheckExtPerDepth = new int[10] {
             0, 1, 2, 3, 4, 5, 6, 6, 6, 6
@@ -299,7 +306,7 @@ namespace ChessBot
 
         public void TempStuff()
         {
-            debugSearchDepthResults = true;
+            //debugSearchDepthResults = true;
             //SetTimeFormat(new TimeFormat() { Time = 30_000_000L, Increment = 100_000L });
             //for (int i = 0; i < 100; i++)
             //{
@@ -313,12 +320,14 @@ namespace ChessBot
             //PerftRoot(10_000_000L);
             //r1b2rk1/p3qpp1/1pn1p2p/2p5/3P4/2PQPN2/P1B2PPP/R4RK1 b - - 2 15
             //r1br2k1/p3qpp1/1pn1p2p/2p5/3P4/2PQPN2/P1B2PPP/R4RK1 b - - 3 15
-            //LoadFenString("2r3k1/Q2n2b1/4q1p1/4ppBp/7P/2P2NP1/Pr2PP2/R3K2R w Q - 0 18");
+            //LoadFenString("2Q2rk1/3Q1pp1/4p3/4p3/4P2p/p2P3P/r4PP1/6K1 b - - 0 33");
             //MinimaxRoot(500_000L);
             //MinimaxRoot(1_000_000L);
             //debugSearchDepthResults = true;
-            LoadFenString("r2qk2r/1pb2ppp/n1n5/p3pP2/P1PpP3/3P2P1/6BP/R1BQNRK1 b kq - 0 16");
-            MinimaxRoot(100_000_000L);
+            //LoadFenString("r2qk2r/1pb2ppp/n1n5/p3pP2/P1PpP3/3P2P1/6BP/R1BQNRK1 b kq - 0 16");
+            //MinimaxRoot(100_000_000L);
+
+            //PlayThroughZobristTree();
 
             //for (int p = 0; p < 64; p += forLoopBBSkipPrecalcs[(whitePieceBitboard >> p >> 1) & sixteenFBits])
             //{
@@ -334,7 +343,7 @@ namespace ChessBot
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
 
-            //PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, false, 40_000_000L);
+            //PlayGameOnConsoleAgainstHuman("6k1/5p2/5p2/3P4/7K/7P/6r1/8 b - - 0 40", true, 60_000_000L);
 
             //-0.125x + 4
 
@@ -2212,7 +2221,7 @@ namespace ChessBot
 
             BestMove = NULL_MOVE;
             searches++;
-            int baseLineLen = tthits = cutoffs = evalCount = 0;
+            int baseLineLen = tthits = cutoffs = nodeCount = 0;
 
             ClearHeuristics();
             //transpositionTable.Clear();
@@ -2324,11 +2333,11 @@ namespace ChessBot
         {
             //Console.WriteLine("a = " + pAspirationAlpha + "|  b = " + pAspirationBeta);
 
-            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove);
+            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove, true);
             //return isWhiteToMove 
             //    ? MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE)
             //    : MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
-            //if (isWhiteToMove)
+            //if (isWhiteToMove)e
             //{
             //    if (pAttkSq < 0) return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
             //    else return MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
@@ -2360,7 +2369,7 @@ namespace ChessBot
             return false;
         }
 
-        private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW)
+        private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW, bool pCanDoNull)
         {
             //
             if (IsDrawByRepetition(pRepetitionHistoryPly - 3) || (globalTimer.ElapsedTicks > limitTimestamp && pPly != 0)) return 0;
@@ -2370,7 +2379,9 @@ namespace ChessBot
             if (pDepth < 1 || pCheckExtC > maxCheckExtension)
                 return NegamaxQSearch(pPly, pAlpha, pBeta, pDepth, pCheckingSquare, pLastMove, pIW);
 
+
             nodeCount++;
+
 
             //
             var (_ttKey, _ttMove, _ttEval, _ttDepth, _ttFlag, _ttAge) = TTV2[zobristKey % TTSize];
@@ -2390,6 +2401,50 @@ namespace ChessBot
 
 
             // 
+            Move bestMove = NULL_MOVE;
+            int tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly, tV;
+            ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide, isInZeroWindow = pAlpha + 1 == pBeta, isInCheck = pCheckingSquare != -1;
+            byte tttflag = 0b0;
+            isWhiteToMove = pIW;
+
+            //
+            //if (pCanDoNull && pDepth > 1 && !isInCheck && !isInZeroWindow)
+            //{
+            //    //
+            //    zobristKey = tZobristKey;
+            //    fiftyMoveRuleCounter = 0;
+            //    enPassantSquare = 65;
+            //
+            //    int tnEval = -NegamaxSearch(pPly + 1, -pBeta, -pBeta + 1, pDepth - 3, pCheckExtC, pRepetitionHistoryPly + 1, -1, NULL_MOVE, !pIW, false);
+            //
+            //    //
+            //    enPassantSquare = tEPSquare;
+            //
+            //    if (tnEval >= pBeta && tnEval < WHITE_CHECKMATE_TOLERANCE && tnEval > BLACK_CHECKMATE_TOLERANCE)
+            //    {
+            //        Console.WriteLine(":)");
+            //        isWhiteToMove = pIW;
+            //        zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
+            //        allPieceBitboard = tAPB;
+            //        whitePieceBitboard = tWPB;
+            //        blackPieceBitboard = tBPB;
+            //        fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
+            //        return pBeta;
+            //    }
+            //}
+
+
+            //
+            //if (!isInCheck && !isInZeroWindow && pPly != 0 && pCheckExtC == 0 && pBeta < WHITE_CHECKMATE_TOLERANCE && pBeta > BLACK_CHECKMATE_TOLERANCE
+            //    && (tV = TexelEvaluate() - 97 * pDepth) >= pBeta) return tV;
+
+            if (pDepth < 3 && !isInZeroWindow && !isInCheck)
+            {
+
+            }
+
+            // 
             List<Move> moveOptionList = new List<Move>();
             if (pIW) {
                 if (WhiteIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalWhiteMovesSpecialDoubleCheckCase(ref moveOptionList);
@@ -2399,18 +2454,10 @@ namespace ChessBot
                 else GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
             }
 
-
-            // 
-            Move bestMove = NULL_MOVE;
-            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly;
-            ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
-            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
-            byte tttflag = 0b0;
             enPassantSquare = 65;
-            isWhiteToMove = pIW;
-
 
             // 
+            int molc = moveOptionList.Count;
             double[] moveSortingArray = new double[molc];
             int[] moveSortingArrayIndexes = new int[molc];
             if (_ttKey == zobristKey) {
@@ -2437,18 +2484,34 @@ namespace ChessBot
             // 
             for (int m = 0; m < molc; m++)
             {
+                //
                 int tActualIndex = moveSortingArrayIndexes[m], tCheckPos = -1;
                 Move curMove = moveOptionList[tActualIndex];
-
                 int tPTI = pieceTypeArray[curMove.endPos];
 
+
+                //
                 NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
+                debugMoveList[pPly] = curMove;
 
-                int tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1, pCheckExtC, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW);
+                //
+                int tincr = 0, tEval;
+                if (pDepth == 1 && (tCheckPos != -1 || isInCheck)) tincr = 1;
 
+                if (m == 0) tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
+                else {
+                    tEval = -NegamaxSearch(pPly + 1, -pAlpha - 1, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
+                    if (tEval > pAlpha && tEval < pBeta)
+                        tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
+                }
+
+
+                //
                 NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
 
+
+                //
                 if (tEval > curEval)
                 {
                     bestMove = curMove;
@@ -2474,7 +2537,6 @@ namespace ChessBot
                 }
             }
 
-
             //
             isWhiteToMove = pIW;
             zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
@@ -2494,7 +2556,7 @@ namespace ChessBot
 
             //
             else if (pDepth > _ttDepth || happenedHalfMoves > _ttAge) 
-                TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (short)(pDepth - pCheckExtC), tttflag, (short)(happenedHalfMoves + TTAgePersistance));
+                TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (short)(pDepth - pCheckExtC), tttflag, (short)(happenedHalfMoves + pPly - 2));
 
 
             //
@@ -5099,7 +5161,7 @@ namespace ChessBot
         #region | HEURISTICS |
 
         private const int TTSize = 524288;
-        private const int TTAgePersistance = 3;
+        private const int TTAgePersistance = 3; // Legacy
         /*
          * [ulong] = Zobrist Key
          * [Move] = Best Move / Refutation Move
@@ -5161,7 +5223,6 @@ namespace ChessBot
         private int[,][] piecePositionEvals = new int[33, 14][];
 
         private int evalCount = 0;
-
         private int Evaluate()
         {
             evalCount++;
@@ -6595,7 +6656,8 @@ namespace ChessBot
         {
             int tEvalEG = 0, tEvalLG = 0, tProgress = 0;
             //ulong[] attkULs = new ulong[14];
-            for (int p = 0; p < 64; p++) {
+            for (int p = 0; p < 64; p++)
+            { //+= forLoopBBSkipPrecalcs[(allPieceBitboard >> p >> 1) & sixteenFBits]
                 if (((int)(allPieceBitboard >> p) & 1) == 0) continue;
                 int aPT = pieceTypeArray[p], tPT = aPT + 7 * ((int)(blackPieceBitboard >> p) & 1); //, mobilityStraight = 0, mobilityDiagonal = 0;
                 tEvalEG += texelTuningRuntimePositionalValsV2EG[tPT][p] + texelPieceEvaluationsV2EG[tPT];

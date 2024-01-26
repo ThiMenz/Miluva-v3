@@ -63,7 +63,7 @@ namespace ChessBot
 
             //FirmataArdControl.TEST();
 
-            // MEM_CreateSnapshot("SNAPSHOT_V02_01_017");
+            //MEM_CreateSnapshot("SNAPSHOT_V02_02_006");
 
             //_ = new ReLe_AIHandler();
 
@@ -102,33 +102,36 @@ namespace ChessBot
         }
 
         /*
-         * ! V01_00_018: PeStO Piece Square Tables
-         * ! V01_01_000: Aspiration Windows & Custom Killer Heuristic
-         * ! V01_01_001: Check Ext-3 & LG For-Loop Precalcs
-         * ! V02_00_000: Time Formats & Basic Management
-         * $ V02_00_005: No CheckExt, but fixed Time Management & ApirWindows
-         * $ --> Different CheckExt Vals
-         * + V02_00_009: Scaling CheckExt
-         * $ V02_00_010: QSearch InEff Checkmate Checks
-         * ! V02_01_003: Bugged Full-TT-Impl & Custom Sort Removal
-         * ? V02_01_004: TT-Improvs
-         * ? V02_01_017: TT-Improvs
+         *  ! V01_00_018: PeStO Piece Square Tables
+         *  ! V01_01_000: Aspiration Windows & Custom Killer Heuristic
+         *  ! V01_01_001: Check Ext-3 & LG For-Loop Precalcs
+         *  ! V02_00_000: Time Formats & Basic Management
+         *  $ V02_00_005: No CheckExt, but fixed Time Management & ApirWindows
+         *  $ --> Different CheckExt Vals
+         *  $ V02_00_009: Scaling CheckExt
+         *  $ V02_00_010: QSearch InEff Checkmate Checks
+         *  ! V02_01_003: Bugged Full-TT-Impl & Custom Sort Removal
+         *  $ V02_01_004: TT-Improvs
+         *  $ V02_01_017: Actual TT
+         *  $ V02_02_000: Negamax & PVS
+         *  $ V02_02_001: Proof that PVS is actually slightly helpful; Negamax without PVS
+         * ++ V02_02_002: TT pPly depending Aging
          */ 
 
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V02_01_016[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V02_01_017[16];
+            IBoardManager[] oppBoards = new SNAPSHOT_V02_02_006[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V02_02_002[16];
             
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V02_01_016(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V02_01_017(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V02_02_006(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V02_02_002(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 70_000_000L, Increment = 100_000L }, 16);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 70_000_000L, Increment = 100_000L }, 32);
         }
 
         private static void MEM_SelfPlay()

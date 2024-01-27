@@ -101,9 +101,9 @@ namespace ChessBot
             File.AppendAllLines(PathManager.GetTXTPath("ENGINE/SNAPSHOT_SYSTEM/Clashes"), new string[5] 
             {
                 idStr,
-                "ELO: " + GetRoundedDoubleLogString(ge1.NEXT_ELO - ge1.ELO) + "\\" + GetRoundedDoubleLogString(ge2.NEXT_ELO - ge2.ELO),
-                "RD: " + GetRoundedDoubleLogString(ge1.NEXT_RD - ge1.RD) + "\\" + GetRoundedDoubleLogString(ge2.NEXT_RD - ge2.RD),
-                "VOL: " + GetNonRoundedDoubleLogString(ge1.NEXT_VOL - ge1.VOL) + "\\" + GetNonRoundedDoubleLogString(ge2.NEXT_VOL - ge2.VOL),
+                "ELO: " + GetRoundedDoubleLogString(ge1.ELO - ge1.PREV_ELO) + "\\" + GetRoundedDoubleLogString(ge2.ELO - ge2.PREV_ELO),
+                "RD: " + GetRoundedDoubleLogString(ge1.RD - ge1.PREV_RD) + "\\" + GetRoundedDoubleLogString(ge2.RD - ge2.PREV_RD),
+                "VOL: " + GetNonRoundedDoubleLogString(ge1.VOL - ge1.PREV_VOL) + "\\" + GetNonRoundedDoubleLogString(ge2.VOL - ge2.PREV_VOL),
                 "----------------------------------------------------"
             } );
 
@@ -174,7 +174,8 @@ namespace ChessBot
             GlickoEntity ge1 = GetGlickoEntity(GetTypeOfIBoardManager(pWhite));
             GlickoEntity ge2 = GetGlickoEntity(GetTypeOfIBoardManager(pBlack));
 
-            new GlickoGame(ge1, ge2, tState);
+            curClashGames++;
+            new GlickoGame(ge1, ge2, tState, (curClashGames - (curClashGames % 15)) / 15);
 
             movehashnucreStrs.Add((tState+1).ToString());
             curClashStrings.Add(pFEN + ";" + String.Concat(movehashnucreStrs));
@@ -351,7 +352,6 @@ namespace ChessBot
 
             LegacyEngineManager.curClashResultTuple = (tRes.Item1 + LegacyEngineManager.curClashResultTuple.Item1, tRes.Item2 + LegacyEngineManager.curClashResultTuple.Item2, tRes.Item3 + LegacyEngineManager.curClashResultTuple.Item3);
             LegacyEngineManager.curClashResult += tRes.Item1 - tRes.Item3;
-            LegacyEngineManager.curClashGames += fens.Count;
             LegacyEngineManager.clashObjectsFinished++;
         }
 

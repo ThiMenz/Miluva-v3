@@ -8,10 +8,15 @@
 
         public static void CalculateAllEntities(List<GlickoEntity> entityList)
         {
-            foreach (GlickoEntity entity in entityList)
-            {
-                entity.CalculateNextEntityUpdate();
-            }
+            bool b;
+            int s = 0;
+            foreach (GlickoEntity entity in entityList) entity.StartOfCalcEpoch();
+            do {
+                b = false;
+                foreach (GlickoEntity entity in entityList) if (!entity.CalculateNextEntityUpdate(s)) b = true;
+                foreach (GlickoEntity entity in entityList) entity.UpdateEntityQuietly();
+                s++;
+            } while (b);
         }
 
         public static void UpdateAllEntities(List<GlickoEntity> entityList)
@@ -171,12 +176,14 @@
     {
         public GlickoEntity entity1, entity2;
         public double result;
+        public int season;
 
-        public GlickoGame(GlickoEntity pE1, GlickoEntity pE2, double pRes)
+        public GlickoGame(GlickoEntity pE1, GlickoEntity pE2, double pRes, int pSeason)
         {
             entity1 = pE1;
             entity2 = pE2;
             result = pRes;
+            season = pSeason;
 
             entity1.glickoGames.Add(this);
             entity2.glickoGames.Add(this);
@@ -205,6 +212,7 @@
 
         public double ELO = 1500, RD = 350, VOL = 0.06;
         public double NEXT_ELO, NEXT_RD, NEXT_VOL;
+        public double PREV_ELO, PREV_RD, PREV_VOL;
 
         public List<GlickoGame> glickoGames = new List<GlickoGame>();
 
@@ -218,33 +226,90 @@
             VOL = pVol;
         }
 
-        public void UpdateEntity()
+        public void StartOfCalcEpoch()
         {
-            Console.WriteLine();
-            Console.WriteLine(" === " + NAME + " === ");
-            Console.WriteLine("ELO: " + ELO + " -> " + NEXT_ELO);
-            Console.WriteLine("RD: " + RD + " -> " + NEXT_RD);
-            Console.WriteLine("Volatility: " + VOL + " -> " + NEXT_VOL);
+            PREV_ELO = NEXT_ELO = ELO;
+            PREV_RD = NEXT_RD = RD;
+            PREV_VOL = NEXT_VOL = VOL;
+        }
 
+        public void UpdateEntityQuietly()
+        {
             ELO = NEXT_ELO;
             RD = NEXT_RD;
             VOL = NEXT_VOL;
         }
 
-        public void CalculateNextEntityUpdate()
+        public void UpdateEntity()
+        {
+            if (ELO != PREV_ELO) {
+                Console.WriteLine();
+                Console.WriteLine(" === " + NAME + " === ");
+                Console.WriteLine("ELO: " + PREV_ELO + " -> " + ELO);
+                Console.WriteLine("RD: " + PREV_RD + " -> " + RD);
+                Console.WriteLine("Volatility: " + PREV_VOL + " -> " + VOL);
+            }
+            ELO = NEXT_ELO;
+            RD = NEXT_RD;
+            VOL = NEXT_VOL;
+        }
+
+        public bool CalculateNextEntityUpdate(int pSeason)
         {
             int tL = glickoGames.Count;
-            double[] tResults = new double[tL];
-            GlickoEntity[] tOpps = new GlickoEntity[tL];
+            List<double> tResults = new List<double>();
+            List<GlickoEntity> tOpps = new List<GlickoEntity>();
             for (int i = 0; i < tL; i++)
             {
+                if (glickoGames[i].season != pSeason) continue;
                 (GlickoEntity, double) tInfos = glickoGames[i].GetRelevantCalculationInformations(this);
-                tResults[i] = tInfos.Item2;
-                tOpps[i] = tInfos.Item1;
+                tResults.Add(tInfos.Item2);
+                tOpps.Add(tInfos.Item1);
             }
-            Glicko2.CalculateRating(this, tOpps, tResults);
+            if (tResults.Count != 0) Glicko2.CalculateRating(this, tOpps.ToArray(), tResults.ToArray());
 
-            glickoGames.Clear();
+            return tResults.Count == 0;
         }
+
+        //public bool CalculateNextEntityUpdate(int pSeason)
+        //{
+        //    int tL = glickoGames.Count;
+        //    //double[] tResults = new double[tL];
+        //    //GlickoEntity[] tOpps = new GlickoEntity[tL];
+        //    double d = 0d;
+        //    List<double> tResults = new List<double>();
+        //    List<GlickoEntity> tOpps = new List<GlickoEntity>();
+        //    bool b = tL == 0;
+        //    for (int i = 0; i < pGameLimit; i++)
+        //    {
+        //        int tI = gameIndex + i;
+        //        if (tI >= tL) break;
+        //        d += 1d;
+        //        (GlickoEntity, double) tInfos = glickoGames[tI].GetRelevantCalculationInformations(this);
+        //        tResults.Add(tInfos.Item2);
+        //        tOpps.Add(tInfos.Item1);
+        //        if (tI + 1 == tL)
+        //        {
+        //            glickoGames.Clear();
+        //            b = true;
+        //            break;
+        //        }
+        //    }
+        //
+        //    if (tOpps.Count != 0)
+        //    {
+        //        Glicko2.CalculateRating(this, tOpps.ToArray(), tResults.ToArray());
+        //    }
+        //
+        //    gameIndex += pGameLimit;
+        //    //int o = 0;
+        //    //while (o < tResults.Length) {
+        //    //    List<double> ti_results = new List<double>();
+        //    //    for (int i = 0; i < 9 && o < tResults.Length; i++) ti_results.Add(tResults[o++]);
+        //    //    Glicko2.CalculateRating(this, tOpps, t);
+        //    //}
+        //
+        //    return b;
+        //}
     }
 }

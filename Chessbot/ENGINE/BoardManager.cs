@@ -77,6 +77,21 @@ namespace ChessBot
             160
         };
 
+        private readonly int[] DELTA_PRUNING_VALS = new int[6]
+        {
+            //0,
+            //350,
+            //550,
+            //570,
+            //750,
+            0,
+            479,
+            689,
+            741,
+            917,
+            1531
+        };
+
         private readonly int[] maxCheckExtPerDepth = new int[10] {
             0, 1, 2, 3, 4, 5, 6, 6, 6, 6
         };
@@ -306,7 +321,7 @@ namespace ChessBot
 
         public void TempStuff()
         {
-            //debugSearchDepthResults = true;
+            debugSearchDepthResults = true;
             //SetTimeFormat(new TimeFormat() { Time = 30_000_000L, Increment = 100_000L });
             //for (int i = 0; i < 100; i++)
             //{
@@ -343,7 +358,7 @@ namespace ChessBot
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
 
-            //PlayGameOnConsoleAgainstHuman("6k1/5p2/5p2/3P4/7K/7P/6r1/8 b - - 0 40", true, 60_000_000L);
+            PlayGameOnConsoleAgainstHuman("5Q2/8/6k1/P6p/8/1B3N2/5K2/8 w - - 1 66", false, 60_000_000L);
 
             //-0.125x + 4
 
@@ -2203,9 +2218,9 @@ namespace ChessBot
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
         private Move BestMove;
 
-        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0, nodeCount = 0;
+        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0, nodeCount = 0, timerNodeCount;
         private long limitTimestamp = 0;
-        private bool shouldSearchForBookMove = true;
+        private bool shouldSearchForBookMove = true, searchTimeOver = true;
 
         private int maxCheckExtension = 0;
 
@@ -2219,6 +2234,7 @@ namespace ChessBot
             long tTime;
             limitTimestamp = (tTime = globalTimer.ElapsedTicks) + pTime;
 
+            searchTimeOver = false;
             BestMove = NULL_MOVE;
             searches++;
             int baseLineLen = tthits = cutoffs = nodeCount = 0;
@@ -2332,8 +2348,8 @@ namespace ChessBot
         private int MinimaxRootCall(int pDepth, int pBaseLineLen, int pAttkSq, int pAspirationAlpha, int pAspirationBeta)
         {
             //Console.WriteLine("a = " + pAspirationAlpha + "|  b = " + pAspirationBeta);
-
-            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove, true);
+            timerNodeCount = 79;
+            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove, false);
             //return isWhiteToMove 
             //    ? MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE)
             //    : MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
@@ -2372,7 +2388,7 @@ namespace ChessBot
         private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW, bool pCanDoNull)
         {
             //
-            if (IsDrawByRepetition(pRepetitionHistoryPly - 3) || (globalTimer.ElapsedTicks > limitTimestamp && pPly != 0)) return 0;
+            if (IsDrawByRepetition(pRepetitionHistoryPly - 3)) return 0;
 
 
             //
@@ -2380,6 +2396,9 @@ namespace ChessBot
                 return NegamaxQSearch(pPly, pAlpha, pBeta, pDepth, pCheckingSquare, pLastMove, pIW);
 
 
+            //
+            if (searchTimeOver) return 0;
+            else if ((++timerNodeCount & 1023) == 0) searchTimeOver = globalTimer.ElapsedTicks > limitTimestamp;
             nodeCount++;
 
 
@@ -2399,6 +2418,9 @@ namespace ChessBot
                 }
             }
 
+            // 
+            else if (pDepth > 3) pDepth--;
+
 
             // 
             Move bestMove = NULL_MOVE;
@@ -2409,7 +2431,7 @@ namespace ChessBot
             isWhiteToMove = pIW;
 
             //
-            //if (pCanDoNull && pDepth > 1 && !isInCheck && !isInZeroWindow)
+            //if (pCanDoNull && pDepth > 2 && !isInCheck && !isInZeroWindow && HasRelevantPiecesLeft(pIW ? whitePieceBitboard : blackPieceBitboard))
             //{
             //    //
             //    zobristKey = tZobristKey;
@@ -2418,33 +2440,35 @@ namespace ChessBot
             //
             //    int tnEval = -NegamaxSearch(pPly + 1, -pBeta, -pBeta + 1, pDepth - 3, pCheckExtC, pRepetitionHistoryPly + 1, -1, NULL_MOVE, !pIW, false);
             //
-            //    //
-            //    enPassantSquare = tEPSquare;
+            //    blackPieceBitboard = tBPB;
+            //    whitePieceBitboard = tWPB;
+            //    allPieceBitboard = tAPB;
+            //    zobristKey = tZobristKey;
+            //    isWhiteToMove = pIW;
             //
-            //    if (tnEval >= pBeta && tnEval < WHITE_CHECKMATE_TOLERANCE && tnEval > BLACK_CHECKMATE_TOLERANCE)
-            //    {
-            //        Console.WriteLine(":)");
-            //        isWhiteToMove = pIW;
+            //    if (tnEval >= pBeta) { //&& tnEval < WHITE_CHECKMATE_TOLERANCE && tnEval > BLACK_CHECKMATE_TOLERANCE
             //        zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
-            //        allPieceBitboard = tAPB;
-            //        whitePieceBitboard = tWPB;
-            //        blackPieceBitboard = tBPB;
             //        fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
             //        return pBeta;
             //    }
             //}
 
 
-            //
+            // Das wäre Static Null Move Pruning bzw. Reverse Futility Pruning; scheint aber kaum irgendetwas zu bezwecken
+
             //if (!isInCheck && !isInZeroWindow && pPly != 0 && pCheckExtC == 0 && pBeta < WHITE_CHECKMATE_TOLERANCE && pBeta > BLACK_CHECKMATE_TOLERANCE
-            //    && (tV = TexelEvaluate() - 97 * pDepth) >= pBeta) return tV;
+            //&& (tV = (pIW ? TexelEvaluate() : -TexelEvaluate()) - 79 * pDepth) >= pBeta)
+            //    return tV;
 
-            if (pDepth < 3 && !isInZeroWindow && !isInCheck)
-            {
 
-            }
+            //if (pDepth < 3 && !isInZeroWindow && !isInCheck)
+            //{
+            //
+            //}
+
 
             // 
+            enPassantSquare = tEPSquare;
             List<Move> moveOptionList = new List<Move>();
             if (pIW) {
                 if (WhiteIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalWhiteMovesSpecialDoubleCheckCase(ref moveOptionList);
@@ -2455,6 +2479,7 @@ namespace ChessBot
             }
 
             enPassantSquare = 65;
+
 
             // 
             int molc = moveOptionList.Count;
@@ -2499,6 +2524,8 @@ namespace ChessBot
                 int tincr = 0, tEval;
                 if (pDepth == 1 && (tCheckPos != -1 || isInCheck)) tincr = 1;
 
+
+                //
                 if (m == 0) tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
                 else {
                     tEval = -NegamaxSearch(pPly + 1, -pAlpha - 1, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
@@ -2551,7 +2578,7 @@ namespace ChessBot
 
 
             //
-            if (pPly == 0 && globalTimer.ElapsedTicks > limitTimestamp && pDepth != 1) return curEval;
+            if (pPly == 0 && searchTimeOver && pDepth != 1) return curEval;
 
 
             //
@@ -2570,9 +2597,11 @@ namespace ChessBot
 
             //
             int standPat = TexelEvaluate() * (pIW ? 1 : -1);
-            if (standPat >= pBeta || pDepth < MAX_QUIESCENCE_TOTAL_LENGTH) return pBeta;
-            if (standPat > pAlpha) pAlpha = standPat;
+            if (standPat >= pBeta) return pBeta; // || pDepth < MAX_QUIESCENCE_TOTAL_LENGTH
 
+            //if (standPat < pAlpha - 975) return pAlpha;
+
+            if (standPat > pAlpha) pAlpha = standPat;
 
             //
             List<Move> moveOptionList = new List<Move>();
@@ -2589,7 +2618,7 @@ namespace ChessBot
 
 
             // 
-            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly;
+            int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
             enPassantSquare = 65;
@@ -2615,6 +2644,8 @@ namespace ChessBot
                 Move curMove = moveOptionList[tActualIndex];
 
                 int tPTI = pieceTypeArray[curMove.endPos];
+
+                if (pCheckingSquare == -1 && standPat + DELTA_PRUNING_VALS[tPTI] < pAlpha) break;
 
                 NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
 
@@ -5221,6 +5252,7 @@ namespace ChessBot
         private int[] pieceEvals = new int[14] { 0, 100, 300, 320, 500, 900, 0, 0, -100, -300, -320, -500, -900, 0 };
         //private int[,,] pawnPositionTable = new int[32, 6, 64];
         private int[,][] piecePositionEvals = new int[33, 14][];
+        private bool[] relevantPiece = new bool[7] { false, false, true, true, true, true, false };
 
         private int evalCount = 0;
         private int Evaluate()
@@ -5270,6 +5302,13 @@ namespace ChessBot
                 if (curSearchZobristKeyLine[i] == zobristKey)
                     if (++tC == 2) return true;
             }
+            return false;
+        }
+
+        private bool HasRelevantPiecesLeft(ulong pBB)
+        {
+            for (int i = 0; i < 64; i += forLoopBBSkipPrecalcs[(pBB >> i >> 1) & sixteenFBits])
+                if (relevantPiece[pieceTypeArray[i]]) return true;
             return false;
         }
 

@@ -60,7 +60,8 @@ namespace ChessBot
 
         private const int BESTMOVE_SORT_VAL = -2_000_000_000;
         private const int CAPTURE_SORT_VAL = -1_000_000_000;
-        private const int KILLERMOVE_SORT_VAL = -300;
+        private const int KILLERMOVE_SORT_VAL = -500_000_000;
+        private const int COUNTERMOVE_SORT_VAL = -500000;
 
         private readonly int[,] MVVLVA_TABLE = new int[7, 7] {
             { 0, 0, 0, 0, 0, 0, 0 },  // Nichts
@@ -71,26 +72,13 @@ namespace ChessBot
             { 0, 9500, 9400, 9300, 9200, 9100, 9000 },  // Dame
             { 0, 0, 0, 0, 0, 0, 0 }}; // König
 
-        private readonly int[] RAZORING_MARGINS = new int[3] {
-            000,
-            100,
-            160
+        private readonly int[] FUTILITY_MARGINS = new int[10] {
+            000, 100, 160, 220, 280, 
+            340, 400, 460, 520, 580
         };
 
         private readonly int[] DELTA_PRUNING_VALS = new int[6]
-        {
-            //0,
-            //350,
-            //550,
-            //570,
-            //750,
-            0,
-            479,
-            689,
-            741,
-            917,
-            1531
-        };
+        { 0, 300, 500, 520, 700, 1000 };
 
         private readonly int[] maxCheckExtPerDepth = new int[10] {
             0, 1, 2, 3, 4, 5, 6, 6, 6, 6
@@ -321,7 +309,7 @@ namespace ChessBot
 
         public void TempStuff()
         {
-            debugSearchDepthResults = true;
+            //debugSearchDepthResults = true;
             //SetTimeFormat(new TimeFormat() { Time = 30_000_000L, Increment = 100_000L });
             //for (int i = 0; i < 100; i++)
             //{
@@ -338,8 +326,9 @@ namespace ChessBot
             //LoadFenString("2Q2rk1/3Q1pp1/4p3/4p3/4P2p/p2P3P/r4PP1/6K1 b - - 0 33");
             //MinimaxRoot(500_000L);
             //MinimaxRoot(1_000_000L);
-            //debugSearchDepthResults = true;
-            //LoadFenString("r2qk2r/1pb2ppp/n1n5/p3pP2/P1PpP3/3P2P1/6BP/R1BQNRK1 b kq - 0 16");
+            debugSearchDepthResults = true;
+            //LoadFenString("1rbq1rk1/pp2b1pp/2np1n2/2p1pp2/P1P5/1QNP1NPB/1P1BPP1P/R3K2R b KQ - 4 10");
+            //
             //MinimaxRoot(100_000_000L);
 
             //PlayThroughZobristTree();
@@ -358,7 +347,7 @@ namespace ChessBot
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
 
-            PlayGameOnConsoleAgainstHuman("5Q2/8/6k1/P6p/8/1B3N2/5K2/8 w - - 1 66", false, 60_000_000L);
+            PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 70_000_000L);
 
             //-0.125x + 4
 
@@ -529,7 +518,6 @@ namespace ChessBot
             while (tGState == 3)
             {
                 MinimaxRoot(tickLimitForEngine);
-                PlayThroughZobristTree();
                 Move tM = BestMove;
                 Console.WriteLine(tM);
                 Console.WriteLine(CreateFenString());
@@ -552,24 +540,26 @@ namespace ChessBot
 
         private void PlayThroughZobristTree()
         {
-            SetJumpState();
+            //SetJumpState();
             Console.WriteLine("\n- - - - - - - - - - - - -");
-            int tC = 1;
-            Dictionary<ulong, bool> usedULs = new Dictionary<ulong, bool>();
-            while (TTV2[zobristKey % TTSize].Item1 == zobristKey)
-            {
-                if (usedULs.ContainsKey(zobristKey))
-                {
-                    Console.WriteLine(tC + ": AT LEAST ONE REPETION; REST NOT VISIBLE");
-                    break;
-                }
-                Console.WriteLine(tC + ": " + TTV2[zobristKey % TTSize].Item2 + " > ");
-                usedULs.Add(zobristKey, true);
-                PlainMakeMove(TTV2[zobristKey % TTSize].Item2);
-                tC++;
-            }
+            //int tC = 1;
+            //Dictionary<ulong, bool> usedULs = new Dictionary<ulong, bool>();
+            //while (TTV2[zobristKey % TTSize].Item1 == zobristKey)
+            //{
+            //    if (usedULs.ContainsKey(zobristKey))
+            //    {
+            //        Console.WriteLine(tC + ": AT LEAST ONE REPETION; REST NOT VISIBLE");
+            //        break;
+            //    }
+            //    Console.WriteLine(tC + ": " + TTV2[zobristKey % TTSize].Item2 + " > ");
+            //    usedULs.Add(zobristKey, true);
+            //    if (TTV2[zobristKey % TTSize].Item2 == NULL_MOVE) break;
+            //    PlainMakeMove(TTV2[zobristKey % TTSize].Item2);
+            //    tC++;
+            //}
+            foreach (Move m in PV_LINE_V2) Console.WriteLine(m);
             Console.WriteLine("- - - - - - - - - - - - -\n");
-            LoadJumpState();
+            //LoadJumpState();
         }
 
         public Move? ReturnNextMove(Move? lastMove, long pThinkingTime)
@@ -2256,7 +2246,7 @@ namespace ChessBot
             {
                 (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMoveV2(moveHashList);
 
-                if (bookMoveTuple.Item2 != 0)
+                if (bookMoveTuple.Item2 > 4)
                 {
                     int actualMoveHash = NuCRe.GetNumber(bookMoveTuple.Item1);
                     List<Move> tMoves = new List<Move>();
@@ -2283,6 +2273,7 @@ namespace ChessBot
                 shouldSearchForBookMove = false;
             }
             int evalBefore = 0;
+            Move[] tPV2Line = Array.Empty<Move>();
 
             do {
                 maxCheckExtension = maxCheckExtPerDepth[Math.Clamp(pDepth, 0, 9)];
@@ -2291,7 +2282,6 @@ namespace ChessBot
                 ulong[] completeZobristHistory = new ulong[baseLineLen + pDepth - CHECK_EXTENSION_LENGTH + 1];
                 for (int i = 0; i < baseLineLen; i++) completeZobristHistory[i] = curSearchZobristKeyLine[i];
                 curSearchZobristKeyLine = completeZobristHistory;
-
                 //int estimatedNextEvalCount = 35;
                 //if (pDepth != 1) estimatedNextEvalCount = (int)Math.Pow(Math.Pow(3 * evalCount / (pDepth - 1), 1.0 / (pDepth - 1)), pDepth);
 
@@ -2302,14 +2292,16 @@ namespace ChessBot
                     //Console.WriteLine("A: " + aspirationAlpha + " | B: " + aspirationBeta);
                     curEval = MinimaxRootCall(pDepth, baseLineLen, tattk, aspirationAlpha, aspirationBeta);
 
-                    Console.WriteLine(curEval);
+                    //Console.WriteLine(curEval);
 
                     if (aspirationAlpha < curEval && curEval < aspirationBeta || globalTimer.ElapsedTicks > limitTimestamp) break;
                 }
 
-                if (globalTimer.ElapsedTicks > limitTimestamp) {
+                if (globalTimer.ElapsedTicks > limitTimestamp)
+                {
                     curEval = evalBefore;
                 }
+                else tPV2Line = PV_LINE_V2.ToArray();
 
                 //if (TTV2[zobristKey % TTSize].Item1 == zobristKey) BestMove = TTV2[zobristKey % TTSize].Item2;
 
@@ -2334,10 +2326,13 @@ namespace ChessBot
 
             } while (globalTimer.ElapsedTicks < limitTimestamp && ++pDepth < 179 && curEval > BLACK_CHECKMATE_TOLERANCE && curEval < WHITE_CHECKMATE_TOLERANCE);
 
+            PV_LINE_V2 = tPV2Line.ToList<Move>();
             depths += pDepth - 1;
             BOT_MAIN.depthsSearched += pDepth - 1;
             BOT_MAIN.searchesFinished++;
             BOT_MAIN.evaluationsMade += evalCount;
+
+            if (debugSearchDepthResults && pTime != 1L) PlayThroughZobristTree();
 
             curSearchZobristKeyLine = tZobristKeyLine;
             chessClock.MoveFinished(globalTimer.ElapsedTicks - tTime);
@@ -2347,9 +2342,10 @@ namespace ChessBot
 
         private int MinimaxRootCall(int pDepth, int pBaseLineLen, int pAttkSq, int pAspirationAlpha, int pAspirationBeta)
         {
+            PV_LINE_V2.Clear();
             //Console.WriteLine("a = " + pAspirationAlpha + "|  b = " + pAspirationBeta);
             timerNodeCount = 79;
-            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove, false);
+            return NegamaxSearch(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE, isWhiteToMove, ref PV_LINE_V2);
             //return isWhiteToMove 
             //    ? MinimaxWhite(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE)
             //    : MinimaxBlack(0, pAspirationAlpha, pAspirationBeta, pDepth, 0, pBaseLineLen, pAttkSq, NULL_MOVE);
@@ -2385,24 +2381,36 @@ namespace ChessBot
             return false;
         }
 
-        private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW, bool pCanDoNull)
+        private int NegamaxSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckExtC, int pRepetitionHistoryPly, int pCheckingSquare, Move pLastMove, bool pIW, ref List<Move> pPVL)
         {
-            //
+            /*
+             * Check if the position is a draw by repetition
+             * "pRepetitionHistoryPly - 3" because the same position can be reached at first 4 plies ago
+             */
             if (IsDrawByRepetition(pRepetitionHistoryPly - 3)) return 0;
 
 
-            //
+            /*
+             * End of search, transition into Quiescense Search (only captures)
+             */
             if (pDepth < 1 || pCheckExtC > maxCheckExtension)
-                return NegamaxQSearch(pPly, pAlpha, pBeta, pDepth, pCheckingSquare, pLastMove, pIW);
+                return NegamaxQSearch(pPly, pAlpha, pBeta, pDepth, pCheckingSquare, pLastMove, pIW, ref pPVL);
 
 
-            //
-            if (searchTimeOver) return 0;
+            /*
+             * Check if the time is running out / has run out
+             * For efficiency reasons only each 1024th time; still accurate on a few milliseconds
+             */
+            if (searchTimeOver & pPly != 0) return 0;
             else if ((++timerNodeCount & 1023) == 0) searchTimeOver = globalTimer.ElapsedTicks > limitTimestamp;
             nodeCount++;
 
 
-            //
+            /*
+             * Get & Verify the Transposition Table Entry 
+             * If it's instantly usable (based on the flag value): 
+             * Cutoff because theres no need to investigate twice in the same or lower depth in a transposition
+             */
             var (_ttKey, _ttMove, _ttEval, _ttDepth, _ttFlag, _ttAge) = TTV2[zobristKey % TTSize];
             if (_ttKey == zobristKey)
             {
@@ -2418,56 +2426,46 @@ namespace ChessBot
                 }
             }
 
-            // 
+
+            /*
+             * Internal Iterative Reductions:
+             * As long as no TT-Entry has been found, it's likely that this node isn't that interesting to look at
+             * Next time we'll visit this node (either through Iterative Deepening or a tranposition), it will be
+             * searched at full-depth
+             */
             else if (pDepth > 3) pDepth--;
 
 
-            // 
+            /*
+             * Setup Vals:
+             * These values are mainly for being able to efficiently undo the next moves
+             * Some of these are ofc also for searching / sorting
+             */
             Move bestMove = NULL_MOVE;
+            List<Move> childPVLine = new List<Move>();
             int tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly, tV;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
-            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide, isInZeroWindow = pAlpha + 1 == pBeta, isInCheck = pCheckingSquare != -1;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide, isInZeroWindow = pAlpha + 1 == pBeta, isInCheck = pCheckingSquare != -1, canFP;
             byte tttflag = 0b0;
             isWhiteToMove = pIW;
 
-            //
-            //if (pCanDoNull && pDepth > 2 && !isInCheck && !isInZeroWindow && HasRelevantPiecesLeft(pIW ? whitePieceBitboard : blackPieceBitboard))
-            //{
-            //    //
-            //    zobristKey = tZobristKey;
-            //    fiftyMoveRuleCounter = 0;
-            //    enPassantSquare = 65;
-            //
-            //    int tnEval = -NegamaxSearch(pPly + 1, -pBeta, -pBeta + 1, pDepth - 3, pCheckExtC, pRepetitionHistoryPly + 1, -1, NULL_MOVE, !pIW, false);
-            //
-            //    blackPieceBitboard = tBPB;
-            //    whitePieceBitboard = tWPB;
-            //    allPieceBitboard = tAPB;
-            //    zobristKey = tZobristKey;
-            //    isWhiteToMove = pIW;
-            //
-            //    if (tnEval >= pBeta) { //&& tnEval < WHITE_CHECKMATE_TOLERANCE && tnEval > BLACK_CHECKMATE_TOLERANCE
-            //        zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
-            //        fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
-            //        return pBeta;
-            //    }
-            //}
+
+            /*
+             * Reverse Futility Pruning / SNMH:
+             * As soon as the static evaluation of the current board position is way above beta
+             * it is likely that this node will be a fail-high; therefore it gets pruned
+             */
+            if (!isInCheck && pPly != 0 && pCheckExtC == 0 && pBeta < WHITE_CHECKMATE_TOLERANCE && pBeta > BLACK_CHECKMATE_TOLERANCE
+            && ((tV = (pIW ? TexelEvaluate() : -TexelEvaluate())) - 79 * pDepth) >= pBeta)
+                return tV;
 
 
-            // Das wäre Static Null Move Pruning bzw. Reverse Futility Pruning; scheint aber kaum irgendetwas zu bezwecken
-
-            //if (!isInCheck && !isInZeroWindow && pPly != 0 && pCheckExtC == 0 && pBeta < WHITE_CHECKMATE_TOLERANCE && pBeta > BLACK_CHECKMATE_TOLERANCE
-            //&& (tV = (pIW ? TexelEvaluate() : -TexelEvaluate()) - 79 * pDepth) >= pBeta)
-            //    return tV;
-
-
-            //if (pDepth < 3 && !isInZeroWindow && !isInCheck)
-            //{
-            //
-            //}
-
-
-            // 
+            /*
+             * Just the functions for getting all the next possible moves
+             * The "Special Case" occurs when two straight attacking pieces (rook or queen) attack 
+             * the opponents king at the same time. The only time this can happen is through a promotion 
+             * capture directly in contact with the king. "pCheckingSquare" will then be = -779
+             */
             enPassantSquare = tEPSquare;
             List<Move> moveOptionList = new List<Move>();
             if (pIW) {
@@ -2477,84 +2475,144 @@ namespace ChessBot
                 if (BlackIsPositionTheSpecialCase(pLastMove, pCheckingSquare)) GetLegalBlackMovesSpecialDoubleCheckCase(ref moveOptionList);
                 else GetLegalBlackMoves(pCheckingSquare, ref moveOptionList);
             }
-
             enPassantSquare = 65;
 
 
-            // 
-            int molc = moveOptionList.Count;
+            /*
+             * Move Sorting:
+             * In the following order:
+             * 1. TT-Move (best known move / refutation move)
+             * 2. Captures
+             *    2.1 MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+             * 3. Killer Moves (indexed by ply; currently two per ply)
+             * 4. Countermove
+             * 5. History Heuristic Values (indexed by custom Move-Hashing)
+             */
+            int molc = moveOptionList.Count, tcm = countermoveHeuristic[pLastMove.situationalMoveHash];
             double[] moveSortingArray = new double[molc];
             int[] moveSortingArrayIndexes = new int[molc];
             if (_ttKey == zobristKey) {
                 for (int m = 0; m < molc; m++) {
-                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove == _ttMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
                     else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if (CheckForKiller(pPly, curMove.situationalMoveHash)) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else if (tcm == curMove.situationalMoveHash) moveSortingArray[m] = COUNTERMOVE_SORT_VAL;
+                    else moveSortingArray[m] -= historyHeuristic[curMove.moveHash];
                 }
             } else {
                 for (int m = 0; m < molc; m++) {
-                    int k;
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if (CheckForKiller(pPly, curMove.situationalMoveHash)) moveSortingArray[m] = KILLERMOVE_SORT_VAL;
+                    else if (tcm == curMove.situationalMoveHash) moveSortingArray[m] = COUNTERMOVE_SORT_VAL;
+                    else moveSortingArray[m] -= historyHeuristic[curMove.moveHash];
                 }
             }
             Array.Sort(moveSortingArray, moveSortingArrayIndexes);
 
 
-            // 
-            for (int m = 0; m < molc; m++)
-            {
-                //
+            /*
+             * Futility Pruning Prep:
+             * If the current static evaluation is so bad that you can add significant margins to the
+             * static evalation and still don't exceed alpha, you'll prune all the moves from this node
+             * that are not the TT-Move, tactical moves (Captures or Promotions) or checking moves.
+             */
+            canFP = pDepth < 8 && !isInCheck && molc != 1 && (pIW ? TexelEvaluate() : -TexelEvaluate()) + FUTILITY_MARGINS[pDepth] <= pAlpha;
+
+
+            /*
+             * Main Move Loop
+             */
+            for (int m = 0; m < molc; m++) {
                 int tActualIndex = moveSortingArrayIndexes[m], tCheckPos = -1;
                 Move curMove = moveOptionList[tActualIndex];
-                int tPTI = pieceTypeArray[curMove.endPos];
+                int tPTI = pieceTypeArray[curMove.endPos], tincr = 0, tEval;
 
 
-                //
+                /*
+                 * Making the Move
+                 */
                 NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
                 curSearchZobristKeyLine[pRepetitionHistoryPly] = zobristKey;
                 debugMoveList[pPly] = curMove;
 
-                //
-                int tincr = 0, tEval;
-                if (pDepth == 1 && (tCheckPos != -1 || isInCheck)) tincr = 1;
 
-
-                //
-                if (m == 0) tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
-                else {
-                    tEval = -NegamaxSearch(pPly + 1, -pAlpha - 1, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
-                    if (tEval > pAlpha && tEval < pBeta)
-                        tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, true);
+                /*
+                 * Futility Pruning Execution:
+                 * needs to be after "MakeMove" since it needs to be checked if the move is a checking move
+                 */
+                if (canFP && m != 0 && !curMove.isPromotion && !curMove.isCapture && tCheckPos == -1) {
+                    NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
+                    continue;
+                    //if (canLMR && ++lmrMoves > LMP_MOVE_VALS[pDepth]) tincr = -1;
                 }
 
 
-                //
+                /*
+                 * Check-Extensions:
+                 * When the king is in check or evades one, the depth will get increased by one for the following branch
+                 * Ofc only at leaf nodes, since otherwise the search would get enormously huge
+                 */
+                if (pDepth == 1 && (tCheckPos != -1 || isInCheck)) tincr = 1;
+
+
+                /*
+                 * PVS-Search:
+                 * For every move after the first one (likely a PV-Move due to the move ordering) we'll search
+                 * with a Zero-Window first´, since that takes up significantly less computations.
+                 * If the result is unsafe however; a costly full research needs to be done
+                 */
+                if (m == 0) tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
+                else {
+                    tEval = -NegamaxSearch(pPly + 1, -pAlpha - 1, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
+                    if (tEval > pAlpha && tEval < pBeta) {
+                        //if (tincr == -1) tincr = 0;
+                        tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
+                    }
+                }
+
+
+                /*
+                 * Undo the Move
+                 */
                 NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
 
 
-                //
-                if (tEval > curEval)
-                {
+                if (tEval > curEval) {
+
+                    /*
+                     * A new best move for this node got found
+                     */
                     bestMove = curMove;
                     curEval = tEval;
+                    UpdatePVLINEV2(curMove, childPVLine, ref pPVL);
 
-                    if (curEval > pAlpha)
-                    {
+                    if (curEval > pAlpha) {
+
+                        /*
+                         * The "new best move" is so good, that it can raise alpha
+                         */
                         pAlpha = curEval;
                         tttflag = 1;
 
-                        if (curEval >= pBeta)
-                        {
-                            if (!curMove.isCapture)
-                            {
+                        if (curEval >= pBeta) {
+
+                            /*
+                             * The move is so good, that it's evaluation is above beta
+                             * It results therefore in a cutoff
+                             */
+                            if (!curMove.isCapture) {
+
+                                /*
+                                 * As long as the move is quiet, the heuristics will get updated
+                                 */
                                 cutoffs++;
-                                if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                                if (!isInZeroWindow) killerHeuristic[pPly] = (killerHeuristic[pPly] << 15) | curMove.situationalMoveHash;
+                                countermoveHeuristic[pLastMove.situationalMoveHash] = curMove.situationalMoveHash;
+                                if (pPly < 8) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
                             }
 
                             tttflag = 2;
@@ -2562,9 +2620,14 @@ namespace ChessBot
                         }
                     }
                 }
+
+                childPVLine.Clear();
             }
 
-            //
+
+            /*
+             * Final Undo
+             */
             isWhiteToMove = pIW;
             zobristKey = tZobristKey ^ blackTurnHash ^ enPassantSquareHashes[enPassantSquare = tEPSquare];
             allPieceBitboard = tAPB;
@@ -2573,25 +2636,37 @@ namespace ChessBot
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
 
-            //
+            /*
+             * Stalemate Detection
+             */
             if (molc == 0 && pCheckingSquare == -1) curEval = 0;
 
 
-            //
-            if (pPly == 0 && searchTimeOver && pDepth != 1) return curEval;
-
-
-            //
+            /*
+             * Transposition Table Update
+             */
+            if (searchTimeOver && curSearchDepth != 1) return curEval;
             else if (pDepth > _ttDepth || happenedHalfMoves > _ttAge) 
                 TTV2[zobristKey % TTSize] = (zobristKey, bestMove, curEval, (short)(pDepth - pCheckExtC), tttflag, (short)(happenedHalfMoves + pPly - 2));
-
-
-            //
             if (pPly == 0) BestMove = bestMove;
+
+
+            /*
+             * Return the final evaluation
+             */
             return curEval;
         }
 
-        private int NegamaxQSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove, bool pIW)
+        private List<Move> PV_LINE_V2 = new List<Move>();
+
+        private void UpdatePVLINEV2(Move pMove, List<Move> pSubLine, ref List<Move> pRefL)
+        {
+            pRefL.Clear();
+            pRefL.Add(pMove);
+            pRefL.AddRange(pSubLine);
+        }
+
+        private int NegamaxQSearch(int pPly, int pAlpha, int pBeta, int pDepth, int pCheckingSquare, Move pLastMove, bool pIW, ref List<Move> pPVL)
         {
             nodeCount++;
 
@@ -2618,6 +2693,8 @@ namespace ChessBot
 
 
             // 
+            Move bestMove = NULL_MOVE;
+            List<Move> childPVLine = new List<Move>();
             int molc = moveOptionList.Count, tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
             bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide;
@@ -2649,12 +2726,17 @@ namespace ChessBot
 
                 NegamaxSearchMakeMove(curMove, tFiftyMoveRuleCounter, tWPB, tBPB, tZobristKey, tPTI, pIW, ref tCheckPos);
 
-                int tEval = -NegamaxQSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1, tCheckPos, curMove, !pIW);
+                int tEval = -NegamaxQSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1, tCheckPos, curMove, !pIW, ref childPVLine);
 
                 NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
 
                 if (tEval >= pBeta) return pBeta;
-                if (pAlpha < tEval) pAlpha = tEval;
+                if (pAlpha < tEval) {
+                    pAlpha = tEval;
+                    bestMove = curMove;
+                    UpdatePVLINEV2(curMove, childPVLine, ref pPVL);
+                }
+                childPVLine.Clear();
             }
 
 
@@ -2666,6 +2748,9 @@ namespace ChessBot
             blackPieceBitboard = tBPB;
             fiftyMoveRuleCounter = tFiftyMoveRuleCounter - 1;
 
+            var (_ttKey, _ttMove, _ttEval, _ttDepth, _ttFlag, _ttAge) = TTV2[zobristKey % TTSize];
+            if (pDepth > _ttDepth || happenedHalfMoves > _ttAge)
+                TTV2[zobristKey % TTSize] = (zobristKey, bestMove, pAlpha, (short)(-100 - pDepth), 3, (short)(happenedHalfMoves + pPly - 2));
 
             return pAlpha;
         }
@@ -3224,7 +3309,7 @@ namespace ChessBot
                     Move curMove = moveOptionList[m];
                     if (curMove == _ttMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
                     else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if ((k = historyHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                     //moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
@@ -3236,7 +3321,7 @@ namespace ChessBot
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if ((k = historyHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                 }
             }
 
@@ -3558,7 +3643,7 @@ namespace ChessBot
                             {
                                 //killerMoveHeuristic[curMove.situationalMoveHash][pPly] = true;
                                 cutoffs++;
-                                if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                                if (pPly < 7) historyHeuristic[curMove.moveHash] += 7 - pPly;
                                 //counterMoveHeuristic[pLastMove.situationalMoveHash][0] = true;
                                 //if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
                             }
@@ -3901,7 +3986,7 @@ namespace ChessBot
                     Move curMove = moveOptionList[m];
                     if (curMove == _ttMove) moveSortingArray[m] = BESTMOVE_SORT_VAL;
                     else if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if ((k = historyHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                     //moveSortingArray[m] -= transposEntry.moveGenOrderedEvals[m];
                 }
             }
@@ -3913,7 +3998,7 @@ namespace ChessBot
                     moveSortingArrayIndexes[m] = m;
                     Move curMove = moveOptionList[m];
                     if (curMove.isCapture) moveSortingArray[m] = CAPTURE_SORT_VAL - MVVLVA_TABLE[pieceTypeArray[curMove.endPos], curMove.pieceType];
-                    else if ((k = killerHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
+                    else if ((k = historyHeuristic[curMove.moveHash]) != 0) moveSortingArray[m] = k * KILLERMOVE_SORT_VAL;
                 }
             }
 
@@ -4237,7 +4322,8 @@ namespace ChessBot
                             if (!curMove.isCapture)
                             {
                                 cutoffs++;
-                                if (pPly < 7) killerHeuristic[curMove.moveHash] += 7 - pPly;
+                                //killerHeuristic[pPly] = (killerHeuristic[pPly] << 12) | curMove.situationalMoveHash;
+                                if (pPly < 7) historyHeuristic[curMove.moveHash] += 7 - pPly;
                                 //counterMoveHeuristic[pLastMove.situationalMoveHash][0] = true;
                                 //if (pDepth > 0) historyHeuristic[curMove.moveHash] += pDepth * pDepth;
                             }
@@ -5191,7 +5277,7 @@ namespace ChessBot
 
         #region | HEURISTICS |
 
-        private const int TTSize = 524288;
+        private const int TTSize = 1048576;
         private const int TTAgePersistance = 3; // Legacy
         /*
          * [ulong] = Zobrist Key
@@ -5204,15 +5290,22 @@ namespace ChessBot
         private (ulong, Move, int, short, byte, short)[] TTV2 = new(ulong, Move, int, short, byte, short)[TTSize];
 
 
-        private int[] killerHeuristic = new int[262_144];
+        private int[] historyHeuristic = new int[262_144];
+        private int[] countermoveHeuristic = new int[32_768];
+        private int[] killerHeuristic = new int[180];
 
+        public bool CheckForKiller(int pPly, int pCurSitMoveHash)
+        {
+            int tEntry = killerHeuristic[pPly];
+            return (tEntry & 0x7FFF) == pCurSitMoveHash || ((tEntry >> 15) & 0x7FFF) == pCurSitMoveHash;
+        }
 
         public void ClearHeuristics()
         {
-            for (int i = 0; i < 262_144; i++)
-            {
-                killerHeuristic[i] = 0;
-            }
+            for (int i = 0; i < 262_144; i++) historyHeuristic[i] = 0;
+            for (int i = 0; i < 32_768; i++) countermoveHeuristic[i] = 0;
+            for (int i = 0; i < 180; i++) killerHeuristic[i] = 0;
+
         }
 
         public void ClearTTTable()

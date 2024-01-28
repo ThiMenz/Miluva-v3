@@ -13,6 +13,7 @@ namespace ChessBot
 
         private static List<string> curClashStrings = new List<string>();
 
+        private const int GAMES_PER_SEASON = 11;
         public static void InitSnapshots()
         {
             string[] strs = File.ReadAllLines(PathManager.GetTXTPath("ENGINE/SNAPSHOT_SYSTEM/SnapshotResults"));
@@ -175,7 +176,7 @@ namespace ChessBot
             GlickoEntity ge2 = GetGlickoEntity(GetTypeOfIBoardManager(pBlack));
 
             curClashGames++;
-            new GlickoGame(ge1, ge2, tState, (curClashGames - (curClashGames % 15)) / 15);
+            new GlickoGame(ge1, ge2, tState, (curClashGames - (curClashGames % GAMES_PER_SEASON)) / GAMES_PER_SEASON);
 
             movehashnucreStrs.Add((tState+1).ToString());
             curClashStrings.Add(pFEN + ";" + String.Concat(movehashnucreStrs));

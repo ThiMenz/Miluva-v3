@@ -62,6 +62,7 @@ namespace ChessBot
         private const int CAPTURE_SORT_VAL = -1_000_000_000;
         private const int KILLERMOVE_SORT_VAL = -500_000_000;
         private const int COUNTERMOVE_SORT_VAL = -500000;
+        private const int FOLLOWUPMOVE_SORT_VAL = -5000;
 
         private readonly int[,] MVVLVA_TABLE = new int[7, 7] {
             { 0, 0, 0, 0, 0, 0, 0 },  // Nichts
@@ -328,8 +329,9 @@ namespace ChessBot
             //MinimaxRoot(1_000_000L);
             debugSearchDepthResults = true;
             //LoadFenString("1rbq1rk1/pp2b1pp/2np1n2/2p1pp2/P1P5/1QNP1NPB/1P1BPP1P/R3K2R b KQ - 4 10");
+            LoadFenString("8/8/8/2K5/8/4k3/8/3q4 b - - 5 30");
             //
-            //MinimaxRoot(100_000_000L);
+            MinimaxRoot(100_000_000L);
 
             //PlayThroughZobristTree();
 
@@ -347,7 +349,7 @@ namespace ChessBot
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
 
-            PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 70_000_000L);
+            //PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 70_000_000L);
 
             //-0.125x + 4
 
@@ -2445,7 +2447,7 @@ namespace ChessBot
             List<Move> childPVLine = new List<Move>();
             int tWhiteKingSquare = whiteKingSquare, tBlackKingSquare = blackKingSquare, tEPSquare = enPassantSquare, tFiftyMoveRuleCounter = fiftyMoveRuleCounter + 1, curEval = BLACK_CHECKMATE_VAL + pPly, tV;
             ulong tZobristKey = zobristKey ^ blackTurnHash ^ enPassantSquareHashes[tEPSquare], tAPB = allPieceBitboard, tBPB = blackPieceBitboard, tWPB = whitePieceBitboard;
-            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide, isInZeroWindow = pAlpha + 1 == pBeta, isInCheck = pCheckingSquare != -1, canFP;
+            bool tWKSCR = whiteCastleRightKingSide, tWQSCR = whiteCastleRightQueenSide, tBKSCR = blackCastleRightKingSide, tBQSCR = blackCastleRightQueenSide, isInZeroWindow = pAlpha + 1 == pBeta, isInCheck = pCheckingSquare != -1, canFP, canLMP;
             byte tttflag = 0b0;
             isWhiteToMove = pIW;
 
@@ -2488,7 +2490,7 @@ namespace ChessBot
              * 4. Countermove
              * 5. History Heuristic Values (indexed by custom Move-Hashing)
              */
-            int molc = moveOptionList.Count, tcm = countermoveHeuristic[pLastMove.situationalMoveHash];
+            int molc = moveOptionList.Count, tcm = countermoveHeuristic[pLastMove.situationalMoveHash], lmrM = 0;
             double[] moveSortingArray = new double[molc];
             int[] moveSortingArrayIndexes = new int[molc];
             if (_ttKey == zobristKey) {
@@ -2524,6 +2526,14 @@ namespace ChessBot
 
 
             /*
+             * Late Move Reductions Prep:
+             * Since the move ordering exists, we can assume that moves 
+             * late in the ordering are not so promising.
+             */
+            canLMP = pDepth > 2 && !isInCheck && molc != 1;
+
+
+            /*
              * Main Move Loop
              */
             for (int m = 0; m < molc; m++) {
@@ -2541,12 +2551,19 @@ namespace ChessBot
 
 
                 /*
-                 * Futility Pruning Execution:
+                 * Futility Pruning & Late Move Reduction Execution:
                  * needs to be after "MakeMove" since it needs to be checked if the move is a checking move
                  */
-                if (canFP && m != 0 && !curMove.isPromotion && !curMove.isCapture && tCheckPos == -1) {
-                    NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
-                    continue;
+                if (m != 0 && !curMove.isPromotion && !curMove.isCapture && tCheckPos == -1) {
+                    if (canFP)
+                    {
+                        NegamaxSearchUndoMove(curMove, tWKSCR, tWQSCR, tBKSCR, tBQSCR, tWhiteKingSquare, tBlackKingSquare, tPTI, pIW);
+                        continue;
+                    }
+                    if (canLMP && ++lmrM > 5)
+                    {
+                        tincr = -1;
+                    }
                     //if (canLMR && ++lmrMoves > LMP_MOVE_VALS[pDepth]) tincr = -1;
                 }
 
@@ -2562,14 +2579,14 @@ namespace ChessBot
                 /*
                  * PVS-Search:
                  * For every move after the first one (likely a PV-Move due to the move ordering) we'll search
-                 * with a Zero-Window first´, since that takes up significantly less computations.
+                 * with a Zero-Window first, since that takes up significantly less computations.
                  * If the result is unsafe however; a costly full research needs to be done
                  */
                 if (m == 0) tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
                 else {
                     tEval = -NegamaxSearch(pPly + 1, -pAlpha - 1, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
                     if (tEval > pAlpha && tEval < pBeta) {
-                        //if (tincr == -1) tincr = 0;
+                        if (tincr < 0) tincr = 0;
                         tEval = -NegamaxSearch(pPly + 1, -pBeta, -pAlpha, pDepth - 1 + tincr, pCheckExtC + tincr, pRepetitionHistoryPly + 1, tCheckPos, curMove, !pIW, ref childPVLine);
                     }
                 }
@@ -5277,7 +5294,7 @@ namespace ChessBot
 
         #region | HEURISTICS |
 
-        private const int TTSize = 1048576;
+        private const int TTSize = 1_048_576;
         private const int TTAgePersistance = 3; // Legacy
         /*
          * [ulong] = Zobrist Key
@@ -5297,7 +5314,8 @@ namespace ChessBot
         public bool CheckForKiller(int pPly, int pCurSitMoveHash)
         {
             int tEntry = killerHeuristic[pPly];
-            return (tEntry & 0x7FFF) == pCurSitMoveHash || ((tEntry >> 15) & 0x7FFF) == pCurSitMoveHash;
+            return (tEntry & 0x7FFF) == pCurSitMoveHash
+                || ((tEntry >> 15) & 0x7FFF) == pCurSitMoveHash;
         }
 
         public void ClearHeuristics()

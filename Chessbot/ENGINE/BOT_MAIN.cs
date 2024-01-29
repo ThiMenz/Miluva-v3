@@ -49,7 +49,7 @@ namespace ChessBot
             //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
             //TLMDatabase.OptimizeSizeOfDatabase();
 
-            MEM_TempStuff();
+            //MEM_TempStuff();
 
             //for (int i = 0; i < 100; i++)
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(TLMDatabase.SearchForNextBookMoveV2(new List<int>()).Item1));
@@ -72,7 +72,7 @@ namespace ChessBot
             //Move? tm;
             //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
 
-            //MEM_TempStuff();
+            MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
@@ -123,22 +123,23 @@ namespace ChessBot
          *  $ V02_04_000: Futility Pruning & QS-TT-Adds
          * ++ V02_04_001: Rev. Futitlity Pruning / SNMH
          *  $ V02_05_000: More or less casual HH & Killer Heuristic
+         *  $ V02_05_001: Countermove Heuristic
          */ 
 
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new SNAPSHOT_V02_01_004[16];
+            IBoardManager[] oppBoards = new BoardManager[16];
             IBoardManager[] ownBoards = new SNAPSHOT_V02_05_001[16];
             
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new SNAPSHOT_V02_01_004(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
                 ownBoards[i] = new SNAPSHOT_V02_05_001(ENGINE_VALS.DEFAULT_FEN);
             }
 
-            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 70_000_000L, Increment = 100_000L }, 128);
+            LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 40_000_000L, Increment = 100_000L }, 128);
         }
 
         private static void MEM_SelfPlay()

@@ -327,11 +327,11 @@ namespace ChessBot
             //LoadFenString("2Q2rk1/3Q1pp1/4p3/4p3/4P2p/p2P3P/r4PP1/6K1 b - - 0 33");
             //MinimaxRoot(500_000L);
             //MinimaxRoot(1_000_000L);
-            debugSearchDepthResults = true;
+            //debugSearchDepthResults = true;
             //LoadFenString("1rbq1rk1/pp2b1pp/2np1n2/2p1pp2/P1P5/1QNP1NPB/1P1BPP1P/R3K2R b KQ - 4 10");
-            LoadFenString("8/8/8/2K5/8/4k3/8/3q4 b - - 5 30");
+            //LoadFenString("8/8/8/2K5/8/4k3/8/3q4 b - - 5 30");
             //
-            MinimaxRoot(100_000_000L);
+            //MinimaxRoot(100_000_000L);
 
             //PlayThroughZobristTree();
 
@@ -349,7 +349,7 @@ namespace ChessBot
             //chessClock.Set(30_000_000L, 50_000L);
             //chessClock.Enable();
 
-            //PlayGameOnConsoleAgainstHuman(ENGINE_VALS.DEFAULT_FEN, true, 70_000_000L);
+            PlayGameOnConsoleAgainstHuman("8/8/2p5/pk6/4q3/1PK3Q1/6P1/8 w ha - 4 15", false, 700_000_000L);
 
             //-0.125x + 4
 
@@ -5305,7 +5305,6 @@ namespace ChessBot
          * [short] = Age
          */
         private (ulong, Move, int, short, byte, short)[] TTV2 = new(ulong, Move, int, short, byte, short)[TTSize];
-
 
         private int[] historyHeuristic = new int[262_144];
         private int[] countermoveHeuristic = new int[32_768];

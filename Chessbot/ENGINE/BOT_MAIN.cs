@@ -49,6 +49,14 @@ namespace ChessBot
             //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
             //TLMDatabase.OptimizeSizeOfDatabase();
 
+            TLMDatabase.LoadNN();
+
+
+
+
+            //TLMDatabase.PlayThroughDatabase(new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+
+
             //MEM_TempStuff();
 
             //for (int i = 0; i < 100; i++)
@@ -72,7 +80,7 @@ namespace ChessBot
             //Move? tm;
             //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
 
-            MEM_TempStuff();
+            //MEM_TempStuff();
             //
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
@@ -124,6 +132,7 @@ namespace ChessBot
          * ++ V02_04_001: Rev. Futitlity Pruning / SNMH
          *  $ V02_05_000: More or less casual HH & Killer Heuristic
          *  $ V02_05_001: Countermove Heuristic
+         *  $ LMR
          */ 
 
         private static void MEM_SnapshotClash()

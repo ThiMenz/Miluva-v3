@@ -104,7 +104,7 @@ namespace ChessBot
         private Rays rays;
         public List<Move> moveOptionList { get; set; }
 
-        private int[] pieceTypeArray = new int[64];
+        public int[] pieceTypeArray = new int[64];
         public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
         private ulong zobristKey;
         private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, happenedHalfMoves = 0, fiftyMoveRuleCounter = 0;
@@ -770,6 +770,8 @@ namespace ChessBot
 
         private void GetLegalWhiteMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            legalMoveGens++;
+
             if (pCheckingPieceSquare == -779)
             {
                 GetLegalWhiteMovesSpecialDoubleCheckCase(ref pMoveList);
@@ -933,6 +935,8 @@ namespace ChessBot
 
         private void GetLegalWhiteCaptures(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            capLegalMoveGens++;
+
             if (pCheckingPieceSquare == -779)
             {
                 GetLegalWhiteCapturesSpecialDoubleCheckCase(ref pMoveList);
@@ -1159,6 +1163,8 @@ namespace ChessBot
 
         private void GetLegalBlackMoves(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            legalMoveGens++;
+
             if (pCheckingPieceSquare == -779)
             {
                 GetLegalBlackMovesSpecialDoubleCheckCase(ref pMoveList);
@@ -1321,6 +1327,8 @@ namespace ChessBot
 
         private void GetLegalBlackCaptures(int pCheckingPieceSquare, ref List<Move> pMoveList)
         {
+            capLegalMoveGens++;
+
             if (pCheckingPieceSquare == -779)
             {
                 GetLegalBlackCapturesSpecialDoubleCheckCase(ref pMoveList);
@@ -2210,7 +2218,7 @@ namespace ChessBot
         private readonly Move NULL_MOVE = new Move(0, 0, 0);
         private Move BestMove;
 
-        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0, nodeCount = 0, timerNodeCount;
+        private int curSearchDepth = 0, curSubSearchDepth = -1, cutoffs = 0, tthits = 0, nodeCount = 0, timerNodeCount, legalMoveGens = 0, capLegalMoveGens = 0;
         private long limitTimestamp = 0;
         private bool shouldSearchForBookMove = true, searchTimeOver = true;
 
@@ -2229,7 +2237,7 @@ namespace ChessBot
             searchTimeOver = false;
             BestMove = NULL_MOVE;
             searches++;
-            int baseLineLen = tthits = cutoffs = nodeCount = 0;
+            int baseLineLen = capLegalMoveGens = legalMoveGens = tthits = cutoffs = nodeCount = 0;
 
             ClearHeuristics();
             //transpositionTable.Clear();
@@ -2320,6 +2328,8 @@ namespace ChessBot
                     Console.WriteLine((tSearchEval >= 0 ? "+" : "") + tSearchEval
                         + " " + BestMove + "  [Depth = " + pDepth 
                         + ", Nodes = " + GetThreeDigitSeperatedInteger(nodeCount) 
+                        + ", NGens = " + GetThreeDigitSeperatedInteger(legalMoveGens) 
+                        + ", CGens = " + GetThreeDigitSeperatedInteger(capLegalMoveGens) 
                         + ", Cutoffs = " + GetThreeDigitSeperatedInteger(cutoffs) 
                         + ", TTHits = " + GetThreeDigitSeperatedInteger(tthits) 
                         + ", Time = " + GetThreeDigitSeperatedInteger(timeForSearchSoFar) 

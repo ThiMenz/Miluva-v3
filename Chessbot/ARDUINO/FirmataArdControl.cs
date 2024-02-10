@@ -66,12 +66,25 @@ namespace ChessBot
             WaitForTickCount(10_000_000L);
 
             //SendNumberToArduino((200 << 1) | 1);
-            SendNumberToArduino(0);
-            //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
+            //SendNumberToArduino(0);
+            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
+            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
+            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
+            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
+            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((100 << 9) | (60 << 1) | 1);
             //SendNumberToArduino((200 << 9) | (200 << 1) | 1);
             //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
 
-            SESSION.SetDigitalPin(10, true);
+            //SESSION.SetDigitalPin(10, true);
+            SESSION.SetDigitalPin(6, true);
 
             //SESSION.CreateAnalogStateMonitor();
 
@@ -150,6 +163,7 @@ namespace ChessBot
             SESSION.SetDigitalPinMode(2, PinMode.DigitalOutput); // STEP STEPPER 1 PIN
             SESSION.SetDigitalPinMode(5, PinMode.DigitalOutput); // DIR STEPPER 1 PIN 
             SESSION.SetDigitalPinMode(8, PinMode.DigitalOutput); // TEST LED
+            SESSION.SetDigitalPinMode(6, PinMode.DigitalOutput); // TEST LED
         }
 
         private static void TURN_STEPPER(int pSteps, int pRPM, bool pClockwise, STEPPER_MOTOR pStepper)

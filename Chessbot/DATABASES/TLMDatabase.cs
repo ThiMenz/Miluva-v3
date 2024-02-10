@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ChessBot
 {
-    // 99.98055251% der 22.6 GB großen PGN File
+    // 99.98055251% from the 22.6 GB sized PGN File
     // ~310k Games with 2100+ Elo (4.2017-File)
     public static class TLMDatabase
     {
@@ -64,6 +65,207 @@ namespace ChessBot
             bM = BOT_MAIN.boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1];
 
             Console.WriteLine("[TLM_DB] LOADED IN");
+        }
+
+        public static void LoadNN()
+        {
+            NeuralNetwork neuNet = new NeuralNetwork(
+
+                NeuronFunctions.Sigmoid, NeuronFunctions.SigmoidDerivative, // STANDARD NEURON FUNCTION
+                OUTPUT_SIGMOID, OUTPUT_SIGMOID_DERIVATIVE, // OUTPUT NEURON FUNCTION
+                NeuronFunctions.SquaredDeviation, NeuronFunctions.SquareDeviationDerivative, // DEVIATION FUNCTION
+
+                768, 16, 8, 7, 1);
+
+            neuNet.LoadNNFromString(
+                File.ReadAllText(PathManager.GetTXTPath("OTHER/CUR_NN"))
+            );
+
+            BoardManager tBM = new BoardManager("r1bqk1nr/ppp2ppp/2np4/2b1p3/2B1P3/1P1P1N2/P1P2PPP/RNBQK2R b KQkq - 0 5");
+
+            tBM.LoadFenString("r1bq1rk1/ppp2ppp/2np1n2/2b1p3/8/8/5R2/R1B3K1 b Q - 0 7");
+
+            ulong[] tULArr = new ulong[12];
+
+            for (int i = 0; i < 64; i++)
+            {
+                int tPT = tBM.pieceTypeArray[i];
+                if (ULONG_OPERATIONS.IsBitOne(tBM.whitePieceBitboard, i)) tULArr[tPT - 1] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT - 1], i);
+                else if (ULONG_OPERATIONS.IsBitOne(tBM.blackPieceBitboard, i)) tULArr[tPT + 5] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT + 5], i);
+            }
+
+            double[] tinps = NNUE_DB_DATA.ULONGARRS_TO_NNINPUTS(tULArr);
+            Console.WriteLine((neuNet.CalculateOutputs(tinps)[0] - 1) * 400);
+        }
+
+        public static void PlayThroughDatabase(BoardManager pBM)
+        {
+            const int MAX_GAME_AMOUNT = 7900;
+
+            pBM.LoadFenString(ENGINE_VALS.DEFAULT_FEN);
+            pBM.SetJumpState();
+
+            List<TrainingData> tTrainingData = new List<TrainingData>();
+
+            //ulong[] ttULArr = new ulong[12];
+
+            //Stopwatch sw = Stopwatch.StartNew();
+            //
+            //for (int i = 0; i < 1_000_000; i++)
+            //{
+            //    double[] tArr = NNUE_DB_DATA.ULONGARRS_TO_NNINPUTS(ttULArr);
+            //}
+            //
+            //sw.Stop();
+
+            //Console.WriteLine(sw.ElapsedMilliseconds);
+
+
+            for (int e = 0; e < DATABASE_SIZE && e < MAX_GAME_AMOUNT; e++) {
+
+                pBM.LoadJumpState();
+                string pStr = DATABASE[e];
+                int tL = pStr.Length;
+                List<char> tchars = new List<char>();
+                List<ulong[]> gameMoveInputs = new List<ulong[]>();
+
+                for (int cpos = 1; cpos < tL; cpos++) {
+
+                    char ch = pStr[cpos];
+                    if (ch == ',')
+                    {
+                        int tMoveHash = NuCRe.GetNumber(new String(tchars.ToArray()));
+                        List<Move> tMoves = new List<Move>();
+                        pBM.GetLegalMoves(ref tMoves);
+                        int ti_tL = tMoves.Count;
+                        for (int m = 0; m < ti_tL; m++)
+                        {
+                            Move tM = tMoves[m];
+                            if (tM.moveHash == tMoveHash)
+                            {
+                                pBM.PlainMakeMove(tM);
+
+                                ulong[] tULArr = new ulong[12];
+
+                                for (int i = 0; i < 64; i++)
+                                {
+                                    int tPT = pBM.pieceTypeArray[i];
+                                    if (ULONG_OPERATIONS.IsBitOne(pBM.whitePieceBitboard, i)) tULArr[tPT - 1] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT - 1], i);
+                                    else if (ULONG_OPERATIONS.IsBitOne(pBM.blackPieceBitboard, i)) tULArr[tPT + 5] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT + 5], i);
+                                }
+
+                                gameMoveInputs.Add(tULArr);
+
+
+                                //for (int j = 0; j < 12; j++)
+                                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tULArr[j]));
+
+                                break;
+                            }
+                        }
+
+                        tchars.Clear();
+                    }
+                    else tchars.Add(ch);
+                }
+
+                NNUE_DB_DATA tNDD = new NNUE_DB_DATA(gameMoveInputs, Convert.ToInt32(new String(tchars.ToArray())));
+                tTrainingData.AddRange(tNDD.TrainingData);
+                if (e % 1000 == 0) Console.WriteLine(e + " Done!");
+            }
+
+            Console.WriteLine(tTrainingData.Count);
+
+
+
+            NeuralNetwork neuNet = new NeuralNetwork(
+
+                NeuronFunctions.ParametricReLU, NeuronFunctions.ParametricReLUDerivative, // STANDARD NEURON FUNCTION
+                OUTPUT_SIGMOID, OUTPUT_SIGMOID_DERIVATIVE, // OUTPUT NEURON FUNCTION
+                NeuronFunctions.SquaredDeviation, NeuronFunctions.SquareDeviationDerivative, // DEVIATION FUNCTION
+
+                768, 16, 8, 7, 1);
+
+            neuNet.GenerateRandomNetwork(new System.Random(), -1f, 1f, -1f, 1f);
+
+            Console.WriteLine("Generated NN");
+
+            TrainingData[] TrainingDataArr = RearrangeTrainingData(tTrainingData);
+            TrainingData[][] TrainingDataBatches = TrainingData.CreateMiniBatches(TrainingDataArr, 40);
+
+            int batchCount = TrainingDataBatches.Length;
+            Console.WriteLine("BatchCount: " + batchCount);
+            int curBatch = 0;
+            int epoch = 0;
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            // ~((0.48/250)*8719)*4
+
+            for (int i = 0; i < 1_500_000; i++)
+            {
+                neuNet.GradientDescent(TrainingDataBatches[curBatch], 1d, false);
+
+                if (i % batchCount == 0)
+                {
+                    Console.WriteLine(sw.Elapsed);
+                    LogManager.LogText("\n\n\n<<< EPOCH " + epoch + " >>> \n");
+                    if (epoch++ % 3 == 0)
+                    {
+                        Console.WriteLine("EPOCH " + epoch + ": " + neuNet.CalculateDeviation(TrainingDataArr));
+                    }
+                    neuNet.RawLog();
+                }
+                if (++curBatch == batchCount) curBatch = 0; 
+            }
+
+            Console.WriteLine(neuNet.CalculateDeviation(TrainingDataArr));
+
+            //Console.WriteLine(sw.Elapsed);
+
+            neuNet.RawLog();
+
+            //nnv.InitNeuralNetworkVisualizor(neuNet.layer, new Vector2(-5f, -5f), new Vector2(5f, 5f), valueColorCodeGradient, selectInfoText, new GameObject[4] { knotPrefab, linePrefab, worldSpaceTextPrefab, worldSpaceCanvas });
+            //neuNet.CalculateOutputs(new double[2] { 0.5d, 0.7d }, nnv);
+            //UpdateAIOutputDots();
+            //selectInfoText.text = "Deviation: " + neuNet.CalculateDeviation(trainingData);
+        }
+
+        private static TrainingData[] RearrangeTrainingData(List<TrainingData> pNotRearrangedTrainingData)
+        {
+            Random rng = new Random();
+            int tL = pNotRearrangedTrainingData.Count;
+            TrainingData[] tRArr = new TrainingData[tL];
+            for (int i = 0; i < tL; i++)
+            {
+                int tRand = rng.Next(0, tL - i);
+                tRArr[i] = pNotRearrangedTrainingData[tRand];
+                pNotRearrangedTrainingData.RemoveAt(tRand);
+            }
+            return tRArr;
+        }
+
+        private static double THI(double pVal)
+        {
+            if (pVal > 0) return Math.Log(pVal + 1);
+            return -Math.Log(-pVal + 1);
+        }
+
+        private static double THI_DERIVATIVE(double pVal)
+        {
+            if (pVal < 0) return -1 / (pVal - 1);
+            return 1 / (pVal + 1);
+        }
+
+        private static double OUTPUT_SIGMOID(double pVal)
+        {
+            return 2d / (Math.Exp(-pVal) + 1);
+        }
+
+        private static double OUTPUT_SIGMOID_DERIVATIVE(double pVal)
+        {
+            double d = Math.Exp(pVal);
+            return 2 * d / Math.Pow(d + 1, 2);
         }
 
         #region | RUNTIME METHODS |
@@ -749,4 +951,53 @@ namespace ChessBot
     }
 
     #endregion
+
+    public class FullyLoadedGame
+    {
+        public List<Move> Moves = new List<Move>();
+        public int Outcome;
+
+        public FullyLoadedGame(List<Move> pMoves, int pOutcome)
+        {
+            Moves = pMoves;
+            Outcome = pOutcome;
+        }
+    }
+
+    public class NNUE_DB_DATA
+    {
+        public List<ulong[]> Inputs = new List<ulong[]>();
+        public int Outcome;
+
+        public List<TrainingData> TrainingData = new List<TrainingData>();
+
+        public NNUE_DB_DATA(List<ulong[]> pInputs, int pOutcome)
+        {
+            Inputs = pInputs;
+            Outcome = pOutcome;
+
+            int tL = pInputs.Count;
+            for (int i = 0; i < tL; i++)
+            {
+                if (i < 5 || i > tL - 6) continue;
+                TrainingData.Add(
+                    new TrainingData(
+                        ULONGARRS_TO_NNINPUTS(pInputs[i]),
+                        new double[1] { Outcome }
+                        //pInputs[i]
+                    )
+                );
+            }
+        }
+
+        public static double[] ULONGARRS_TO_NNINPUTS(ulong[] pULArrs)
+        {
+            double[] rArr = new double[768];
+            int a = 0;
+            for (int j = 0; j < 12; j++)
+                for (int i = 0; i < 64; i++)
+                    rArr[a++] = (pULArrs[j] >> i) & 1;
+            return rArr;
+        }
+    }
 }

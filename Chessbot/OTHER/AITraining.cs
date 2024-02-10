@@ -204,7 +204,7 @@ namespace ChessBot
 
     #endregion
 
-    #region    | ARTIFICIAL NEURAL NETWORKS |
+    #region | ARTIFICIAL NEURAL NETWORKS |
 
     public class NeuralNetwork
     {
@@ -232,6 +232,42 @@ namespace ChessBot
         public void AddAdditionalNeuronFunctionToOutputLayer(Func<double[], int, double[]> pFunc, Func<double[], int, double[]> pDerivativeFunc)
         {
             outputLayer.AddAdditionalNeuronFunction(pFunc, pDerivativeFunc);
+        }
+
+        public void LoadNNFromString(string pStr)
+        {
+            string[] tStrSpl = pStr.Split('\n');
+
+            int tLayer = -1, tNeuron = 0;
+
+            foreach (string tStr in tStrSpl)
+            {
+                if (tStr.Length < 20)
+                {
+                    continue;
+                }
+
+                if (tStr[2] == '-' || tStr[1] == '-' || tStr[0] == '-' || tStr[3] == '-')
+                {
+                    tLayer++;
+                    tNeuron = 0;
+                    continue;
+                }
+
+                //Console.WriteLine(tStr);
+
+                string[] ti_strSpl = tStr.Split(':');
+                string[] ti_strSpl2 = ti_strSpl[2].Split(", ");
+                int tL = ti_strSpl2.Length;
+
+                layer[tLayer].biases[tNeuron] = Convert.ToDouble(ti_strSpl[1].Split('|')[0]);
+                for (int i = 0; i < tL; i++)
+                    layer[tLayer].weights[i, tNeuron] = Convert.ToDouble(ti_strSpl2[i]);
+
+                tNeuron++;
+            }
+
+            //layer[0].weights
         }
 
         private const double GrDescH = 0.00001d;
@@ -291,6 +327,11 @@ namespace ChessBot
                 LogManager.LogANNGradients(layer);
             }
             ClearAllDeviationGradients();
+        }
+
+        public void RawLog()
+        {
+            LogManager.LogANNGradients(layer);
         }
 
         public void UpdateAllDeviationGradients(TrainingData pData)
@@ -530,10 +571,18 @@ namespace ChessBot
     {
         public double[] inputs, expectedOutputs;
 
+        private ulong[] binInputs;
+
         public TrainingData(double[] pInputs, double[] pExpectedOutputs)
         {
             inputs = pInputs;
             expectedOutputs = pExpectedOutputs;
+        }
+
+        public TrainingData(double[] pExpectedOutputs, ulong[] pBinInputs)
+        {
+            expectedOutputs = pExpectedOutputs;
+            binInputs = pBinInputs;
         }
 
         public static TrainingData[][] CreateMiniBatches(TrainingData[] pTrainingData, int pBatchSize)
@@ -640,9 +689,20 @@ namespace ChessBot
             return val;
         }
 
+        public static double ParametricReLU(double val)
+        {
+            if (val < 0d) return 0.1d * val;
+            return val;
+        }
+
         public static double ReLUDerivative(double val)
         {
             return (val > 0d) ? 1d : 0d;
+        }
+
+        public static double ParametricReLUDerivative(double val)
+        {
+            return (val > 0d) ? 1d : 0.1d;
         }
 
         #endregion
@@ -711,7 +771,7 @@ namespace ChessBot
 
     public static class LogManager
     {
-        private static string logFilePath = "";
+        private static string logFilePath = @"C:\Users\tpmen\Desktop\NeuralNetworkLog.txt";
 
         public static void SetLogFile(string tLF)
         {
@@ -736,11 +796,11 @@ namespace ChessBot
                 string layerString = "\n\n  - - - { LAYER " + l + " } - - -";
                 for (int i = 0; i < tLayerSize; i++)
                 {
-                    layerString += "\n        (" + i + ") Bias-Gradient: " + tnnl.deviationGradientBiases[i] + " | Weight-Gradients: ";
+                    layerString += "\n        (" + i + ") Bias: " + tnnl.biases[i] + " | Weights: ";
                     for (int j = 0; j < tPrevLayerSize; j++)
                     {
                         if (j != 0) layerString += ", ";
-                        layerString += tnnl.deviationGradientWeights[j, i];
+                        layerString += tnnl.weights[j, i];
                     }
                 }
                 File.AppendAllText(logFilePath, layerString);

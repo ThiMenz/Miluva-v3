@@ -28,6 +28,7 @@
 #include <Servo.h>
 #include <Wire.h>
 #include <Firmata.h>
+#include <Stepper.h>
 
 #define I2C_WRITE                   B00000000
 #define I2C_READ                    B00001000
@@ -58,7 +59,11 @@
 SerialFirmata serialFeature;
 #endif
 
-const int MAX_RPM = 200;
+const int MAX_RPM = 200; // Für die 12V Stepper
+
+#define MOTOR_RPM_5V 12
+#define QUATERROT_STEPS_5V 510 //509.5; 2038 für eine volle Umdrehung
+Stepper stepper(2038, 10, 12, 11, 13); // 5V Stepper
 
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
@@ -377,11 +382,13 @@ void setPinModeCallback(byte pin, int mode)
  * Can only be used on pins configured as OUTPUT.
  * Cannot be used to enable pull-ups on Digital INPUT pins.
  */
+ // Besonders hier ist super viel modifiziert  / hinzugefügt
 
 int dataCount = 0;
 long actualData = 0;
 long actionQueue[50];
 int countOfQActions;
+bool curMagnetState = false;
 
 void setPinValueCallback(byte pin, int value)
 {
@@ -409,13 +416,22 @@ void setPinValueCallback(byte pin, int value)
 }
 
 void processCustomNumberData(long pData) {
-  if (pData != 0) {
+  if (pData > 3) {
     TURN(pData >> 9, (pData >> 1) & 255, pData & 1);
-  }
-  else {
-    TURN_UNTIL_BTN_PRESS(btnPin, 100, true);
+  } else if (pData > 1) {
+    ChangeMagnetState(pData - 2);
+  } else {
+    TURN_UNTIL_BTN_PRESS(btnPin, 100, pData);
   }
   delay(100);
+}
+
+void ChangeMagnetState(bool pState) {
+  if (pState == curMagnetState) return;
+
+  curMagnetState = pState;
+  stepper.setSpeed(MOTOR_RPM_5V);
+  stepper.step((pState ? -1 : 1) * QUATERROT_STEPS_5V);
 }
 
 void executeAllEnqueuedActions() {

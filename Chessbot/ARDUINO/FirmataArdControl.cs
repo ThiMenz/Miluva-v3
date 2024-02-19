@@ -66,6 +66,22 @@ namespace ChessBot
             WaitForTickCount(10_000_000L);
 
             //SendNumberToArduino((200 << 1) | 1);
+            //for (int i = 0; i < 2; i++)
+            //{
+            //    SendNumberToArduino((600 << 9) | (170 << 1) | 0);
+            //    SendNumberToArduino((600 << 9) | (170 << 1) | 1);
+            //}
+
+            // 0 = non-clockwise drive until press
+            // 1 = clockwise drive until press
+            // 2 = magnet down
+            // 3 = magnet up
+            // [][][] = 12V Stepper Driving
+
+            SendNumberToArduino(3);
+            SendNumberToArduino((600 << 9) | (170 << 1) | 0);
+            SendNumberToArduino(2);
+            SendNumberToArduino((600 << 9) | (170 << 1) | 1);
             //SendNumberToArduino(0);
             //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
             //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
@@ -75,7 +91,12 @@ namespace ChessBot
             //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
             //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
             //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
-            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
+            //SendNumberToArduino((250 << 9) | (150 << 1) | 1);
+            //SendNumberToArduino((250 << 9) | (90 << 1) | 0);
+            //SendNumberToArduino((250 << 9) | (90 << 1) | 1);
+            //SendNumberToArduino((250 << 9) | (150 << 1) | 0);
+            //SendNumberToArduino((250 << 9) | (90 << 1) | 1);
+            //SendNumberToArduino((250 << 9) | (150 << 1) | 0);
             //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
             //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
             //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
@@ -83,8 +104,8 @@ namespace ChessBot
             //SendNumberToArduino((200 << 9) | (200 << 1) | 1);
             //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
 
-            //SESSION.SetDigitalPin(10, true);
-            SESSION.SetDigitalPin(6, true);
+            SESSION.SetDigitalPin(10, true);
+            //SESSION.SetDigitalPin(6, true);
 
             //SESSION.CreateAnalogStateMonitor();
 

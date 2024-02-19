@@ -49,7 +49,7 @@ namespace ChessBot
             //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
             //TLMDatabase.OptimizeSizeOfDatabase();
 
-            TLMDatabase.LoadNN();
+            //TLMDatabase.LoadNN();
 
 
 
@@ -69,7 +69,7 @@ namespace ChessBot
 
             //Console.WriteLine(CGFF.GetGame(";-8,U:,gF,üK,fY,Q;,BW,ÁL,Ç¤,^^,&b,´9,yU,ÿ²,Í5,K9,g9,II,6J,KJ,%j,õ;,D7,k[,Eb,lx,Ñ6,Gv,#V,ýX,Cu,Yp,AC,]l,0"));
 
-            //FirmataArdControl.TEST();
+            FirmataArdControl.TEST();
 
             //MEM_CreateSnapshot("SNAPSHOT_V02_05_001"); 
 

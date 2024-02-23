@@ -43,7 +43,9 @@
 #define I2C_REGISTER_NOT_SPECIFIED  -1
 
 #define stepPin 2
+#define stepPin2 6
 #define dirPin 5 
+#define dirPin2 3
 #define testLEDPin 8 
 #define btnPin 0
 
@@ -416,14 +418,57 @@ void setPinValueCallback(byte pin, int value)
 }
 
 void processCustomNumberData(long pData) {
-  if (pData > 3) {
-    TURN(pData >> 9, (pData >> 1) & 255, pData & 1);
-  } else if (pData > 1) {
-    ChangeMagnetState(pData - 2);
-  } else {
-    TURN_UNTIL_BTN_PRESS(btnPin, 100, pData);
+
+  int curActionType = pData & 7; // 8 Options
+  int delayAfterAction = (pData >> 4) & 255; // 0 to 255ms
+  bool bInformation = (pData >> 3) & 1; // Motor / State specifications
+
+  long remainingData = pData >> 12; 
+
+  switch (curActionType) {
+
+    case 0: // 0 => TURN WITH MOVEMENT SPECIFICATIONS [% ******** *]
+
+      //Serial.print("Steps: ");
+      //Serial.println(remainingData >> 9);
+      //Serial.print("RPM: ");
+      //Serial.println((remainingData >> 1) & 255);
+      //Serial.print("Direction: ");
+      //Serial.println(remainingData & 1);
+      //Serial.print("Axis: ");
+      //Serial.println(bInformation);
+
+      //TURN(450, 150, true, false);
+
+      TURN(
+        remainingData >> 9, // Steps
+        (remainingData >> 1) & 255,  // RPM
+        remainingData & 1, // Direction
+        bInformation // Axis
+      );
+      break;
+
+
+    case 1: // 1 => MOVE UNTIL BUTTON SIGNAL [% *** *]
+      TURN_UNTIL_BTN_PRESS(
+        (remainingData >> 1) & 7, // Button Signal Pin
+        remainingData >> 4, // RPM
+        remainingData & 1, // Direction
+        bInformation
+      ); 
+      break;
+
+
+    case 2: // 2 => SET MAGNET STATE []
+      ChangeMagnetState(bInformation);
+      break;
+
+
+    case 3:
+      break;
   }
-  delay(100);
+
+  delay(delayAfterAction);
 }
 
 void ChangeMagnetState(bool pState) {
@@ -448,16 +493,18 @@ int Clamp(int pVal, int pMin, int pMax) {
   return pVal;
 }
 
-void TURN_UNTIL_BTN_PRESS(int pAnlgBtnPin, int pRPM, bool pClockwise) {
+void TURN_UNTIL_BTN_PRESS(int pAnlgBtnPin, int pRPM, bool pClockwise, bool pMainAxis) {
   int microSecondDelay = CALC_MICROSEC_DELAY(pRPM);
-  digitalWrite(dirPin, !pClockwise);
-  while (analogRead(pAnlgBtnPin) < 100) STEPPER_PULSE(stepPin, microSecondDelay);
+  digitalWrite(pMainAxis ? dirPin2 : dirPin, !pClockwise);
+  while (analogRead(pAnlgBtnPin) < 100) STEPPER_PULSE(pMainAxis ? stepPin2 : stepPin, microSecondDelay);
 }
 
-void TURN(int pSteps, int pRPM, bool pClockwise) {
+void TURN(int pSteps, int pRPM, bool pClockwise, bool pMainAxis) {
+  digitalWrite(testLEDPin, HIGH);
   int microSecondDelay = CALC_MICROSEC_DELAY(pRPM);
-  digitalWrite(dirPin, !pClockwise);
-  for(int c = 0; c < pSteps; c++) STEPPER_PULSE(stepPin, microSecondDelay);
+  digitalWrite(pMainAxis ? dirPin2 : dirPin, !pClockwise);
+  for(int c = 0; c < pSteps; c++) STEPPER_PULSE(pMainAxis ? stepPin2 : stepPin, microSecondDelay);
+  digitalWrite(testLEDPin, LOW);
 }
 
 int CALC_MICROSEC_DELAY(int pRPM) {

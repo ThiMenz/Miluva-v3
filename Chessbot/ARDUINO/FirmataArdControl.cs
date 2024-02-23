@@ -19,6 +19,8 @@ namespace ChessBot
         private static ArduinoSession? SESSION;
         private static ISerialConnection? CONNECTION;
 
+        private const bool X_MOTOR = true, Y_MOTOR = false;
+
         public static void TEST()
         {
             sw.Start();
@@ -77,11 +79,33 @@ namespace ChessBot
             // 2 = magnet down
             // 3 = magnet up
             // [][][] = 12V Stepper Driving
+            ARDUINO_ACTION smt1 = new STEPPER_MOTOR_TURN(Y_MOTOR, 350, 150, false);
+            ARDUINO_ACTION smt2 = new STEPPER_MOTOR_TURN(Y_MOTOR, 350, 150, true);
+            ARDUINO_ACTION smt3 = new STEPPER_MOTOR_TURN(X_MOTOR, 350, 150, false);
+            ARDUINO_ACTION smt4 = new STEPPER_MOTOR_TURN(X_MOTOR, 350, 150, true);
+            ARDUINO_ACTION smt5 = new MAGNET_STATE_SET(true);
+            ARDUINO_ACTION smt6 = new MAGNET_STATE_SET(false);
+            //ARDUINO_ACTION smt4 = new STEPPER_MOTOR_TURN(X_MOTOR, 200, 150, true);
+            //ARDUINO_ACTION smt5 = new STEPPER_MOTOR_TURN(X_MOTOR, 200, 150, false);
+            //ARDUINO_ACTION smt = new MAGNET_STATE_SET(true);
+            //ARDUINO_ACTION smt2 = new MAGNET_STATE_SET(false);
 
-            SendNumberToArduino(3);
-            SendNumberToArduino((600 << 9) | (170 << 1) | 0);
-            SendNumberToArduino(2);
-            SendNumberToArduino((600 << 9) | (170 << 1) | 1);
+            ExecuteAction(smt3, 200);
+            ExecuteAction(smt5, 20);
+            ExecuteAction(smt1, 200);
+            ExecuteAction(smt6, 20);
+            ExecuteAction(smt4, 200);
+            ExecuteAction(smt5, 20);
+            ExecuteAction(smt2, 200);
+            ExecuteAction(smt6, 20);
+            //ExecuteAction(smt4, 20);
+            //ExecuteAction(smt5, 20);
+            //ExecuteAction(smt2, 200);
+
+            //SendNumberToArduino(3);
+            //SendNumberToArduino((600 << 9) | (170 << 1) | 0);
+            //SendNumberToArduino(2);
+            //SendNumberToArduino((600 << 9) | (170 << 1) | 1);
             //SendNumberToArduino(0);
             //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
             //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
@@ -215,6 +239,43 @@ namespace ChessBot
         private struct STEPPER_MOTOR
         {
             public int stepPin, dirPin, stepsPerRot, maxRPM;
+        }
+
+
+        private static void ExecuteAction(ARDUINO_ACTION pArdAction, int pDelayAfterwards)
+        {
+            if (pDelayAfterwards < 0) pDelayAfterwards = 0;
+            else if (pDelayAfterwards > 255) pDelayAfterwards = 255;
+
+            Console.WriteLine(">>> " + ((int)pArdAction.VAL | (pDelayAfterwards << 4)));
+            SendNumberToArduino((ulong)((int)pArdAction.VAL | (pDelayAfterwards << 4)));
+        }
+
+        private interface ARDUINO_ACTION
+        {
+            ulong VAL {
+                get;
+            }
+        }
+
+        private struct STEPPER_MOTOR_TURN : ARDUINO_ACTION
+        {
+            public ulong VAL { get; private set; }
+
+            public STEPPER_MOTOR_TURN(bool pMotorAxis, int pSteps, int pRPM, bool pDir)
+            {
+                VAL = (pMotorAxis ? 8ul : 0ul) | (pDir ? 4096ul : 0ul) | ((ulong)pRPM << 13) | ((ulong)pSteps << 21);
+            }
+        }
+
+        private struct MAGNET_STATE_SET : ARDUINO_ACTION
+        {
+            public ulong VAL { get; private set; }
+
+            public MAGNET_STATE_SET(bool pState)
+            {
+                VAL = 2ul | (pState ? 8ul : 0ul);
+            }
         }
     }
 }

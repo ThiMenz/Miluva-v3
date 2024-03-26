@@ -7,19 +7,12 @@ namespace ChessBot
 {
     public static class FirmataArdControl
     {
-        private static STEPPER_MOTOR STEPPER1 = new STEPPER_MOTOR() { 
-            dirPin = 5,
-            stepPin = 2,
-            maxRPM = 200,
-            stepsPerRot = 200
-        };
-
         private static Stopwatch sw = new Stopwatch();
 
         private static ArduinoSession? SESSION;
         private static ISerialConnection? CONNECTION;
 
-        private const bool X_MOTOR = true, Y_MOTOR = false;
+        private const bool X_MOTOR = true, Y_MOTOR = false, DOWN = false, UP = true, LEFT = false, RIGHT = true;
 
         public static void TEST()
         {
@@ -67,103 +60,41 @@ namespace ChessBot
 
             WaitForTickCount(10_000_000L);
 
-            //SendNumberToArduino((200 << 1) | 1);
-            //for (int i = 0; i < 2; i++)
-            //{
-            //    SendNumberToArduino((600 << 9) | (170 << 1) | 0);
-            //    SendNumberToArduino((600 << 9) | (170 << 1) | 1);
-            //}
+            ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 500, 160, DOWN); // Unten
+            ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 500, 160, UP); // Oben
+            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 250, 160, LEFT);
+            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 250, 160, RIGHT);
+            ARDUINO_ACTION MAGNET_UP = new MAGNET_STATE_SET(true);
+            ARDUINO_ACTION MAGNET_DOWN = new MAGNET_STATE_SET(false);
 
-            // 0 = non-clockwise drive until press
-            // 1 = clockwise drive until press
-            // 2 = magnet down
-            // 3 = magnet up
-            // [][][] = 12V Stepper Driving
-            ARDUINO_ACTION smt1 = new STEPPER_MOTOR_TURN(Y_MOTOR, 350, 150, false);
-            ARDUINO_ACTION smt2 = new STEPPER_MOTOR_TURN(Y_MOTOR, 350, 150, true);
-            ARDUINO_ACTION smt3 = new STEPPER_MOTOR_TURN(X_MOTOR, 350, 150, false);
-            ARDUINO_ACTION smt4 = new STEPPER_MOTOR_TURN(X_MOTOR, 350, 150, true);
-            ARDUINO_ACTION smt5 = new MAGNET_STATE_SET(true);
-            ARDUINO_ACTION smt6 = new MAGNET_STATE_SET(false);
-            //ARDUINO_ACTION smt4 = new STEPPER_MOTOR_TURN(X_MOTOR, 200, 150, true);
-            //ARDUINO_ACTION smt5 = new STEPPER_MOTOR_TURN(X_MOTOR, 200, 150, false);
-            //ARDUINO_ACTION smt = new MAGNET_STATE_SET(true);
-            //ARDUINO_ACTION smt2 = new MAGNET_STATE_SET(false);
 
-            ExecuteAction(smt3, 200);
-            ExecuteAction(smt5, 20);
-            ExecuteAction(smt1, 200);
-            ExecuteAction(smt6, 20);
-            ExecuteAction(smt4, 200);
-            ExecuteAction(smt5, 20);
-            ExecuteAction(smt2, 200);
-            ExecuteAction(smt6, 20);
-            //ExecuteAction(smt4, 20);
-            //ExecuteAction(smt5, 20);
-            //ExecuteAction(smt2, 200);
+            //SESSION.CreateDigitalStateMonitor()
 
-            //SendNumberToArduino(3);
-            //SendNumberToArduino((600 << 9) | (170 << 1) | 0);
-            //SendNumberToArduino(2);
-            //SendNumberToArduino((600 << 9) | (170 << 1) | 1);
-            //SendNumberToArduino(0);
-            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
-            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
-            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
-            //SendNumberToArduino((250 << 9) | (150 << 1) | 1);
-            //SendNumberToArduino((250 << 9) | (90 << 1) | 0);
-            //SendNumberToArduino((250 << 9) | (90 << 1) | 1);
-            //SendNumberToArduino((250 << 9) | (150 << 1) | 0);
-            //SendNumberToArduino((250 << 9) | (90 << 1) | 1);
-            //SendNumberToArduino((250 << 9) | (150 << 1) | 0);
-            //SendNumberToArduino((100 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((150 << 9) | (180 << 1) | 0);
-            //SendNumberToArduino((50 << 9) | (180 << 1) | 1);
-            //SendNumberToArduino((100 << 9) | (60 << 1) | 1);
-            //SendNumberToArduino((200 << 9) | (200 << 1) | 1);
-            //SendNumberToArduino((200 << 9) | (100 << 1) | 0);
+            string str;
 
-            SESSION.SetDigitalPin(10, true);
-            //SESSION.SetDigitalPin(6, true);
+            //SESSION.RequestPinState(9);
 
-            //SESSION.CreateAnalogStateMonitor();
+            Console.WriteLine(SESSION.GetPinState(9).Value);
 
-            //CONNECTION.WriteLine("Test");
+            ExecuteActions(
+                (MAGNET_UP, 200),
+                (MAGNET_DOWN, 200)
+            );
 
+            /*                (Y_DOWN, 200),
+                (X_LEFT, 200),
+                (MAGNET_DOWN, 200),
+                (Y_UP, 200),
+                (X_RIGHT, 200),
+                (Y_DOWN, 200),
+                (X_LEFT, 200),
+                (MAGNET_UP, 200),
+                (Y_UP, 200),
+                (X_RIGHT, 200),
+                (MAGNET_DOWN, 200)*/
             Console.WriteLine(":)");
-            //int count;
-            //
-            //while ((count = CONNECTION.BytesToRead) == 0)
-            //{
-            //    WaitForTickCount(100_000L);
-            //}
-            //
-            //Console.WriteLine(count);
-            //
-            //for (int i = 0; i < count; i++)
-            //{
-            //    Console.WriteLine(i);
-            //    Console.WriteLine(CONNECTION.ReadByte());
-            //}
-            //SESSION.SetDigitalPin(9, true);
-
-
-            //for (int i = 0; i < 100; i++)
-            //{
-            //    TURN_STEPPER(200, 60, true, STEPPER1);
-            //    WaitForTickCount(10_000_000L);
-            //    TURN_STEPPER(200, 60, false, STEPPER1);
-            //    WaitForTickCount(10_000_000L);
-            //}
 
             //CONNECTION.Close();
-
-            Console.WriteLine(":)");
         }
 
         private static void SendNumberToArduino(ulong pNum)
@@ -179,11 +110,9 @@ namespace ChessBot
                 if (ULONG_OPERATIONS.IsBitOne(pNum, i)) m = i + 1;
             }
 
-            Console.WriteLine(m);
-
             for (int i = 0; i < m; i++)
             {
-                WaitForTickCount(50000L);
+                WaitForTickCount(5000L);
                 SESSION.SetDigitalPin(9, ULONG_OPERATIONS.IsBitOne(pNum, i));
             }
             SESSION.SetDigitalPin(10, false);
@@ -241,13 +170,21 @@ namespace ChessBot
             public int stepPin, dirPin, stepsPerRot, maxRPM;
         }
 
+        private static void ExecuteActions(params (ARDUINO_ACTION, int)[] pActions)
+        {
+            if (SESSION == null) return;
 
-        private static void ExecuteAction(ARDUINO_ACTION pArdAction, int pDelayAfterwards)
+            foreach ((ARDUINO_ACTION, int) pAct in pActions)
+                SendAction(pAct.Item1, pAct.Item2);
+
+            SESSION.SetDigitalPin(10, true);
+        }
+
+        private static void SendAction(ARDUINO_ACTION pArdAction, int pDelayAfterwards)
         {
             if (pDelayAfterwards < 0) pDelayAfterwards = 0;
             else if (pDelayAfterwards > 255) pDelayAfterwards = 255;
 
-            Console.WriteLine(">>> " + ((int)pArdAction.VAL | (pDelayAfterwards << 4)));
             SendNumberToArduino((ulong)((int)pArdAction.VAL | (pDelayAfterwards << 4)));
         }
 
@@ -276,6 +213,31 @@ namespace ChessBot
             {
                 VAL = 2ul | (pState ? 8ul : 0ul);
             }
+        }
+    }
+    public class MyObserver : IObserver<string>
+    {
+        public IDisposable _unsubscriber;
+
+        public virtual void Subscribe(IObservable<string> provider)
+        {
+            if (provider != null)
+            {
+                _unsubscriber = provider.Subscribe(this);
+            }
+        }
+
+        public virtual void OnCompleted()
+        {
+            _unsubscriber.Dispose();
+        }
+
+        public virtual void OnError(Exception ex)
+        { }
+
+        public virtual void OnNext(string str)
+        {
+            Console.WriteLine(str);
         }
     }
 }

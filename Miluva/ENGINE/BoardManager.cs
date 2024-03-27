@@ -6,7 +6,7 @@ using System.Linq;
 #pragma warning disable CS8600
 #pragma warning disable CS8622
 
-namespace ChessBot
+namespace Miluva
 {
     public interface IBoardManager
     {

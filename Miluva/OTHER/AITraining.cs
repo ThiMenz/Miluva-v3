@@ -3,7 +3,7 @@
 #pragma warning disable CS8603
 #pragma warning disable CS8618
 
-namespace ChessBot
+namespace Miluva
 {
     #region | NEURAL NETWORKING |
 

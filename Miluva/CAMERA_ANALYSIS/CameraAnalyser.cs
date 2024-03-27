@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
 
-namespace ChessBot
+namespace Miluva
 {
-#pragma warning disable CA1416
+    #pragma warning disable CA1416
 
     public static class CAM_SETTINGS
     {

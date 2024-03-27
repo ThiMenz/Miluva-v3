@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace ChessBot
+namespace Miluva
 {
     public static class STATIC_ROOKMOVEMENT
     {

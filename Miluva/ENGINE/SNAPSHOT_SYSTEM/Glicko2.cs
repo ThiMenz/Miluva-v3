@@ -1,4 +1,4 @@
-﻿namespace ChessBot
+﻿namespace Miluva
 {
     public static class Glicko2
     {

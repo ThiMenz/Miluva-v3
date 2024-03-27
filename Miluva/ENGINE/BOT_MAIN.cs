@@ -3,7 +3,7 @@
 #pragma warning disable CS8618
 #pragma warning disable CS8622
 
-namespace ChessBot
+namespace Miluva
 {
     public static class BOT_MAIN
     {

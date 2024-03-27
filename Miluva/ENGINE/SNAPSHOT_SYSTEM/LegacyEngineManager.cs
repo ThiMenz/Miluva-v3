@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace ChessBot
+namespace Miluva
 {
     public static class LegacyEngineManager
     {

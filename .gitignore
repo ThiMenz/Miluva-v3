@@ -405,3 +405,6 @@ Chessbot/OTHER/TEXEL_TUNING.txt
 Chessbot/DATABASES/SELF_PLAY_GAMES.txt
 Chessbot/DATABASES/TLM_DB1.txt
 Chessbot/DATABASES/OpeningDatabaseV1.txt
+Miluva/DATABASES/OpeningDatabaseV1.txt
+Miluva/DATABASES/TLM_DB1.txt
+Miluva/OTHER/ReLeResults.txt

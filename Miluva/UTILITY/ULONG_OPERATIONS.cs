@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace ChessBot
+namespace Miluva
 {
     public static class ULONG_OPERATIONS
     {

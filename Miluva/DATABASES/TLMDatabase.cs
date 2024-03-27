@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable CS8622
 
-namespace ChessBot
+namespace Miluva
 {
     // 99.98055251% from the 22.6 GB sized PGN File
     // ~310k Games with 2100+ Elo (4.2017-File)

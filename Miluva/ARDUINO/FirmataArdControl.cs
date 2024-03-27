@@ -3,7 +3,7 @@ using Solid.Arduino;
 using System.IO.Ports;
 using System.Diagnostics;
 
-namespace ChessBot
+namespace Miluva
 {
     public static class FirmataArdControl
     {

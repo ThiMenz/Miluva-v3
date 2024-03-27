@@ -2,7 +2,7 @@
 using System.ComponentModel.Design;
 using System.Diagnostics;
 
-namespace ChessBot
+namespace Miluva
 {
 
     public class ReLeTests

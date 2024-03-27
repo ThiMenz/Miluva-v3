@@ -5862,7 +5862,7 @@ namespace Miluva
         // === CUR ===
         private void PrecalculateMultipliers()
         {
-            if (BOARD_MANAGER_ID == ENGINE_VALS.PARALLEL_BOARDS - 1) Console.WriteLine();
+            //if (BOARD_MANAGER_ID == ENGINE_VALS.PARALLEL_BOARDS - 1) Console.WriteLine();
             for (int i = 0; i < 25; i++)
             {
                 //earlyGameMultipliers[i] = MultiplierFunction(i, 32d);
@@ -5872,8 +5872,8 @@ namespace Miluva
                 earlyGameMultipliers[i] = EGMultiplierFunction(i);
                 lateGameMultipliers[i] = LGMultiplierFunction(i);
 
-                if (BOARD_MANAGER_ID == ENGINE_VALS.PARALLEL_BOARDS - 1)
-                    Console.WriteLine("[" + i + "] " + earlyGameMultipliers[i] + " | " + middleGameMultipliers[i] + " | " + lateGameMultipliers[i]);
+                //if (BOARD_MANAGER_ID == ENGINE_VALS.PARALLEL_BOARDS - 1)
+                //    Console.WriteLine("[" + i + "] " + earlyGameMultipliers[i] + " | " + middleGameMultipliers[i] + " | " + lateGameMultipliers[i]);
             }
         }
 

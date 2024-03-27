@@ -29,7 +29,7 @@ namespace Miluva
         {
             SetupArduinoConnection();
 
-            if (SESSION == null) return;
+            //if (SESSION == null) return;
 
             switch (ARDUINO_GAME_SETTINGS.GAME_MODE.ToLower())
             {
@@ -43,11 +43,13 @@ namespace Miluva
         {
             TimeFormat tfHUMAN = new TimeFormat(ARDUINO_GAME_SETTINGS.HUMAN_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.HUMAN_INCREMENT_INT_SEC * 10_000_000d));
             TimeFormat tfBOT = new TimeFormat(ARDUINO_GAME_SETTINGS.BOT_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.BOT_INCREMENT_INT_SEC * 10_000_000d));
-
+            
             BOT_MAIN.SetupParallelBoards();
-
+            
             IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0];
             MainBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
+
+            STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
         }
 

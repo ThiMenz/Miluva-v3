@@ -682,8 +682,6 @@ void loop()
 
       }
 
-      if (tinput > 0) newPanel = 7;
-
     break;
 
     case 1:

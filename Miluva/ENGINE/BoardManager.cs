@@ -10,6 +10,12 @@ namespace Miluva
 {
     public interface IBoardManager
     {
+        ulong allPieceBitboard
+        {
+            get;
+            set;
+        }
+
         int TEXEL_PARAMS
         {
             get;
@@ -22,6 +28,11 @@ namespace Miluva
         }
 
         List<Move> moveOptionList
+        {
+            get;
+            set;
+        }
+        ChessClock chessClock
         {
             get;
             set;
@@ -52,6 +63,7 @@ namespace Miluva
         void SetPlayThroughVals(List<TLM_ChessGame> pDatabase, int pMin, int pMax);
     }
 
+
     public class BoardManager : IBoardManager
     {
         #region | BOARD VALS |
@@ -74,7 +86,7 @@ namespace Miluva
             { 0, 0, 0, 0, 0, 0, 0 }}; // König
 
         private readonly int[] FUTILITY_MARGINS = new int[10] {
-            000, 100, 160, 220, 280, 
+            000, 100, 160, 220, 280,
             340, 400, 460, 520, 580
         };
 
@@ -91,7 +103,7 @@ namespace Miluva
 
         private int BOARD_MANAGER_ID = -1;
 
-        private bool debugSearchDepthResults = false;
+        private bool debugSearchDepthResults = true;
         private bool debugSortResults = false;
 
         private RookMovement rookMovement;
@@ -105,7 +117,8 @@ namespace Miluva
         public List<Move> moveOptionList { get; set; }
 
         public int[] pieceTypeArray = new int[64];
-        public ulong whitePieceBitboard, blackPieceBitboard, allPieceBitboard;
+        public ulong whitePieceBitboard, blackPieceBitboard;
+        public ulong allPieceBitboard { get; set; } = 0ul;
         private ulong zobristKey;
         private int whiteKingSquare, blackKingSquare, enPassantSquare = 65, happenedHalfMoves = 0, fiftyMoveRuleCounter = 0;
         private bool whiteCastleRightKingSide, whiteCastleRightQueenSide, blackCastleRightKingSide, blackCastleRightQueenSide;
@@ -139,7 +152,7 @@ namespace Miluva
         private string debugFEN = "";
 
         private Stopwatch globalTimer = Stopwatch.StartNew();
-        public ChessClock chessClock = new ChessClock() { disabled = true };
+        public ChessClock chessClock { get; set; } = new ChessClock() { disabled = true };
 
         private Move lastMadeMove;
         private int depths, searches;
@@ -2256,7 +2269,7 @@ namespace Miluva
             {
                 (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMoveV2(moveHashList);
 
-                if (bookMoveTuple.Item2 > 4)
+                if (bookMoveTuple.Item2 > 1)
                 {
                     int actualMoveHash = NuCRe.GetNumber(bookMoveTuple.Item1);
                     List<Move> tMoves = new List<Move>();

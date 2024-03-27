@@ -3,19 +3,19 @@
     public static class ARDUINO_GAME_SETTINGS
     {
 
-        public const string GAME_MODE = "CLASSIC"; // { Classic }
+        public static readonly string GAME_MODE = "CLASSIC"; // { Classic }
 
         // [CLASSIC]
-        public const int HUMAN_TIME_IN_SEC = 300;
-        public const double HUMAN_INCREMENT_INT_SEC = 2.5;
-        public const int BOT_TIME_IN_SEC = 300;
-        public const double BOT_INCREMENT_INT_SEC = 2.5;
+        public static readonly int HUMAN_TIME_IN_SEC = 1200;
+        public static readonly double HUMAN_INCREMENT_IN_SEC = 2.5;
+        public static readonly int BOT_TIME_IN_SEC = 1200;
+        public static readonly double BOT_INCREMENT_IN_SEC = 2.5;
 
         // [CLASSIC]
-        public const bool HUMAN_PLAYS_WHITE = true;
+        public static readonly bool HUMAN_PLAYS_WHITE = true;
 
         // [CLASSIC]
-        public const string START_FEN = ENGINE_VALS.DEFAULT_FEN;
+        public static readonly string START_FEN = ENGINE_VALS.DEFAULT_FEN;
 
     }
 }

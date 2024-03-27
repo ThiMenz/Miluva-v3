@@ -45,6 +45,15 @@ MD_Parola myDisplay = MD_Parola(HARDWARE_TYPE, DATAPIN, CLK_PIN, CS_PIN, MAX_DEV
 SerialFirmata serialFeature;
 #endif
 
+unsigned long millisA1Press = 0, millisA2Press = 0, animMillis = 0;
+bool a1Press = false, a2Press = false, anyinputthispanel = false;
+byte CUR_PANEL = 0, SETUP_CUR_PANEL = -1;
+int animCount = 0, tinput;
+byte hIdx = 0, SmallUniversalVal = 0;
+
+unsigned long remainingMillis = 5400000, timeStamp = 0, lastTimeStamp = 0;
+bool TIMER_SIDE = false, IS_HUMANS_TURN = false;
+
 const int MAX_RPM = 200; // Für die 12V Stepper
 
 #define MOTOR_RPM_5V 12
@@ -216,8 +225,8 @@ void setPinModeCallback(byte pin, int mode)
       serialFeature.handlePinMode(pin, PIN_MODE_SERIAL);
 #endif
       break;
-    default:
-      Firmata.sendString("Unknown pin mode"); // TODO: put error msgs in EEPROM
+    //default:
+      //Firmata.sendString("Unknown pin mode"); // TODO: put error msgs in EEPROM
   }
   // TODO: save status to EEPROM here, if changed
 }
@@ -302,7 +311,9 @@ void processCustomNumberData(long pData) {
     case 3:
 
 
-      switch (delayAfterAction) {
+
+
+      /*switch (delayAfterAction & 7) {
 
         case 0: // Clock until Signal
 
@@ -328,12 +339,28 @@ void processCustomNumberData(long pData) {
 
         break;
 
-      }
+      }*/
 
-      if (delayAfterAction == 0) {
+      CUR_PANEL = delayAfterAction & 7;
+      millisA2Press = millisA1Press = 0;
+      Firmata.setPinState(9, anyinputthispanel = LOW);
+      IS_HUMANS_TURN = remainingData & 1;
+      TIMER_SIDE = remainingData & 2;
+      remainingMillis = ((remainingData & 1048575) >> 2) * 100;
+      SmallUniversalVal = delayAfterAction >> 3;
+
+      // delayAfterAction >> 3 -> UNIVERSAL SMALL VALUE
+      // bInformation -> UNIVERSAL BOOL
+
+
+      // remainingData & 1 -> CLOCK SIDE
+      // remainingData & 2 -> HUMAN
+      // remainingData >> 2 -> TIME
+
+      //if (delayAfterAction == 0) {
         // Clock until Signal
-      }
-      else if (delayAfterAction == 1) 
+      //}
+      //else if (delayAfterAction == 1) 
 
       //delayAfterAction
       //remainingData
@@ -358,7 +385,7 @@ void executeAllEnqueuedActions() {
     processCustomNumberData(actionQueue[i]);
   }
   countOfQActions = 0;
-  digitalWrite(10, HIGH);
+  //digitalWrite(10, HIGH);
 }
 
 int Clamp(int pVal, int pMin, int pMax) {
@@ -563,12 +590,6 @@ void firmataLoop() {
 #endif
 }
 
-unsigned long millisA1Press = 0, millisA2Press = 0, animMillis = 0;
-bool a1Press = false, a2Press = false, anyinputthispanel = false;
-int tinput = 0;
-byte CUR_PANEL = 0, SETUP_CUR_PANEL = -1;
-int animCount = 0;
-
 void btncontrolpanelcheck() {
 
   unsigned long curTime = millis();
@@ -600,7 +621,7 @@ void btncontrolpanelcheck() {
   else if (a1Press && !a2Press && ta1 > 50) tinput = 1;
   else if (a2Press && !a1Press && ta2 > 50) tinput = 2;
 
-  if (tinput > 0 && CUR_PANEL != 4) digitalWrite(9, anyinputthispanel = HIGH);
+  if (tinput > 0 && CUR_PANEL != 4) Firmata.setPinState(9, anyinputthispanel = HIGH);
   //digitalWrite(9, tinput == 1);
 }
 
@@ -629,18 +650,12 @@ const char* waitingAnim[] = {
   "/", "|", "\\", "--"
 };
 
-const char* cccc = ":";
-
-
-byte hIdx = 0, GAME_OUTCOME = 2, ComputerPromType = 0;
-
-unsigned long remainingMillis = 5400000, timeStamp = 0, lastTimeStamp = 0;
-bool TIMER_SIDE = false, IS_HUMANS_TURN = false;
-
 void DisplayTimer() {
   myDisplay.setTextAlignment(TIMER_SIDE ? PA_LEFT : PA_RIGHT);
 
-  unsigned long tVal = remainingMillis - millis() + timeStamp;
+  long tVal = remainingMillis - millis() + timeStamp;
+
+  if (remainingMillis == 6400000) tVal = millis() - timeStamp;
 
   if (anyinputthispanel && IS_HUMANS_TURN) tVal = lastTimeStamp;
   else lastTimeStamp = tVal;
@@ -662,7 +677,6 @@ void DisplayTimer() {
 }
 void loop()
 {
-
   firmataLoop();
   btncontrolpanelcheck();
 
@@ -715,6 +729,8 @@ void loop()
 
       if (SETUP_CUR_PANEL != CUR_PANEL) {
         
+        Firmata.setPinState(10, LOW);
+
         hIdx = 0;
         myDisplay.displayClear();
 
@@ -736,9 +752,10 @@ void loop()
         break;
         case 3:
           newPanel = 7;
-          digitalWrite(dirPin, hIdx & 1);
-          digitalWrite(dirPin, (hIdx & 2) == 2);
-          digitalWrite(9, HIGH);
+
+          Firmata.setPinState(7, hIdx & 1);
+          Firmata.setPinState(8, (hIdx & 2) == 2);
+          Firmata.setPinState(10, HIGH);
         break;
       }
 
@@ -751,7 +768,7 @@ void loop()
         myDisplay.setTextAlignment(PA_CENTER);
       }
 
-      myDisplay.print(promTypeArr[ComputerPromType]);
+      myDisplay.print(promTypeArr[SmallUniversalVal]);
 
       if (tinput > 0) newPanel = 2;
 
@@ -761,7 +778,7 @@ void loop()
       if (SETUP_CUR_PANEL != CUR_PANEL) {
         
         myDisplay.displayClear();
-        myDisplay.displayText(gameResultArr[GAME_OUTCOME], PA_CENTER, 100, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+        myDisplay.displayText(gameResultArr[SmallUniversalVal], PA_CENTER, 100, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
 
       }
 
@@ -788,6 +805,6 @@ void loop()
   else {
     millisA2Press = millisA1Press = 0;
     CUR_PANEL = newPanel;
-    digitalWrite(9, anyinputthispanel = LOW);
+    Firmata.setPinState(9, anyinputthispanel = LOW);
   }
 }

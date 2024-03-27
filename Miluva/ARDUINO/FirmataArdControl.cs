@@ -2,6 +2,7 @@
 using Solid.Arduino;
 using System.IO.Ports;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Miluva
 {
@@ -29,7 +30,7 @@ namespace Miluva
         {
             SetupArduinoConnection();
 
-            //if (SESSION == null) return;
+            if (SESSION == null) return;
 
             switch (ARDUINO_GAME_SETTINGS.GAME_MODE.ToLower())
             {
@@ -39,18 +40,186 @@ namespace Miluva
             }
         }
 
+        private static ChessClock? HUMAN_CHESS_CLOCK, BOT_CHESS_CLOCK;
+        private static int[] promTypeConversionArray = new int[7] { 0, 0, 3, 2, 1, 0, 0 };
+        private static int[] promTypeConversionArrayBack = new int[4] { 5, 4, 3, 2 };
+
         private static void Classic_Arduino_Game()
         {
-            TimeFormat tfHUMAN = new TimeFormat(ARDUINO_GAME_SETTINGS.HUMAN_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.HUMAN_INCREMENT_INT_SEC * 10_000_000d));
-            TimeFormat tfBOT = new TimeFormat(ARDUINO_GAME_SETTINGS.BOT_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.BOT_INCREMENT_INT_SEC * 10_000_000d));
-            
+            TimeFormat tfHUMAN = new TimeFormat(ARDUINO_GAME_SETTINGS.HUMAN_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.HUMAN_INCREMENT_IN_SEC * 10_000_000d));
+            TimeFormat tfBOT = new TimeFormat(ARDUINO_GAME_SETTINGS.BOT_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.BOT_INCREMENT_IN_SEC * 10_000_000d));
+
+            ChessClock humanChessClock = new ChessClock(); //, botChessClock = new ChessClock();
+            humanChessClock.Set(tfHUMAN);
+            HUMAN_CHESS_CLOCK = humanChessClock;
+
             BOT_MAIN.SetupParallelBoards();
-            
             IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0];
             MainBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
+            BOT_CHESS_CLOCK = MainBoardManager.chessClock;
+            BOT_CHESS_CLOCK.Set(tfBOT);
 
             STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
+            ChangePanel(1, 0, false, true);
+
+            if (!ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE)
+            {
+                Move? tM = MainBoardManager.ReturnNextMove(null, 100_000_000L);
+
+                if (tM == null) // Bot has lost
+                {
+                    ChangePanel(6, 0, false, true);
+                    return;
+                }
+                else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
+                else ChangePanel(7, 0, false, false);
+
+                // Pathfinder & Sending Move Infos to Arduino  MISSING!
+
+                WaitUntilPinIsOne(9); // Wait until move has been done
+
+                if (tM.isPromotion)
+                {
+                    ChangePanel(5, promTypeConversionArray[tM.promotionType], false, false);
+                }
+
+                ChangePanel(2, 0, false, false);
+            }
+
+            while (true)
+            {
+
+                //**********************
+                // HUMAN'S TURN
+                //**********************
+
+                int ttimeC = WaitUntilPinIsOne(9);
+                HUMAN_CHESS_CLOCK.MoveFinished(ttimeC * 5_000_000L);
+
+                ulong camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
+                List<Move> tLegalMoves = new List<Move>();
+                MainBoardManager.GetLegalMoves(ref tLegalMoves);
+                MainBoardManager.SetJumpState();
+                Move? tM = null;
+                int tC = tLegalMoves.Count;
+                bool legalMoveFound = false;
+                for (int i = 0; i < tC; i++)
+                {
+                    tM = tLegalMoves[i];
+
+                    MainBoardManager.LoadJumpState();
+                    MainBoardManager.PlainMakeMove(tM);
+
+                    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(MainBoardManager.allPieceBitboard));
+
+                    if (camAnlysisResult == MainBoardManager.allPieceBitboard)
+                    {
+                        if (tM.isPromotion)
+                        {
+                            ChangePanel(4, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+                            WaitUntilPinIsOne(10);
+
+                            long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
+                            int tpromType = (int)(ps7 | (ps8 << 1));
+                            MainBoardManager.LoadJumpState();
+
+                            for (int j = 0; j < tC; j++)
+                            {
+                                tM = tLegalMoves[j];
+                                MainBoardManager.PlainMakeMove(tM);
+                                if (camAnlysisResult == MainBoardManager.allPieceBitboard && tpromType == tM.promotionType)
+                                {
+                                    legalMoveFound = true;
+                                    break;
+                                }
+                            }
+
+                        }
+                        else legalMoveFound = true;
+
+                        break;
+                    }
+                }
+
+                MainBoardManager.LoadJumpState();
+
+                if (!legalMoveFound)
+                {
+                    return; // Reanalysis?
+                }
+
+                ChangePanel(2, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+
+
+
+                //**********************
+                // BOT'S TURN
+                //**********************
+
+                if (tM == null) return;
+                Move? tbM = MainBoardManager.ReturnNextMove(tM, 100_000_000L);
+
+                if (tbM == null) // Bot has lost
+                {
+                    ChangePanel(6, 0, false, true);
+                    return;
+                }
+                else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
+                else ChangePanel(7, 0, false, false);
+
+                // Pathfinder & Sending Move Infos to Arduino  MISSING!
+
+                WaitUntilPinIsOne(9); // Wait until move has been done
+
+                if (tbM.isPromotion)
+                {
+                    ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
+                }
+
+                ChangePanel(2, 0, false, ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+            }
+
+            //
+            //WaitForTickCount(5_000_000L);
+            //while (SESSION.GetPinState(10).Value == 0)
+            //{
+            //    WaitForTickCount(5_000_000L);
+            //}
+            //long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
+            //
+            //Console.WriteLine(ps7 | (ps8 << 1));
+
+
+            // Links = Weiß
+
+            //Console.WriteLine((int)((ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ? humanChessClock : botChessClock).curRemainingTime / 1000000));
+            //
+            //ARDUINO_ACTION PANEL_CHANGE2 = new PANEL_CHANGE(1, 0, false, 
+            //    (
+            //    ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE, true, (int)((ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ? humanChessClock : botChessClock).curRemainingTime / 1000000)
+            //    ) 
+            //);
+        }
+
+        private static void ChangePanel(int pPanelID, int pUniVal, bool pUniBool, bool pNextsWhiteTurn)
+        {
+            if (HUMAN_CHESS_CLOCK == null || BOT_CHESS_CLOCK == null) return;
+
+            bool tHT = !(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
+            ARDUINO_ACTION PANEL_CHANGE = new PANEL_CHANGE(pPanelID, pUniVal, pUniBool,
+            (tHT, pNextsWhiteTurn, (int)((tHT ? HUMAN_CHESS_CLOCK : BOT_CHESS_CLOCK).curRemainingTime / 1000000)));
+            ExecuteActions(PANEL_CHANGE);
+        }
+
+        private static int WaitUntilPinIsOne(int pID)
+        {
+            int count = 0;
+            do {
+                WaitForTickCount(5_000_000L);
+                count++;
+            } while (SESSION.GetPinState(pID).Value == 0);
+            return count;
         }
 
         public static void TEST()
@@ -105,8 +274,6 @@ namespace Miluva
 
             //SESSION.RequestPinState(9);
 
-            Console.WriteLine(SESSION.GetPinState(9).Value);
-
             ExecuteActions(
                 (MAGNET_UP, 200),
                 (MAGNET_DOWN, 200)
@@ -143,9 +310,10 @@ namespace Miluva
 
             for (int i = 0; i < m; i++)
             {
-                WaitForTickCount(5000L);
+                WaitForTickCount(25000L);
                 SESSION.SetDigitalPin(9, ULONG_OPERATIONS.IsBitOne(pNum, i));
             }
+            WaitForTickCount(5000L);
             SESSION.SetDigitalPin(10, false);
         }
 
@@ -201,6 +369,16 @@ namespace Miluva
             public int stepPin, dirPin, stepsPerRot, maxRPM;
         }
 
+        private static void ExecuteActions(params ARDUINO_ACTION[] pActions)
+        {
+            if (SESSION == null) return;
+
+            foreach (ARDUINO_ACTION pAct in pActions)
+                SendAction(pAct);
+
+            SESSION.SetDigitalPin(10, true);
+        }
+
         private static void ExecuteActions(params (ARDUINO_ACTION, int)[] pActions)
         {
             if (SESSION == null) return;
@@ -217,6 +395,11 @@ namespace Miluva
             else if (pDelayAfterwards > 255) pDelayAfterwards = 255;
 
             SendNumberToArduino((ulong)((int)pArdAction.VAL | (pDelayAfterwards << 4)));
+        }
+
+        private static void SendAction(ARDUINO_ACTION pArdAction)
+        {
+            SendNumberToArduino(pArdAction.VAL);
         }
 
         private interface ARDUINO_ACTION
@@ -243,6 +426,17 @@ namespace Miluva
             public MAGNET_STATE_SET(bool pState)
             {
                 VAL = 2ul | (pState ? 8ul : 0ul);
+            }
+        }
+
+        private struct PANEL_CHANGE : ARDUINO_ACTION
+        {
+            public ulong VAL { get; private set; }
+
+            public PANEL_CHANGE(int pNextPanel, int pUniversalInfo, bool pUniversalBool, (bool, bool, int) pTimerInfo)
+            {
+                VAL = 3ul | (pUniversalBool ? 8ul : 0ul) | (pTimerInfo.Item1 ? 4096ul : 0ul) | (pTimerInfo.Item2 ? 8192ul : 0ul)
+                          | ((ulong)pTimerInfo.Item3 << 14) | ((ulong)pNextPanel << 4) | ((ulong)pUniversalInfo << 7);
             }
         }
     }

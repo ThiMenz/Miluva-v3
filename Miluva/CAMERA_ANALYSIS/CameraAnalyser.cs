@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
+using System.Transactions;
 
 namespace Miluva
 {
@@ -63,7 +64,7 @@ namespace Miluva
         public const double SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT = 0.28;
 
         // Sobald eine an ein als Square anerkanntes Objekt angrenzende Linie gefunden wurde; wird sie mit folgedem zusätzlichem addierten Prozentsatz gewichtet
-        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST = 0.5;
+        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST = 0.1;
 
         // Nach der Erstellung des Gitters der Felder; Maximale Anzahl an Randpixeln dieser Felder
         public const int SQUARE_MAX_EDGE_PIXEL = 0;
@@ -152,6 +153,8 @@ namespace Miluva
 
         public static int finishedThreads = 0;
 
+        public static ulong RESULT = 0ul;
+
         public static void SETUP()
         {
             Stopwatch stopwatch = new Stopwatch();
@@ -172,26 +175,37 @@ namespace Miluva
             stopwatch.Stop();
         }
 
-        public static void ANALYSE()
+        public static ulong ANALYSE()
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            RESULT = 0ul;
 
-            _ = new PYTHONHANDLER("VIDCAP");
+            try
+            {
 
-            Console.WriteLine("Python Image Input captured in " + stopwatch.ElapsedMilliseconds + "ms");
-            stopwatch.Restart();
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
 
-            System.Drawing.Image resizedImg = ResizeImage(System.Drawing.Image.FromFile(CAM_SETTINGS.PROJECT_DIRECTORY + @"\cam.png"), new Size(CAM_SETTINGS.PIC_RESOLUTION_X, CAM_SETTINGS.PIC_RESOLUTION_Y));
-            resizedImg.Save(CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg", ImageFormat.Jpeg);
+                _ = new PYTHONHANDLER("VIDCAP");
 
-            Console.WriteLine("STEP 0 - Image Resizing   [ " + stopwatch.ElapsedMilliseconds + "ms ]");
+                Console.WriteLine("Python Image Input captured in " + stopwatch.ElapsedMilliseconds + "ms");
+                stopwatch.Restart();
 
-            _ = new PNG_EXTRACTOR(
+                Image timg = Image.FromFile(CAM_SETTINGS.PROJECT_DIRECTORY + @"\cam.png");
 
-                CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg",
+                //File.Delete(CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg");
 
-                new string[16] {
+                System.Drawing.Image resizedImg = ResizeImage(timg, new Size(CAM_SETTINGS.PIC_RESOLUTION_X, CAM_SETTINGS.PIC_RESOLUTION_Y));
+                resizedImg.Save(CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg", ImageFormat.Jpeg);
+
+                timg.Dispose();
+
+                Console.WriteLine("STEP 0 - Image Resizing   [ " + stopwatch.ElapsedMilliseconds + "ms ]");
+
+                _ = new PNG_EXTRACTOR(
+
+                    CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg",
+
+                    new string[16] {
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step1.png",
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step2.png",
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step3.png",
@@ -208,11 +222,21 @@ namespace Miluva
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step14.png",
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step15.png",
                 CAM_SETTINGS.PROJECT_DIRECTORY + @"\Steps\Step16.png"
-                }
+                    }
 
-            );
+                );
 
-            Console.WriteLine("Analysis finished in " + stopwatch.ElapsedMilliseconds + "ms");
+                resizedImg.Dispose();
+
+                Console.WriteLine("Analysis finished in " + stopwatch.ElapsedMilliseconds + "ms");
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+
+            return RESULT;
 
             //}
             //catch(Exception e)
@@ -1037,9 +1061,11 @@ namespace Miluva
             }
             for (int i = 0; i < tL; i++)
             {
-                if (IntListContains(pixIdxs2, pixIdxs[i]))
+                bool bbb;
+                if ((bbb = IntListContains(pixIdxs2, pixIdxs[i])) || (pixIdxs[i] + width < pixelCount && IntListContains(pixIdxs2, pixIdxs[i] + width)))
                 {
                     int tidx = pixIdxs[i];
+                    if (!bbb) tidx += width;
                     activatedPixels[tidx] = true;
 
                     for (int o = 0; o < 81; o++)
@@ -1240,6 +1266,9 @@ namespace Miluva
                     tFurtherColors[i + 5] = pixelInts[pointIDBetweenCenterAndEdge];
                 }
 
+                double avrgDistFromCenter = (thDists[0] + thDists[1] + thDists[2] + thDists[3]) / 4d * 0.6;
+                double KVal = 1d / (avrgDistFromCenter * Math.Sqrt(avrgDistFromCenter));
+
                 //STATIC_MAIN_CAMERA_ANALYSER.ColorDifference
 
                 double pieceDetVal = 0;
@@ -1252,7 +1281,7 @@ namespace Miluva
                     double X = Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID]));
 
                     if (activatedPixelsSaveState[tID])
-                        pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - 0.01 * X, 0d, 0.7d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
+                        pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - KVal * X, 0d, 0.7d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
 
                     //Math.Exp(X - 22)
 
@@ -1359,18 +1388,22 @@ namespace Miluva
 
                 for (int j = 0; j < 8; j++)
                 {
-                    int tID = OPys[i][j] + 5 * width + 5;
+                    int tID = OPys[i][j] + 15 * width + 15;
 
                     if (activatedPixelsSaveState2[tID])
                         finalBoard = ULONG_OPERATIONS.SetBitToOne(finalBoard, i * 8 + j);
                 }
             }
 
+            img.Dispose();
+
             Console.WriteLine("STEP 8 - Square Indexing   [ " + sw.ElapsedMilliseconds + "ms ]");
             sw.Stop();
 
             Console.WriteLine("\n");
             Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(finalBoard));
+
+            STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
 
             #endregion
         }
@@ -2163,11 +2196,6 @@ namespace Miluva
         }
 
         #endregion
-    }
-
-    public class CameraAnalyser
-    {
-
     }
 
     public class PYTHONHANDLER

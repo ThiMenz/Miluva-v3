@@ -61,10 +61,14 @@ namespace Miluva
 
             STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
-            ChangePanel(1, 0, false, true);
+            bool startFENstartswithwhite = ARDUINO_GAME_SETTINGS.START_FEN.Split('/')[7].Split(' ')[1] == "w";
 
-            if (!ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE)
+            ChangePanel(1, 0, false, startFENstartswithwhite);
+
+            if (ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ startFENstartswithwhite)
             {
+                WaitUntilPinIsOne(3);
+
                 Move? tM = MainBoardManager.ReturnNextMove(null, 100_000_000L);
 
                 if (tM == null) // Bot has lost
@@ -84,7 +88,7 @@ namespace Miluva
                     ChangePanel(5, promTypeConversionArray[tM.promotionType], false, false);
                 }
 
-                ChangePanel(2, 0, false, false);
+                ChangePanel(2, 0, false, !startFENstartswithwhite);
             }
 
             while (true)
@@ -97,7 +101,8 @@ namespace Miluva
                 int ttimeC = WaitUntilPinIsOne(9);
                 HUMAN_CHESS_CLOCK.MoveFinished(ttimeC * 5_000_000L);
 
-                ulong camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
+            ReAnalysis:
+                List<ulong> camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
                 List<Move> tLegalMoves = new List<Move>();
                 MainBoardManager.GetLegalMoves(ref tLegalMoves);
                 MainBoardManager.SetJumpState();
@@ -111,9 +116,9 @@ namespace Miluva
                     MainBoardManager.LoadJumpState();
                     MainBoardManager.PlainMakeMove(tM);
 
-                    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(MainBoardManager.allPieceBitboard));
+                    //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(MainBoardManager.allPieceBitboard));
 
-                    if (camAnlysisResult == MainBoardManager.allPieceBitboard)
+                    if (camAnlysisResult.Contains(MainBoardManager.allPieceBitboard))
                     {
                         if (tM.isPromotion)
                         {
@@ -128,7 +133,7 @@ namespace Miluva
                             {
                                 tM = tLegalMoves[j];
                                 MainBoardManager.PlainMakeMove(tM);
-                                if (camAnlysisResult == MainBoardManager.allPieceBitboard && tpromType == tM.promotionType)
+                                if (camAnlysisResult.Contains(MainBoardManager.allPieceBitboard) && tpromType == tM.promotionType)
                                 {
                                     legalMoveFound = true;
                                     break;
@@ -146,8 +151,13 @@ namespace Miluva
 
                 if (!legalMoveFound)
                 {
-                    return; // Reanalysis?
+                    ChangePanel(3, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+                    WaitForTickCount(10_000_000L);
+                    WaitUntilPinIsOne(9);
+                    goto ReAnalysis;
                 }
+
+                Console.WriteLine("MOVE FOUND: " + tM);
 
                 ChangePanel(2, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
 
@@ -157,7 +167,8 @@ namespace Miluva
                 // BOT'S TURN
                 //**********************
 
-                if (tM == null) return;
+                if (tM == null) return; // Pretty much irrelevant, just to not get the warning
+
                 Move? tbM = MainBoardManager.ReturnNextMove(tM, 100_000_000L);
 
                 if (tbM == null) // Bot has lost

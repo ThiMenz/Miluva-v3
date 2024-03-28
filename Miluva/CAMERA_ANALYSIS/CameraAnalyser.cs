@@ -22,17 +22,17 @@ namespace Miluva
 
         // LAB-Pythagoras-Threshold, der zur Outline Erkennung der Felder / Figuren genutzt wird
         public const double COLOR_DIFFERENCE_THRESHOLD = 14.5;
-        public const double COLOR_DIFFERENCE_THRESHOLD_FOR_PIECE_RECOGNITION = 5.5;
+        public const double COLOR_DIFFERENCE_THRESHOLD_FOR_PIECE_RECOGNITION = 4.5;
 
         // Eine Linie darf kein dickere Pixelbreite als diese haben
         public const int MAX_LINE_WIDTH = 4;
 
         // Prezentsatz der gefüllten Pixel, damit eine horizontale / vertikale Linie als sicher relevant anerkannt werden kann
-        public const double HORIZONTALLINE_FULL_SECURE_DETERMINANT = .27;
+        public const double HORIZONTALLINE_FULL_SECURE_DETERMINANT = .28;
         public const double VERTICALLINE_FULL_SECURE_DETERMINANT = .1;
 
         // Mindestabstand zwischen den einzelnen relevanten Linien; in diesem Intervall entscheidet sich der Algorithmus für die prozentual stärkste Linie
-        public const int HORIZONTALLINE_MIN_DIST = 30;
+        public const int HORIZONTALLINE_MIN_DIST = 20;
 
         // Zwei Horizontale Linien dürfen nicht mehr als dieser Multiplikator des Abstands zur vorherigen Linie auseinander liegen 
         public const double MAX_HORIZONTALLINE_DIST_INCR = 1.5;
@@ -42,13 +42,17 @@ namespace Miluva
 
         // Maximale Abweichung in Pixeln, die der Abstand zur nächsten Linie im Vergleich zur vorherigen Linie haben darf
         public const int VERTICALLINE_MAX_DEVIATION_FROM_AVERAGE = 9;
-        public const int HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE = 15;
+        public const int HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_DOWN = 7;
+        public const int HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_UP = 7;
 
         // Bei Verfeinerung der Posierung der horizontalen Linien, dürfen nur Pixel mit diesem Y-Abstand als Wertpunkt für die lineare Regression genutzt werden
         public const int HORIZONTALLINE_MAX_LINREG_OPTIMIZATION_DIST = 16;
 
         // Zur Verfeinerung dieser Posierung müssen aber mindestens diese Anzahl an Wertpunkten gefunden werden
-        public const int HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS = 135;
+        public const int HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS = 55;
+
+        public const int HORIZONTALLINE_INTEGRAL_SIZE = 14;
+        public const int HORIZONTALLINE_INTEGRAL_MIN_DIST = 14;
 
         // Der mindeste Prozentsatz an benötigten ausgefüllten Pixeln, damit ein gefülltes Objekt als Feld anerkannt werden kann
         public const double SQUARYNESS_DETERMINANT = .47;
@@ -64,7 +68,8 @@ namespace Miluva
         public const double SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT = 0.28;
 
         // Sobald eine an ein als Square anerkanntes Objekt angrenzende Linie gefunden wurde; wird sie mit folgedem zusätzlichem addierten Prozentsatz gewichtet
-        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST = 0.1;
+        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST = 0.2;
+        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL = 0.01;
 
         // Nach der Erstellung des Gitters der Felder; Maximale Anzahl an Randpixeln dieser Felder
         public const int SQUARE_MAX_EDGE_PIXEL = 0;
@@ -76,13 +81,19 @@ namespace Miluva
         public const bool MAIN_AREA_SELECTION_WITH_PIXELCOUNT = true;
 
         // Zusätze zur Main Area benötigen mindestens diese Größe (erneut Pixelmasse)
-        public const int MAIN_AREA_ADDITION_MIN_SIZE = 700;
+        public const int MAIN_AREA_ADDITION_MIN_SIZE = 70000000;
 
         // Quadrierter maximaler Abstand, den ein Pixel zu einem anderen der Main Area haben muss
         public const double MAIN_AREA_ADDITION_DIST_THRESHOLD = 100;
 
         // Threshold zur Erkennung der Figuren
-        public const double MIN_PIECE_RECOGNITION_DETERMINANT = 23;
+        public const double MIN_PIECE_RECOGNITION_DETERMINANT = 12;
+
+        // Anzahl an möglichen Lösungen, die der Algorithmus als möglich ansehen soll
+        public const int PIECE_RECOGNITION_SOLUTIONS = 6;
+
+        // Der durchschnittliche Abstand vom Zentrum zu den Ecken eines Feldes mal diesen Wert ergibt den Radius der zu scannenden Feld-Fläche
+        public const double PIECE_RECOGNITION_FIELD_SIZE_RADIUS_MULT = .66;
 
         // Größe des Bilds auf die das Programm den Input skaliert
         public const int PIC_RESOLUTION_X = 800, PIC_RESOLUTION_Y = 450;
@@ -153,7 +164,7 @@ namespace Miluva
 
         public static int finishedThreads = 0;
 
-        public static ulong RESULT = 0ul;
+        public static List<ulong> RESULT = new List<ulong>();
 
         public static void SETUP()
         {
@@ -175,10 +186,12 @@ namespace Miluva
             stopwatch.Stop();
         }
 
-        public static ulong ANALYSE()
+        public static List<ulong> ANALYSE()
         {
-            RESULT = 0ul;
-
+            RESULT.Clear();
+            System.Drawing.Image? resizedImg = null;
+            Image? timg = null;
+            PNG_EXTRACTOR? pe = null;
             try
             {
 
@@ -190,18 +203,18 @@ namespace Miluva
                 Console.WriteLine("Python Image Input captured in " + stopwatch.ElapsedMilliseconds + "ms");
                 stopwatch.Restart();
 
-                Image timg = Image.FromFile(CAM_SETTINGS.PROJECT_DIRECTORY + @"\cam.png");
+                timg = Image.FromFile(CAM_SETTINGS.PROJECT_DIRECTORY + @"\cam.png");
 
                 //File.Delete(CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg");
 
-                System.Drawing.Image resizedImg = ResizeImage(timg, new Size(CAM_SETTINGS.PIC_RESOLUTION_X, CAM_SETTINGS.PIC_RESOLUTION_Y));
+                resizedImg = ResizeImage(timg, new Size(CAM_SETTINGS.PIC_RESOLUTION_X, CAM_SETTINGS.PIC_RESOLUTION_Y));
                 resizedImg.Save(CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg", ImageFormat.Jpeg);
 
                 timg.Dispose();
 
                 Console.WriteLine("STEP 0 - Image Resizing   [ " + stopwatch.ElapsedMilliseconds + "ms ]");
 
-                _ = new PNG_EXTRACTOR(
+                pe = new PNG_EXTRACTOR(
 
                     CAM_SETTINGS.PROJECT_DIRECTORY + @"\ResizedImage.jpg",
 
@@ -230,19 +243,16 @@ namespace Miluva
 
                 Console.WriteLine("Analysis finished in " + stopwatch.ElapsedMilliseconds + "ms");
 
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
+           }
+           catch (Exception e)
+           {
+               Console.WriteLine(e.ToString());
+               resizedImg?.Dispose();
+               timg?.Dispose();
+               pe?.img?.Dispose();
+           }
 
             return RESULT;
-
-            //}
-            //catch(Exception e)
-            //{
-            //    Console.WriteLine(e.ToString());
-            //}
         }
 
         public static bool ColorDifference(int c1, int c2)
@@ -329,9 +339,12 @@ namespace Miluva
         private int width, height, pixelCount;
         private bool[] horsqstartpos = new bool[CAM_SETTINGS.PIC_RESOLUTION_Y];
         private bool[] versqstartpos = new bool[CAM_SETTINGS.PIC_RESOLUTION_X];
+        private double[] horsqstartposd = new double[CAM_SETTINGS.PIC_RESOLUTION_Y];
+        private double[] versqstartposd = new double[CAM_SETTINGS.PIC_RESOLUTION_X];
         private List<int>[] finalVertLinePoses = new List<int>[9];
         private List<int>[] finalHorLinePoses = new List<int>[9];
         private List<int> recursiveLimits = new List<int>();
+        public Bitmap? img;
 
         public PNG_EXTRACTOR(string pathToPNG, string[] pathToResultPNGs)
         {
@@ -340,7 +353,7 @@ namespace Miluva
 
             #region | STEP 1 - Color Difference with LAB |
 
-            Bitmap img = new Bitmap(pathToPNG);
+            img = new Bitmap(pathToPNG);
             height = img.Height;
             width = img.Width;
 
@@ -639,7 +652,8 @@ namespace Miluva
 
                     versqstartpos[txvertPos1] = true;
                     versqstartpos[txvertPos2] = true;
-
+                    versqstartposd[txvertPos1] = tLine1Ye1X;
+                    versqstartposd[txvertPos2] = tLine2Ye1X;
 
                     int txhorPos1 =
                     GetStartYPosOfHorizontalLine(
@@ -653,14 +667,23 @@ namespace Miluva
                     int txhorPos2 =
                     GetStartYPosOfHorizontalLine(
                         tLine2Ye1X = Scale2DoubleTupleXTo(
-                            (edgePoints[3].Item1 - edgePoints[0].Item1, edgePoints[3].Item2 - edgePoints[0].Item2),
+                            (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2),
                             1d
                         ).Item2,
                         edgePoints[0]
                     );
 
+                    //Console.WriteLine(txhorPos1 + " | " + txhorPos2);
+                    //Console.WriteLine(edgePoints[0] + " | " + edgePoints[3] + " => " + (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2) + " => " + txhorPos2);
+                    //Console.WriteLine(tLine1Ye1X);
+                    //Console.WriteLine((edgePoints[1].Item1 - edgePoints[2].Item1, edgePoints[1].Item2 - edgePoints[2].Item2));
+                    //Console.WriteLine(tLine2Ye1X);
+                    //Console.WriteLine((edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2));
+
                     horsqstartpos[txhorPos1] = true;
                     horsqstartpos[txhorPos2] = true;
+                    horsqstartposd[txhorPos1] = tLine1Ye1X;
+                    horsqstartposd[txhorPos2] = tLine2Ye1X;
 
                     ssqAvrgHorY += Math.Abs(txhorPos1 - txhorPos2);
                     if ((tD = (int)Math.Sqrt(sqAvrgXPosDist * sqAvrgXPosDist + sqAvrgYPosDist * sqAvrgYPosDist)) < tminDistToMid)
@@ -886,25 +909,26 @@ namespace Miluva
             List<int> distsBetweenLines = new List<int>();
             List<int> linePositions = new List<int>();
             List<(int, int)> positionsBetweenLines = new List<(int, int)>();
-            int until = height - (int)(xe1HorLineVecY * 400);
+            int until = height; // - (int)(xe1HorLineVecY * 400)
             double toverallhighest = 0d;
             int toverallhighestidx = 0;
             double[] horlinePrecentageVals = new double[until];
 
             for (int i = 0; i < until; i++)
             {
-                if ((horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i)) > CAM_SETTINGS.HORIZONTALLINE_FULL_SECURE_DETERMINANT)
+                double tval;
+                if ((tval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i)) > CAM_SETTINGS.HORIZONTALLINE_FULL_SECURE_DETERMINANT)
                 {
-                    double thighest = horlinePrecentageVals[i];
+                    double thighest = tval;
                     int tidx = i;
 
                     for (int j = 0; j < CAM_SETTINGS.HORIZONTALLINE_MIN_DIST; j++)
                     {
                         if (++i == until) break;
-                        horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i);
-                        if (horlinePrecentageVals[i] > thighest)
+                        double ttval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i);
+                        if (ttval > thighest)
                         {
-                            thighest = horlinePrecentageVals[i];
+                            thighest = ttval;
                             tidx = i;
                             if (thighest > toverallhighest)
                             {
@@ -913,6 +937,8 @@ namespace Miluva
                             }
                         }
                     }
+
+                    horlinePrecentageVals[tidx] = thighest;
 
                     if (l != -1)
                     {
@@ -923,17 +949,68 @@ namespace Miluva
 
                     linePositions.Add(l = tidx);
                 }
+                //else horlinePrecentageVals[i] = tval;
             }
+
+            int[] tsortidxarr = new int[until];
+
+            //string str = "DatenFunktion({";
+            for (int i = 0; i < until; i++)
+            {
+                tsortidxarr[i] = i;
+                if (horlinePrecentageVals[i] < 0.02) horlinePrecentageVals[i] = 0;
+
+                //str += i + (i == until - 1 ? "},{" : ",");
+            }
+
+            double[] tintegralVals = new double[until];
+
+            for (int i = 0; i < until; i++)
+            {
+                double tintegral = 0;
+                for (int j = -(CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE - 1); j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE; j++)
+                {
+                    int t = i + j;
+                    if (t > 0 && t < until)
+                    {
+                        double v1 = horlinePrecentageVals[t - 1];
+                        double v2 = horlinePrecentageVals[t];
+
+                        if (v1 < v2) {
+                            double d = v2;
+                            v2 = v1;
+                            v1 = d;
+                        }
+
+                        tintegral += (v1 - v2) / 2d + v2;
+                    }
+                }
+
+                tintegralVals[i] = tintegral;
+
+                //str += horlinePrecentageVals[i].ToString().Replace(",", ".") + (i == until - 1 ? "})" : ",");
+            }
+
+            Array.Sort(tintegralVals, tsortidxarr);
+            Array.Reverse(tintegralVals);
+            Array.Reverse(tsortidxarr);
+
+
+            //Console.WriteLine(str);
+
+            bool[] activatedPixelsSaveState3 = new bool[pixelCount];
+            activatedPixelsSaveState3 = (bool[])activatedPixels.Clone();
 
             byteA = 0;
             for (int i = 0; i < pixelCount; i++, byteA += 3)
             {
                 imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = activatedPixels[i] ? edgeColorByte : bgColorByte;
-                activatedPixels[i] = true;
+                activatedPixels[i] = false;
             }
 
             Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
             img.Save(pathToResultPNGs[4], ImageFormat.Png);
+
 
             byteA = 0; for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
             for (int i = 0; i < horlineids.Count; i++)
@@ -944,15 +1021,36 @@ namespace Miluva
                 activatedPixels[tidx] = true;
             }
 
+
             Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
             img.Save(pathToResultPNGs[6], ImageFormat.Png);
 
             int tHPos = toverallhighestidx, tLPos = toverallhighestidx;
             int tHPosAdd = ssqAvrgHorY, tLPosAdd = ssqAvrgHorY;
 
+            //Console.WriteLine(tLPos);
+
             int[] furtherLines = new int[9] { toverallhighestidx, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-            for (int i = 0; i < 8; i++)
+            bool[] tusedUpVals = new bool[until];
+
+            for (int i = 0, k = 0; k < 9; i++)
+            {
+                int tidx = tsortidxarr[i];
+                for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
+                    if (tidx + j > -1 && tidx + j < until && tusedUpVals[tidx + j]) goto SkipThisIntegral;
+                Console.WriteLine(tidx + " -> " + tintegralVals[i]);
+                furtherLines[k++] = tidx; 
+                for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
+                {
+                    if (tidx + j > -1 && tidx + j < until) tusedUpVals[tidx + j] = true;
+                }
+            SkipThisIntegral:;
+            }
+
+            List<int> pixIdxs = new List<int>();
+
+            /*for (int i = 0; i < 8; i++)
             {
                 int tLBPOS = tLPos - tLPosAdd;
                 int tHBPOS = tHPos + tHPosAdd;
@@ -960,22 +1058,68 @@ namespace Miluva
                 double thighest = -1;
                 bool b = false;
 
-                for (int j = -CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE; j < CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE + 1; j++)
-                {
-                    double LBprecentage = tLBPOS + j > -1 ? horlinePrecentageVals[tLBPOS + j] : -1;
-                    double HBprecentage = tHBPOS + j < until ? horlinePrecentageVals[tHBPOS + j] : -1;
-                    if (LBprecentage > thighest)
+                Console.WriteLine(tLPos + " -> " + tLBPOS + " | " + tHPos + "-> " + tHBPOS);
+                //
+                //List<(int, int)> tLinRegPointsL = tLBPOS > -1 ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tLBPOS, activatedPixels) : new List<(int, int)>();
+                //List<(int, int)> tLinRegPointsH = tHBPOS < height ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tHBPOS, activatedPixels) : new List<(int, int)>();
+                //
+                //b = tLinRegPointsH.Count < tLinRegPointsL.Count;
+                //
+                //tpos = b ? tLBPOS : tHBPOS;
+
+                //int t_ti_C = tLinRegPoints2.Count;
+                //if (tLinRegPoints3.Count > t_ti_C) {
+                //    t_ti_C = tLinRegPoints3.Count;
+                //    tLinRegPoints = tLinRegPoints3;
+                //}
+                //else tLinRegPoints = tLinRegPoints2;
+                //
+                //int[] tlinregidxs = new int[t_ti_C];
+                //int[] tlinregvals = new int[t_ti_C];
+                //for (int j = 0; j < t_ti_C; j++)
+                //{
+                //    tlinregidxs[j] = tLinRegPoints[j].Item1;
+                //    tlinregvals[j] = tLinRegPoints[j].Item2;
+                //}
+                //(double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
+                //
+                //
+                //for (int x = 0; x < width; x++)
+                //{
+                //    int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
+                //    if (x == 0) finalHorLinePoses[i] = new List<int>();
+                //    pixIdxs.Add(tID);
+                //    finalHorLinePoses[i].Add(tID);
+                //}
+
+
+                int searchWindowSizeIncr = 0;
+
+                while (thighest < 0.1 && searchWindowSizeIncr < 100) {
+
+                    ++searchWindowSizeIncr;
+
+                    for (int j = -CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_DOWN; j < CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_UP * searchWindowSizeIncr + 1; j++)
                     {
-                        thighest = LBprecentage;
-                        tpos = tLBPOS + j;
-                        b = true;
+                        //Console.WriteLine(tLBPOS + j + " | " +);
+                        double LBprecentage = tLBPOS + j > -1 && tLBPOS + j < tLPos - 15 ? horlinePrecentageVals[tLBPOS + j] : -1;
+                        double HBprecentage = tHBPOS + j < until && tHBPOS + j > tHPos + 15 ? horlinePrecentageVals[tHBPOS + j] : -1;
+                        if (LBprecentage > thighest)
+                        {
+                            thighest = LBprecentage;
+                            tpos = tLBPOS + j;
+                            b = true;
+                        }
+                        if (HBprecentage > thighest)
+                        {
+                            thighest = HBprecentage;
+                            tpos = tHBPOS + j;
+                            b = false;
+                        }
                     }
-                    if (HBprecentage > thighest)
-                    {
-                        thighest = HBprecentage;
-                        tpos = tHBPOS + j;
-                        b = false;
-                    }
+
+                    //Console.WriteLine(":)");
+
                 }
 
                 if (b)
@@ -989,45 +1133,65 @@ namespace Miluva
                     tHPos = tpos;
                 }
 
-                furtherLines[i + 1] = tpos;
-            }
+                //Console.WriteLine(thighest + ": " + tpos);
 
-            List<int> pixIdxs = new List<int>();
+                furtherLines[i + 1] = tpos;
+            }*/
+
+            bool[] bbbbbb = new bool[pixelCount];
+
             byteA = 0;
             for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-
+            
             for (int i = 0; i < furtherLines.Length; i++)
             {
-                List<(int, int)> tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState2);
+                List<(int, int)> tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState3);
                 int t_ti_C = tLinRegPoints.Count;
-
+            
                 if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
                 {
-                    tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState);
-                    t_ti_C = tLinRegPoints.Count;
-                    if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
-                    {
-                        List<int> tLine = GetHorizontalLine(xe1HorLineVecY, furtherLines[i]);
-                        finalHorLinePoses[i] = tLine;
-                        pixIdxs.AddRange(tLine);
-                        continue;
-                    }
+                    //Console.WriteLine(i);
+                    //tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState);
+                    //t_ti_C = tLinRegPoints.Count;
+                    //if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
+                    //{
+                    List<int> tLine = GetHorizontalLine(xe1HorLineVecY, furtherLines[i]); // Theoretisch xe1HorLineVecY manchmal austauschen; aber dieser Teil sollte eig sowieso nie vorkommen
+                    finalHorLinePoses[i] = tLine;
+                    pixIdxs.AddRange(tLine);
+                    continue;
+                    //}
                 }
-
+            
                 int[] tlinregidxs = new int[t_ti_C];
                 int[] tlinregvals = new int[t_ti_C];
+                bool differentValueUpUntilHere = false;
+                int lVal = 0;
                 for (int j = 0; j < t_ti_C; j++)
                 {
                     tlinregidxs[j] = tLinRegPoints[j].Item1;
                     tlinregvals[j] = tLinRegPoints[j].Item2;
+
+                    if (j != 0 && lVal != tlinregvals[j])
+                    {
+                        differentValueUpUntilHere = true;
+                    }
+
+                    lVal = tlinregvals[j];
+
+                    bbbbbb[tlinregidxs[j] + tlinregvals[j] * width] = true;
                 }
+
+                if (!differentValueUpUntilHere) tlinregvals[t_ti_C - 1]++;
 
                 (double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
 
                 for (int x = 0; x < width; x++)
                 {
                     int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
-                    if (x == 0) finalHorLinePoses[i] = new List<int>();
+                    if (x == 0)
+                    {
+                        finalHorLinePoses[i] = new List<int>();
+                    }
                     pixIdxs.Add(tID);
                     finalHorLinePoses[i].Add(tID);
                 }
@@ -1043,6 +1207,17 @@ namespace Miluva
 
             Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
             img.Save(pathToResultPNGs[7], ImageFormat.Png);
+
+
+            byteA = 0;
+            for (int i = 0; i < pixelCount; i++, byteA += 3)
+            {
+                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bbbbbb[i] ? edgeColorByte : bgColorByte;
+                activatedPixels[i] = false;
+            }
+
+            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+            img.Save(pathToResultPNGs[5], ImageFormat.Png);
 
             #endregion
 
@@ -1177,6 +1352,9 @@ namespace Miluva
 
             for (int i = 0; i < pixelCount; i++) activatedPixelsSaveState2[i] = false;
 
+            double[] dets = new double[fsqC];
+            double[] pixelDetVal = new double[pixelCount];
+
             for (int s = 0; s < fsqC; s++)
             {
                 List<int> tsquare = finalSquares[s];
@@ -1266,12 +1444,13 @@ namespace Miluva
                     tFurtherColors[i + 5] = pixelInts[pointIDBetweenCenterAndEdge];
                 }
 
-                double avrgDistFromCenter = (thDists[0] + thDists[1] + thDists[2] + thDists[3]) / 4d * 0.6;
+                double avrgDistFromCenter = (thDists[0] + thDists[1] + thDists[2] + thDists[3]) / 4d * CAM_SETTINGS.PIECE_RECOGNITION_FIELD_SIZE_RADIUS_MULT;
                 double KVal = 1d / (avrgDistFromCenter * Math.Sqrt(avrgDistFromCenter));
 
                 //STATIC_MAIN_CAMERA_ANALYSER.ColorDifference
 
                 double pieceDetVal = 0;
+
 
                 for (int i = 0; i < tC; i++)
                 {
@@ -1281,7 +1460,7 @@ namespace Miluva
                     double X = Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID]));
 
                     if (activatedPixelsSaveState[tID])
-                        pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - KVal * X, 0d, 0.7d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
+                        pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - KVal * X, 0d, 1.5d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
 
                     //Math.Exp(X - 22)
 
@@ -1323,10 +1502,34 @@ namespace Miluva
                         int tID = tsquare[i];
                         activatedPixelsSaveState2[tID] = true;
                         int tidx = tID * 3;
+                        pixelDetVal[tID] = pieceDetVal;
                         imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b111111;
                     }
                 }
+
+                dets[s] = pieceDetVal;
             }
+
+            Array.Sort(dets);
+
+            double[] detthresholds = new double[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1];
+            int kkkk = -1;
+
+            for (int i = 0; i < fsqC; i++)
+            {
+                Console.Write((int)(dets[i] * 100) / 100d + ">");
+
+                if (kkkk != -1 && kkkk + 1 < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS)
+                {
+                    detthresholds[kkkk] = dets[i];
+                    kkkk++;
+                }
+                else if (kkkk == -1 && dets[i] > CAM_SETTINGS.MIN_PIECE_RECOGNITION_DETERMINANT) {
+                    kkkk = 1;
+                    detthresholds[0] = dets[i];
+                }
+            }
+            Console.WriteLine();
 
             Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
             img.Save(pathToResultPNGs[14], ImageFormat.Png);
@@ -1370,6 +1573,7 @@ namespace Miluva
 
             int[][] OPys = new int[9][];
             ulong finalBoard = 0ul;
+            ulong[] finalBoardChanges = new ulong[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS];
 
             for (int i = 0; i < 8; i++)
             {
@@ -1391,7 +1595,17 @@ namespace Miluva
                     int tID = OPys[i][j] + 15 * width + 15;
 
                     if (activatedPixelsSaveState2[tID])
+                    {
                         finalBoard = ULONG_OPERATIONS.SetBitToOne(finalBoard, i * 8 + j);
+
+                        for (int p = 0; p < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1; p++)
+                        {
+                            if (pixelDetVal[tID] <= detthresholds[p])
+                            {
+                                finalBoardChanges[p + 1] = ULONG_OPERATIONS.SetBitToOne(finalBoardChanges[p], i * 8 + j);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1401,9 +1615,13 @@ namespace Miluva
             sw.Stop();
 
             Console.WriteLine("\n");
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(finalBoard));
+            
+            for (int sol = 0; sol < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS; sol++)
+            {
+                STATIC_MAIN_CAMERA_ANALYSER.RESULT.Add(finalBoard ^ finalBoardChanges[sol]);
+            }
 
-            STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
+            //STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
 
             #endregion
         }
@@ -1688,6 +1906,8 @@ namespace Miluva
             int tID = startYPos * width;
             double yProgr = 0d;
 
+            if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
+
             List<(int, int)> rPoints = new List<(int, int)>();
 
             for (int i = 0; i < width; i++)
@@ -1783,13 +2003,12 @@ namespace Miluva
                     if (tID < 0) break;
                 }
 
-                if (tID < 0 || pixelColumnVals[i] == 0) break;
+                if (tID < 0 || pixelColumnVals[tID] == 0) break; // DIESE LINE GRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR [tID]!!
 
                 tID--;
                 xProgr -= pLineXe1VecY;
             }
-
-            return pixelRowVals[tID];
+            return pixelRowVals[tID < 0 ? 0 : tID];
         }
 
         private int GetStartXPosOfVerticalLine(double pLineYe1VecX, (int, int) pPos)
@@ -1853,11 +2072,15 @@ namespace Miluva
             return ids;
         }
 
+        bool[] horhorhor = new bool[1000];
+
         private double GetFilledPrecentageOfHorizontalLine(double pLineXe1VecY, int startYPos)
         {
             int tID = startYPos * width, tC = 0, tC2 = 0;
             double yProgr = 0d;
             List<int> ids = new List<int>();
+
+            if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
 
             for (int i = 0; i < width; i++)
             {
@@ -1890,10 +2113,22 @@ namespace Miluva
 
             double tval = tC / (double)tC2;
 
-            if (horsqstartpos[startYPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST;
+            if (horsqstartpos[startYPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL;
+
+            //bool bbbb = false;
+            //for (int j = -15; j < 16; j++)
+            //{
+            //    if (startYPos + j < 0) continue;
+            //    if (horhorhor[startYPos + j])
+            //    {
+            //        bbbb = true;
+            //        break;
+            //    }
+            //}
 
             if (tval > 0.02)
             {
+                horhorhor[startYPos] = true;
                 horlineids.AddRange(ids);
                 byte tbrightness = (byte)(Math.Clamp(255 * tval + 50, 0, 255));
                 for (int i = 0; i < ids.Count; i++)

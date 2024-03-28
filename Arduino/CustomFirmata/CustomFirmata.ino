@@ -553,6 +553,8 @@ void setup()
   myDisplay.begin();
   myDisplay.setIntensity(0);
   myDisplay.displayClear();
+
+  Firmata.setPinState(3, LOW);
 }
 
 
@@ -594,13 +596,13 @@ void btncontrolpanelcheck() {
 
   unsigned long curTime = millis();
 
-  if (analogRead(1) > 100) {
+  if (analogRead(1) > 500) {
     if (!a1Press) millisA1Press = curTime;
     a1Press = true;
   }
   else a1Press = false;
 
-  if (analogRead(2) > 100) {
+  if (analogRead(2) > 500) {
     if (!a2Press) millisA2Press = curTime;
     a2Press = true;
   }
@@ -701,13 +703,16 @@ void loop()
     case 1:
 
       if (SETUP_CUR_PANEL != CUR_PANEL) {
-        
+        Firmata.setPinState(3, LOW);
         myDisplay.displayClear();
         myDisplay.displayText("Press To Start", PA_CENTER, 100, 0, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
 
       }
 
-      if (tinput > 0) newPanel = 2;
+      if (tinput > 0) {
+        newPanel = 2;
+        Firmata.setPinState(3, HIGH);
+      } 
 
     break;
 
@@ -722,6 +727,19 @@ void loop()
     }
 
     DisplayTimer();
+
+    break;
+    
+    case 3:
+
+      if (SETUP_CUR_PANEL != CUR_PANEL) {
+        myDisplay.displayClear();
+        myDisplay.setTextAlignment(PA_CENTER);
+      }
+
+      myDisplay.print("Error?");
+
+      if (tinput) Firmata.setPinState(5, HIGH);
 
     break;
 
@@ -805,6 +823,7 @@ void loop()
   else {
     millisA2Press = millisA1Press = 0;
     CUR_PANEL = newPanel;
+    Firmata.setPinState(5, LOW);
     Firmata.setPinState(9, anyinputthispanel = LOW);
   }
 }

@@ -73,7 +73,40 @@ namespace Miluva
             //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
 
             //FirmataArdControl.TEST();
-            FirmataArdControl.ARDUINO_GAME();
+
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(
+                
+                ULONG_OPERATIONS.FlipBoard90Degress( 
+                    ULONG_OPERATIONS.SetBitsToOne(0ul, 9, 24,25,26,27,28,29,30,31)
+                    )
+                , 9, 63);
+
+
+            Console.WriteLine(mms.GetDirectionMoveString());
+
+            string outp = "";
+            string[] DEUTSCHE_ANWEISUNGEN = new string[5] { "Oben", "Unten", "Links", "Rechts", "MAGNET" };
+            int tC = 1, ll = -1, fC = 1;
+            for (int i = 0; i < MagnetMovePathfinder.FINAL_ACTIONS.Count; i++)
+            {
+                int tAct = MagnetMovePathfinder.FINAL_ACTIONS[i];
+                if (tAct == ll)
+                {
+                    tC++;
+                }
+                else if (i != 0) {
+                    outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll] + ", ";
+                    fC++;
+                    tC = 1;
+                }
+                ll = tAct;
+            }
+            outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll];
+
+            Console.WriteLine(outp);
+            Console.WriteLine(fC);
+
+            //FirmataArdControl.ARDUINO_GAME();
 
             //MEM_CreateSnapshot("SNAPSHOT_V02_05_001"); 
 

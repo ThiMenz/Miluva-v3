@@ -233,7 +233,7 @@ void setPinModeCallback(byte pin, int mode)
 
 int dataCount = 0;
 long actualData = 0;
-long actionQueue[50];
+long actionQueue[200];
 int countOfQActions;
 bool curMagnetState = false;
 

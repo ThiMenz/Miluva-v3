@@ -16,6 +16,6 @@
 
         // [CLASSIC]
         public static readonly string START_FEN = ENGINE_VALS.DEFAULT_FEN;
-
+        
     }
 }

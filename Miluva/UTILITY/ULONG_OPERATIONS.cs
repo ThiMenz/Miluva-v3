@@ -34,6 +34,16 @@ namespace Miluva
             return 1ul << Oindex2 | ((ulong.MaxValue ^ 1ul << Zindex1) & u);
         }
 
+        public static ulong FlipBoard90Degress(ulong u)
+        {
+            ulong ru = 0ul;
+
+            for (int i = 0; i < 64; i++)
+                if (IsBitOne(u, i)) ru = SetBitsToOne(ru, i % 8 * 8 + (i - i % 8) / 8);
+
+            return ru;
+        }
+
         public static ulong ReverseByteOrder(ulong u)
         {
             return (u & 0xFF00000000000000) >> 56 | 

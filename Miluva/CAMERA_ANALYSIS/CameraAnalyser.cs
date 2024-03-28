@@ -954,13 +954,13 @@ namespace Miluva
 
             int[] tsortidxarr = new int[until];
 
-            //string str = "DatenFunktion({";
+            string str = "DatenFunktion({";
             for (int i = 0; i < until; i++)
             {
                 tsortidxarr[i] = i;
                 if (horlinePrecentageVals[i] < 0.02) horlinePrecentageVals[i] = 0;
 
-                //str += i + (i == until - 1 ? "},{" : ",");
+                str += i + (i == until - 1 ? "},{" : ",");
             }
 
             double[] tintegralVals = new double[until];
@@ -988,7 +988,7 @@ namespace Miluva
 
                 tintegralVals[i] = tintegral;
 
-                //str += horlinePrecentageVals[i].ToString().Replace(",", ".") + (i == until - 1 ? "})" : ",");
+                str += horlinePrecentageVals[i].ToString().Replace(",", ".") + (i == until - 1 ? "})" : ",");
             }
 
             Array.Sort(tintegralVals, tsortidxarr);
@@ -996,7 +996,7 @@ namespace Miluva
             Array.Reverse(tsortidxarr);
 
 
-            //Console.WriteLine(str);
+            Console.WriteLine(str);
 
             bool[] activatedPixelsSaveState3 = new bool[pixelCount];
             activatedPixelsSaveState3 = (bool[])activatedPixels.Clone();
@@ -1906,7 +1906,7 @@ namespace Miluva
             int tID = startYPos * width;
             double yProgr = 0d;
 
-            if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
+            //if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
 
             List<(int, int)> rPoints = new List<(int, int)>();
 

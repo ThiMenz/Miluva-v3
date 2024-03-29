@@ -243,6 +243,8 @@ namespace Miluva
 
         public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
         {
+            Console.WriteLine(startSquareIndex + " | " + endSquareIndex);
+
             FINAL_ACTIONS.Clear();
             if (!setupped)
             {

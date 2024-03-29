@@ -3,6 +3,7 @@ using Solid.Arduino;
 using System.IO.Ports;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Miluva
 {
@@ -79,9 +80,9 @@ namespace Miluva
                 else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
                 else ChangePanel(7, 0, false, false);
 
-                // Pathfinder & Sending Move Infos to Arduino  MISSING!
+                CalculateAndExecutePath(MainBoardManager.allPieceBitboard, tM);
 
-                WaitUntilPinIsOne(9); // Wait until move has been done
+                WaitUntilPinIsOne(4); // Wait until move has been done
 
                 if (tM.isPromotion)
                 {
@@ -179,9 +180,9 @@ namespace Miluva
                 else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
                 else ChangePanel(7, 0, false, false);
 
-                // Pathfinder & Sending Move Infos to Arduino  MISSING!
+                CalculateAndExecutePath(MainBoardManager.allPieceBitboard, tbM);
 
-                WaitUntilPinIsOne(9); // Wait until move has been done
+                WaitUntilPinIsOne(4); // Wait until move has been done
 
                 if (tbM.isPromotion)
                 {
@@ -273,22 +274,24 @@ namespace Miluva
 
             WaitForTickCount(10_000_000L);
 
-            ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 500, 160, DOWN); // Unten
-            ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 500, 160, UP); // Oben
-            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 250, 160, LEFT);
-            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 250, 160, RIGHT);
-            ARDUINO_ACTION MAGNET_UP = new MAGNET_STATE_SET(true);
-            ARDUINO_ACTION MAGNET_DOWN = new MAGNET_STATE_SET(false);
-
+            //ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 250, 160, DOWN); // Unten
+            //ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 250, 160, UP); // Oben
+            //ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 163, 160, LEFT);
+            //ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 163, 160, RIGHT);
+            //ARDUINO_ACTION MAGNET_UP = new MAGNET_STATE_SET(true);
+            //ARDUINO_ACTION MAGNET_DOWN = new MAGNET_STATE_SET(false);
+            
 
             //SESSION.CreateDigitalStateMonitor()
 
             //SESSION.RequestPinState(9);
 
-            ExecuteActions(
-                (MAGNET_UP, 200),
-                (MAGNET_DOWN, 200)
-            );
+           // ExecuteActions(
+           //     //(MAGNET_UP, 200),
+           //     //(MAGNET_DOWN, 200),
+           //     (X_RIGHT, 70)
+           //
+           // );
 
             /*                (Y_DOWN, 200),
                 (X_LEFT, 200),
@@ -305,6 +308,89 @@ namespace Miluva
 
             //CONNECTION.Close();
         }
+
+        public static void CalculateAndExecutePath(ulong pBlockedSquares, Move pMove)
+        {
+            CalculateAndExecutePath(pBlockedSquares, pMove.startPos, pMove.endPos);
+        }
+
+        public static void CalculateAndExecutePath(ulong pBlockedSquares, int pFrom, int pTo)
+        {
+            pFrom = pFrom % 8 * 8 + (pFrom - pFrom % 8) / 8;
+            pTo = pTo % 8 * 8 + (pTo - pTo % 8) / 8;
+
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares), pFrom, pTo);
+            mms.GetDirectionMoveString();
+
+            List<(ARDUINO_ACTION, int)> tActions = new List<(ARDUINO_ACTION, int)>();
+            bool tMagnetState = false;
+
+            string outp = "";
+            string[] DEUTSCHE_ANWEISUNGEN = new string[5] { "Oben", "Unten", "Links", "Rechts", "MAGNET" };
+            int tC = 1, ll = -1, fC = 0;
+            for (int i = 0; i < MagnetMovePathfinder.FINAL_ACTIONS.Count; i++)
+            {
+                int tAct = MagnetMovePathfinder.FINAL_ACTIONS[i];
+                if (tAct == ll)
+                {
+                    tC++;
+                }
+                else if (i != 0)
+                {
+                    outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll] + ", ";
+                    fC++;
+                    AppendPathAction(ref tActions, ref tMagnetState, ll, tC);
+                    tC = 1;
+                }
+                ll = tAct;
+            }
+            if (ll != -1)
+            {
+                fC++;
+                outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll];
+                AppendPathAction(ref tActions, ref tMagnetState, ll, tC);
+            }
+
+            Console.WriteLine("[" + fC + " Actions]  " + outp);
+
+            //foreach ((ARDUINO_ACTION, int) ta in tActions)
+            //    Console.WriteLine(ta);
+
+            ExecuteActions(tActions.ToArray());
+        }
+
+        private static void AppendPathAction(ref List<(ARDUINO_ACTION, int)> pList, ref bool pMagnetState, int pActionID, int pCount)
+        {
+            const int tRPM = 160;
+            const int tDelay = 200;
+
+            switch (pActionID)
+            {
+                case 0: // Oben
+                    ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 163 * pCount, tRPM, UP);
+                    pList.Add((Y_UP, tDelay));
+                    break;
+                case 1: // Unten
+                    ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 163 * pCount, tRPM, DOWN);
+                    pList.Add((Y_DOWN, tDelay));
+                    break;
+                case 2: // Links
+                    ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 163 * pCount, tRPM, LEFT);
+                    pList.Add((X_LEFT, tDelay));
+                    break;
+                case 3: // Rechts
+                    ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 163 * pCount, tRPM, RIGHT);
+                    pList.Add((X_RIGHT, tDelay));
+                    break;
+                case 4: // Magnet
+                    ARDUINO_ACTION MAGNET = new MAGNET_STATE_SET(true);
+                    if (pMagnetState) MAGNET = new MAGNET_STATE_SET(false);
+                    pList.Add((MAGNET, tDelay));
+                    pMagnetState = !pMagnetState;
+                    break;
+            }
+        }
+
 
         private static void SendNumberToArduino(ulong pNum)
         {

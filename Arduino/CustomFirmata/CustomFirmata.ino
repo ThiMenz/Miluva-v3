@@ -233,7 +233,7 @@ void setPinModeCallback(byte pin, int mode)
 
 int dataCount = 0;
 long actualData = 0;
-long actionQueue[200];
+long actionQueue[125];
 int countOfQActions;
 bool curMagnetState = false;
 
@@ -385,6 +385,7 @@ void executeAllEnqueuedActions() {
     processCustomNumberData(actionQueue[i]);
   }
   countOfQActions = 0;
+  Firmata.setPinState(4, HIGH);
   //digitalWrite(10, HIGH);
 }
 
@@ -823,6 +824,7 @@ void loop()
   else {
     millisA2Press = millisA1Press = 0;
     CUR_PANEL = newPanel;
+    Firmata.setPinState(4, LOW);
     Firmata.setPinState(5, LOW);
     Firmata.setPinState(9, anyinputthispanel = LOW);
   }

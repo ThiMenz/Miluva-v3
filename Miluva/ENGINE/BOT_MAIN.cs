@@ -73,7 +73,7 @@ namespace Miluva
             //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
 
             //FirmataArdControl.TEST() ;
-            FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 0,1,8,9,10,11,12,16,18,19,20,24,25,26,27,28), 0, 17);
+            FirmataArdControl.CalculateAndExecuteRochadePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), new Move(4, 6, 7, 5));
 
             /*MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(
                 

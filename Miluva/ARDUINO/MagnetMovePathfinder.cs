@@ -13,6 +13,7 @@ namespace Miluva
         public List<CMove> compressedReversedMoves { get; private set; } = new List<CMove>();
 
         public int curField { get; private set; } = 0;
+        public int backwardsMark { get; private set; } = 0;
 
         public override string ToString()
         {
@@ -61,7 +62,7 @@ namespace Miluva
 
         #region | MOVE MANAGEMENT |
 
-        public string GetDirectionMoveString()
+        public string GetDirectionMoveString(bool pCapture)
         {
             string s = "";
             int f = 0;
@@ -77,14 +78,15 @@ namespace Miluva
                 }
 
                 DMove.Direction tdir = DMove.Direction.Left;
-                if (dif == 1) tdir = DMove.Direction.Up; //Up
-                else if (dif == -1) tdir = DMove.Direction.Down; //Down
+                if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Up; //Up
+                else if (dif == -1 || f == 64) tdir = DMove.Direction.Down; //Down
                 else if (dif > 1) tdir = DMove.Direction.Right; //Right
                 dirMoves.Add(new DMove() { dir = tdir, magnet = individualFields[i].magnet });
                 f = individualFields[i].pos;
             }
 
-            // Löschen jeglicher Vor und Zurück Bewegungen -> Schlussendlich finale Ausgabe
+            if (pCapture) AppendCaptureAddition();
+
             CleanUpDirectionMoves();
 
             //int indivFC = individualFields.Count;
@@ -105,7 +107,7 @@ namespace Miluva
             return s;
         }
 
-        private void CleanUpDirectionMoves()
+        public void CleanUpDirectionMoves()
         {
             bool b = true;
             while (b)
@@ -122,6 +124,51 @@ namespace Miluva
                     }
                 }
             }
+
+            List<DMove> tdmoves = new List<DMove>();
+
+            int tX = 0, tY = 0;
+            for (int i = 0; i < dirMoves.Count; i++)
+            {
+                DMove.Direction dir = dirMoves[i].dir;
+                if (dirMoves[i].magnet)
+                {
+                    if (tX != 0 || tY != 0)
+                    {
+                        DMove.Direction xdir = tX > 0 ? DMove.Direction.Right : DMove.Direction.Left;
+                        DMove.Direction ydir = tY > 0 ? DMove.Direction.Up : DMove.Direction.Down;
+
+                        for (int y = 0; y < Math.Abs(tY); y++) tdmoves.Add(new DMove() { dir = ydir, magnet = false });
+                        for (int x = 0; x < Math.Abs(tX); x++) tdmoves.Add(new DMove() { dir = xdir, magnet = false });
+
+                        tX = tY = 0;
+                    }
+
+                    tdmoves.Add(dirMoves[i]);
+                }
+                else
+                {
+                    if (dir == DMove.Direction.Up) tY++;
+                    else if (dir == DMove.Direction.Down) tY--;
+                    else if (dir == DMove.Direction.Left) tX--;
+                    else if (dir == DMove.Direction.Right) tX++;
+                }
+            }
+
+            DMove.Direction xdirE = tX > 0 ? DMove.Direction.Right : DMove.Direction.Left;
+            DMove.Direction ydirE = tY > 0 ? DMove.Direction.Up : DMove.Direction.Down;
+
+            for (int y = 0; y < Math.Abs(tY); y++) tdmoves.Add(new DMove() { dir = ydirE, magnet = false });
+            for (int x = 0; x < Math.Abs(tX); x++) tdmoves.Add(new DMove() { dir = xdirE, magnet = false });
+            dirMoves = tdmoves;
+        }
+
+        private DMove.Direction GetContradictingDirection(DMove.Direction dir)
+        {
+            if (dir == DMove.Direction.Up) return DMove.Direction.Down;
+            if (dir == DMove.Direction.Down) return DMove.Direction.Up;
+            if (dir == DMove.Direction.Left) return DMove.Direction.Right;
+            return DMove.Direction.Left;
         }
 
         // Überprüft ob zwei Richtungen genau entgegengesetzt sind
@@ -139,7 +186,7 @@ namespace Miluva
         {
             //individualFields.Add(new RMove() { pos = curField, magnet = true });
 
-            CleanUpDirectionMoves();
+            backwardsMark = individualFields.Count - 1;
 
             bool tMag = false;
             for (int i = individualFields.Count; --i > 0;)
@@ -255,6 +302,12 @@ namespace Miluva
             return r;
         }
 
+        public void AppendCaptureAddition()
+        {
+            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = DMove.Direction.Down, magnet = false });
+            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = DMove.Direction.Up, magnet = true });
+        }
+
         #endregion
     }
 
@@ -281,8 +334,7 @@ namespace Miluva
         private static bool setupped = false;
 
         #region | PATHFINDER |
-
-        public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
+        private static void CheckForSetup()
         {
             FINAL_ACTIONS.Clear();
             if (!setupped)
@@ -311,16 +363,50 @@ namespace Miluva
                         v.Y += squareSize;
                     }
                 }
-
-
-                Console.WriteLine(startSquareIndex);
-                Console.WriteLine(endSquareIndex);
-                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(pblockedSquares));
             }
+        }
 
+        public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
+        {
+            return CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
+        }
 
+        public static MagnetMoveSequence CalculateRochadePath(ulong pblockedSquares, int startSquareIndexKING, int endSquareIndexKING, int startSquareIndexROOK, int endSquareIndexROOK)
+        {
+            CheckForSetup();
+            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, startSquareIndexKING, endSquareIndexKING, false);
+            pblockedSquares = ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(pblockedSquares, endSquareIndexKING), startSquareIndexKING);
+            MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndexROOK, endSquareIndexROOK, false);
+
+            MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
+            combinedMMS.dirMoves.AddRange(mms1.dirMoves);
+            combinedMMS.dirMoves.AddRange(mms2.dirMoves);
+            combinedMMS.GetDirectionMoveString(false);
+
+            return combinedMMS;
+        }
+
+        public static MagnetMoveSequence CalculateCapturePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
+        {
+            CheckForSetup();
+            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, endSquareIndex, 31, true);
+            MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
+
+            MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
+            combinedMMS.dirMoves.AddRange(mms1.dirMoves);
+            combinedMMS.dirMoves.AddRange(mms2.dirMoves);
+            combinedMMS.GetDirectionMoveString(false);
+
+            return combinedMMS;
+        }
+
+        public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex, bool isCapturePath)
+        {
+            CheckForSetup();
             Stopwatch sw = Stopwatch.StartNew();
             List<int[]> paths = Dijkstra(startSquareIndex, endSquareIndex, pblockedSquares);
+            //WaterflowPathfinder(pblockedSquares, startSquareIndex, endSquareIndex);
+
             float pathCount = (float)paths.Count;
             MagnetMoveSequence shortestMoveSeq = null;
             int shortestMoveSeqLength = int.MaxValue;
@@ -329,16 +415,19 @@ namespace Miluva
                 MagnetMoveSequence mms = BlockerSubPathFinder(path, pblockedSquares);
                 int tempField = mms.curField;
                 mms.AddIndividualMovesFromPath(path, 0ul, 0ul, false);
+
                 mms.FinishMoveSequence();
+
+                //mms.FinishMoveSequence();
                 if (mms.individualFields.Count < shortestMoveSeqLength)
                 {
                     shortestMoveSeq = mms;
                     shortestMoveSeqLength = mms.individualFields.Count;
                 }
             }
-            sw.Stop();
 
-            Console.WriteLine("[PATHFINDER] Path Calculated in " + sw.ElapsedTicks / 10000d + "ms");
+            sw.Stop();
+            shortestMoveSeq.GetDirectionMoveString(isCapturePath);
 
             return shortestMoveSeq;
         }
@@ -361,8 +450,12 @@ namespace Miluva
                 if (ULONG_OPERATIONS.IsBitOne(blockerUL, path[i]))
                 {
                     blockers.Add(path[i]);
-                    //print(path[i]);
                 }
+            }
+
+            if (ULONG_OPERATIONS.IsBitOne(blockerUL, path[path.Length - 1]))
+            {
+                blockers.Add(path[path.Length - 1]);
             }
 
             int[] subPath;
@@ -417,7 +510,7 @@ namespace Miluva
                 int tempIndex = tempList[i];
 
                 // Falls dieses Feld bereits beschritten wurde oder das Start/End Feld des originalen Paths ist, bietet dieses Feld keine Möglichkeit zur Lösung etwas beizutragen
-                if (ULONG_OPERATIONS.IsBitOne(completelyExcludedFields, tempIndex)) continue;
+                if (ULONG_OPERATIONS.IsBitOne(completelyExcludedFields, tempIndex) && curScore != 0) continue;
 
                 fields.Add(tempIndex);
                 if (ULONG_OPERATIONS.IsBitOne(excludedPathUL, tempIndex))
@@ -430,7 +523,7 @@ namespace Miluva
                     // Die Bewegung auf ein blockiertes Feld benötigt pro Feld einen Schiebeaufwand von 5
                     RecursiveBlockerSubPathfinder(tempIndex, curScore + 5, ULONG_OPERATIONS.SetBitToOne(completelyExcludedFields, tempIndex), blockerUL, excludedPathUL, fields);
                 }
-                else
+                else if (curScore != 0 || ULONG_OPERATIONS.IsBitZero(completelyExcludedFields, tempIndex))
                 {
                     // Sobald ein freies Feld erreicht wurde, wird dieser neue beste Path abgespeichert
                     blockedSubPathRecord = fields.ToArray();
@@ -472,79 +565,6 @@ namespace Miluva
                 paths.Add(waterFlowPathsDict[bestWaterFlowPathBlockSkipPositions[i]]);
             }
             return paths;
-        }
-
-        private static List<int[]> NearestFreeSquareWaterflowPathfinder(ulong pblockedSquares, int startField)
-        {
-            bestWaterFlowPathBlockSkipPositions.Clear();
-            waterFlowPathsDict.Clear();
-            int a = 0;
-
-            // Versuche die Wege mit den am wenigsten blockierten Feldern zu finden
-            while (a < 8 && bestWaterFlowPathBlockSkipPositions.Count == 0)
-            {
-                waterFlowPathLength = 128;
-                RecursiveNearestFreeSquareWaterflowPathfinder(0, startField, a, ULONG_OPERATIONS.SetBitToOne(pblockedSquares, startField), ULONG_OPERATIONS.SetBitToOne(0ul, startField), 0ul, new List<int>() { startField });
-                a++;
-            }
-
-            // Kreiere die Liste an relevanten Paths die sich im Anschluss ausgegeben werden sollen
-            List<int[]> paths = new List<int[]>();
-            for (int i = bestWaterFlowPathBlockSkipPositions.Count; --i > -1;)
-            {
-                paths.Add(waterFlowPathsDict[bestWaterFlowPathBlockSkipPositions[i]]);
-            }
-            return paths;
-        }
-
-        private static void RecursiveNearestFreeSquareWaterflowPathfinder(int plyCount, int lastField, int possibleBlockSkipsLeft, ulong pblockedSquares, ulong lineUL, ulong blockSkipPositions, List<int> curFields)
-        {
-            // Wenn die Suche tiefer ist als der bisher kürzeste gefundene Path lang ist, soll hier die Suche beendet werden
-            if (plyCount > waterFlowPathLength + 4) return;
-
-            // Sobald ein gewünschtes Feld erreicht wurde, wird die Suche ebenfalls beendet
-            if (ULONG_OPERATIONS.IsBitZero(pblockedSquares, lastField))
-            {
-                // Mit der Besonderheit, dass der beste Path ersetzt werden muss, im Falle dass einer gefunden wurde
-                if (waterFlowPathsDict.ContainsKey(blockSkipPositions))
-                {
-                    if (plyCount <= waterFlowPathLength)
-                    {
-                        waterFlowPathLength = plyCount;
-                        waterFlowPathsDict[blockSkipPositions] = curFields.ToArray();
-                    }
-                }
-                else
-                {
-                    bestWaterFlowPathBlockSkipPositions.Add(blockSkipPositions);
-                    waterFlowPathsDict.Add(blockSkipPositions, curFields.ToArray());
-                    if (plyCount < waterFlowPathLength) waterFlowPathLength = plyCount;
-                }
-                return;
-            }
-
-            // Aus Effizienz Gründen diese Pointer Deklarierung
-            List<int> tempList = squares[lastField].directNeighbors;
-
-            // Iteration durch jedes benachbartes Feld
-            for (int i = tempList.Count; --i > -1;)
-            {
-                int tempIndex = tempList[i], subtract = 0;
-
-                // Welches nicht bereits durchquert wurde
-                if (ULONG_OPERATIONS.IsBitOne(lineUL, tempIndex)) continue;
-
-                if (ULONG_OPERATIONS.IsBitOne(pblockedSquares, tempIndex))
-                {
-                    if (possibleBlockSkipsLeft == 0) continue;
-                    subtract = 1;
-                }
-
-                // Tiefenerweiterung der Suche
-                curFields.Add(tempIndex);
-                RecursiveNearestFreeSquareWaterflowPathfinder(plyCount + 1, tempIndex, possibleBlockSkipsLeft - subtract, pblockedSquares, ULONG_OPERATIONS.SetBitToOne(lineUL, tempIndex), subtract == 0 ? blockSkipPositions : ULONG_OPERATIONS.SetBitToOne(blockSkipPositions, tempIndex), curFields);
-                curFields.RemoveAt(curFields.Count - 1);
-            }
         }
 
         private static void RecursiveWaterflowPathfinder(int plyCount, int startField, int endField, int lastField, int possibleBlockSkipsLeft, ulong pblockedSquares, ulong lineUL, ulong blockSkipPositions, List<int> curFields)

@@ -322,7 +322,6 @@ namespace Miluva
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(pBlockedSquares, pFrom, pTo);
-            Console.WriteLine(mms.GetDirectionMoveString());
 
             FinalPathCalcsAndExecutions();
         }
@@ -372,21 +371,31 @@ namespace Miluva
 
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
-            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(pBlockedSquares, pTo, 60); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
-            mms.GetDirectionMoveString();
-
-            int[] tSaveIntL = MagnetMovePathfinder.FINAL_ACTIONS.ToArray();
-
-
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculateCapturePath(pBlockedSquares, pFrom, pTo); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
 
             FinalPathCalcsAndExecutions();
         }
 
         public static void CalculateAndExecuteRochadePath(ulong pBlockedSquares, Move pMove)// MISSING
         {
+            int pFromROOK = SwapRowAndColumn(pMove.startPos), pToROOK = SwapRowAndColumn(pMove.endPos);
+            int pFromKING = SwapRowAndColumn(pMove.rochadeStartPos), pToKING = SwapRowAndColumn(pMove.rochadeEndPos);
+
+            pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
+
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculateRochadePath(pBlockedSquares, pFromKING, pToKING, pFromROOK, pToROOK); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
+
+            FinalPathCalcsAndExecutions();
+
+
             // 1. Zu König ohne Magnet
             // 2. König 2-3 Felder
             // 3. Von dort aus: Turm Algorithmus (Turm Algorithmus von 0 bis zum ersten Magnet UP, folglich ohne Magnet bis dahin und dann die abfolge)
+        }
+
+        private static int SwapRowAndColumn(int pVal)
+        {
+            return pVal % 8 * 8 + (pVal - pVal % 8) / 8;
         }
 
         private static void AppendPathAction(ref List<(ARDUINO_ACTION, int)> pList, ref bool pMagnetState, int pActionID, int pCount)

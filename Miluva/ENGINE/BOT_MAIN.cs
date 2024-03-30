@@ -73,7 +73,7 @@ namespace Miluva
             //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
 
             //FirmataArdControl.TEST() ;
-            //FirmataArdControl.CalculateAndExecutePath(0b1111111111111111, 6, 21);
+            FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 0,1,8,9,10,11,12,16,18,19,20,24,25,26,27,28), 0, 17);
 
             /*MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(
                 
@@ -107,7 +107,7 @@ namespace Miluva
             Console.WriteLine(outp);
             Console.WriteLine(fC);*/
 
-            FirmataArdControl.ARDUINO_GAME();
+            //FirmataArdControl.ARDUINO_GAME();
 
             //MEM_CreateSnapshot("SNAPSHOT_V02_05_001"); 
 

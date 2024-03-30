@@ -319,9 +319,16 @@ namespace Miluva
             pFrom = pFrom % 8 * 8 + (pFrom - pFrom % 8) / 8;
             pTo = pTo % 8 * 8 + (pTo - pTo % 8) / 8;
 
-            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares), pFrom, pTo);
-            mms.GetDirectionMoveString();
+            pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(pBlockedSquares, pFrom, pTo);
+            Console.WriteLine(mms.GetDirectionMoveString());
+
+            FinalPathCalcsAndExecutions();
+        }
+
+        public static void FinalPathCalcsAndExecutions()
+        {
             List<(ARDUINO_ACTION, int)> tActions = new List<(ARDUINO_ACTION, int)>();
             bool tMagnetState = false;
 
@@ -353,10 +360,33 @@ namespace Miluva
 
             Console.WriteLine("[" + fC + " Actions]  " + outp);
 
-            //foreach ((ARDUINO_ACTION, int) ta in tActions)
-            //    Console.WriteLine(ta);
-
             ExecuteActions(tActions.ToArray());
+        }
+
+        public static void CalculateAndExecuteCapturePath(ulong pBlockedSquares, int pFrom, int pTo) // MISSING
+        {
+            // 1. 60 muss iwi so freiwerden, dass nicht der weg von pTo bis 60 blockiert wird 
+
+            pFrom = pFrom % 8 * 8 + (pFrom - pFrom % 8) / 8;
+            pTo = pTo % 8 * 8 + (pTo - pTo % 8) / 8;
+
+            pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
+
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(pBlockedSquares, pTo, 60); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
+            mms.GetDirectionMoveString();
+
+            int[] tSaveIntL = MagnetMovePathfinder.FINAL_ACTIONS.ToArray();
+
+
+
+            FinalPathCalcsAndExecutions();
+        }
+
+        public static void CalculateAndExecuteRochadePath(ulong pBlockedSquares, Move pMove)// MISSING
+        {
+            // 1. Zu König ohne Magnet
+            // 2. König 2-3 Felder
+            // 3. Von dort aus: Turm Algorithmus (Turm Algorithmus von 0 bis zum ersten Magnet UP, folglich ohne Magnet bis dahin und dann die abfolge)
         }
 
         private static void AppendPathAction(ref List<(ARDUINO_ACTION, int)> pList, ref bool pMagnetState, int pActionID, int pCount)

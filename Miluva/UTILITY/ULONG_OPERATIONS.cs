@@ -43,6 +43,21 @@ namespace Miluva
 
             return ru;
         }
+        public static string GetStringBoardVisualizationV0(ulong u)
+        {
+            string r = "";
+
+            for (int i = 7; i > -1; i--)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    r += IsBitOne(u, j * 8 + i) ? "#" : "o";
+                }
+                r += "\n";
+            }
+
+            return r;
+        }
 
         public static ulong ReverseByteOrder(ulong u)
         {

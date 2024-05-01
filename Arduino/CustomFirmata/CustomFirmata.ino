@@ -597,13 +597,13 @@ void btncontrolpanelcheck() {
 
   unsigned long curTime = millis();
 
-  if (analogRead(1) > 500) {
+  if (analogRead(1) < 50) {
     if (!a1Press) millisA1Press = curTime;
     a1Press = true;
   }
   else a1Press = false;
 
-  if (analogRead(2) > 500) {
+  if (analogRead(2) < 50) {
     if (!a2Press) millisA2Press = curTime;
     a2Press = true;
   }

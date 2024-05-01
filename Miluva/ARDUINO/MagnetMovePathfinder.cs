@@ -36,8 +36,9 @@ namespace Miluva
                 if (dir == Direction.Left) c = "L";
                 else if (dir == Direction.Right) c = "R";
                 else if (dir == Direction.Down) c = "U";
-                if (magnet) MagnetMovePathfinder.FINAL_ACTIONS.Add(4);
-                MagnetMovePathfinder.FINAL_ACTIONS.Add((int)dir);
+                //if (magnet) MagnetMovePathfinder.FINAL_ACTIONS.Add(4);
+                //MagnetMovePathfinder.FINAL_ACTIONS.Add((int)dir);
+                MagnetMovePathfinder.FINAL_ACTIONS.Add(((int)dir, magnet));
                 return (magnet ? " M " : " ") + c;
             }
         }
@@ -81,7 +82,12 @@ namespace Miluva
                 if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Up; //Up
                 else if (dif == -1 || f == 64) tdir = DMove.Direction.Down; //Down
                 else if (dif > 1) tdir = DMove.Direction.Right; //Right
-                dirMoves.Add(new DMove() { dir = tdir, magnet = individualFields[i].magnet });
+                //dirMoves.Add(new DMove() { dir = tdir, magnet = individualFields[i].magnet });
+                dirMoves.Add(new DMove()
+                {
+                    dir = tdir,
+                    magnet = individualFields[i].magnet //((i == 0 ? individualFields[i].magnet : ((individualFields[i].magnet && !individualFields[i - 1].magnet) || (!individualFields[i].magnet && individualFields[i - 1].magnet))))
+                });
                 f = individualFields[i].pos;
             }
 
@@ -313,7 +319,7 @@ namespace Miluva
 
     public static class MagnetMovePathfinder
     {
-        public static List<int> FINAL_ACTIONS = new List<int>(); 
+        public static List<(int, bool)> FINAL_ACTIONS = new List<(int, bool)>(); 
 
         private static Vector2 bottomDownVec;
         private static float squareSize, maxDistance;
@@ -366,18 +372,13 @@ namespace Miluva
             }
         }
 
-        public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
-        {
-            return CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
-        }
-
         public static MagnetMoveSequence CalculateRochadePath(ulong pblockedSquares, int startSquareIndexKING, int endSquareIndexKING, int startSquareIndexROOK, int endSquareIndexROOK)
         {
-            CheckForSetup();
             MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, startSquareIndexKING, endSquareIndexKING, false);
             pblockedSquares = ULONG_OPERATIONS.SetBitToZero(ULONG_OPERATIONS.SetBitToOne(pblockedSquares, endSquareIndexKING), startSquareIndexKING);
             MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndexROOK, endSquareIndexROOK, false);
 
+            FINAL_ACTIONS.Clear();
             MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
             combinedMMS.dirMoves.AddRange(mms1.dirMoves);
             combinedMMS.dirMoves.AddRange(mms2.dirMoves);
@@ -388,10 +389,11 @@ namespace Miluva
 
         public static MagnetMoveSequence CalculateCapturePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
         {
-            CheckForSetup();
             MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, endSquareIndex, 31, true);
+            pblockedSquares = ULONG_OPERATIONS.SetBitToZero(pblockedSquares, endSquareIndex);
             MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
 
+            FINAL_ACTIONS.Clear();
             MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
             combinedMMS.dirMoves.AddRange(mms1.dirMoves);
             combinedMMS.dirMoves.AddRange(mms2.dirMoves);
@@ -403,9 +405,13 @@ namespace Miluva
         public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex, bool isCapturePath)
         {
             CheckForSetup();
+
+            //Console.WriteLine(startSquareIndex + "|" + endSquareIndex);
+
             Stopwatch sw = Stopwatch.StartNew();
             List<int[]> paths = Dijkstra(startSquareIndex, endSquareIndex, pblockedSquares);
             //WaterflowPathfinder(pblockedSquares, startSquareIndex, endSquareIndex);
+            //Console.WriteLine(paths.Count);
 
             float pathCount = (float)paths.Count;
             MagnetMoveSequence shortestMoveSeq = null;
@@ -427,6 +433,7 @@ namespace Miluva
             }
 
             sw.Stop();
+            //Console.WriteLine("ElapsedTicks: " + sw.ElapsedTicks);
             shortestMoveSeq.GetDirectionMoveString(isCapturePath);
 
             return shortestMoveSeq;
@@ -633,10 +640,10 @@ namespace Miluva
             //    string str = "";
             //    foreach (int i in iarr)
             //        str += i + ", ";
-            //    print(str);
+            //    Console.WriteLine(str);
             //}
 
-            //print(sw2.ElapsedMilliseconds);
+            //Console.WriteLine(sw2.ElapsedMilliseconds);
 
             return res;
         }

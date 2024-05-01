@@ -3,10 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Transactions;
+using System.Drawing;
 
 #pragma warning disable CS8622
 
@@ -96,6 +101,491 @@ namespace Miluva
 
             double[] tinps = NNUE_DB_DATA.ULONGARRS_TO_NNINPUTS(tULArr);
             Console.WriteLine((neuNet.CalculateOutputs(tinps)[0] - 1) * 400);
+        }
+
+        private static double[] EvNNInp = new double[16];
+        // Math.Net Matrix Multiplication: 16 > 16 (just mult) 2.7s/10mil -> ~1,234,567 e/s
+        // Barebone Double Alignment: 16 > 16 (+ bias & parametric ReLU) 0.69s/10mil -> ~5,000,000 e/s
+
+        public static double EfficientProcessOfNN2()
+        {
+            double A0 = EvNNInp[0], A1 = EvNNInp[1], A2 = EvNNInp[2], A3 = EvNNInp[3], A4 = EvNNInp[4], A5 = EvNNInp[5], A6 = EvNNInp[6], A7 = EvNNInp[7], A8 = EvNNInp[8], A9 = EvNNInp[9], A10 = EvNNInp[10], A11 = EvNNInp[11], A12 = EvNNInp[12], A13 = EvNNInp[13], A14 = EvNNInp[14], A15 = EvNNInp[15];
+            double B0 = EvNNF1(1.2939124758683866 * A0 + .7144785930176016 * A1 - .33053041916129805 * A2 + .5885073379690412 * A3 + .2327717563222625 * A4 + .3927689319298945 * A5 + .748892195383743 * A6 + .6526735194176022 * A7 - .6279161769500395 * A8 + .6693487674606016 * A9 + 1.2918812958967623 * A10 - .40150076821467634 * A11 - .3071596904641261 * A12 + .6506905562563978 * A13 - 1.0280382533403756 * A14 + .3788553210414526 * A15 + .20012883795287567);
+            double B1 = EvNNF1(-.5251675439411643 * A0 + .02916012640154912 * A1 + .5195519161131261 * A2 + .784696558380395 * A3 - .48036868393613824 * A4 - .09638798548844359 * A5 - .6441701444569078 * A6 + .7615376317155985 * A7 - 1.1276483264062558 * A8 + .37795921558744866 * A9 + 1.0114993815942184 * A10 + .9915546138143065 * A11 - .4139508971255122 * A12 - .09133128503848426 * A13 - 1.0293222057765548 * A14 - .9198978958712254 * A15 - .7541271952962914);
+            double B2 = EvNNF1(.17204382727194512 * A0 + .4872156057424523 * A1 + .09264884408461405 * A2 + .23801635710162514 * A3 - .9875164157499237 * A4 + .9945108456705899 * A5 - 1.1026369947079877 * A6 - 1.1097860645097066 * A7 + .1261131345625245 * A8 + .7294696725308117 * A9 + .8566891915023447 * A10 + .29091732165312273 * A11 - 1.3441287249794944 * A12 + 1.0885412503418315 * A13 - .808767966865825 * A14 - 1.498690984653565 * A15 + .35178579193592185);
+            double B3 = EvNNF1(-.4255666254870994 * A0 - .36284906481567236 * A1 + .1838657460710973 * A2 - .20169850100591455 * A3 - .0016588012029849896 * A4 + 1.4448323700706858 * A5 - 1.4006495613992669 * A6 - .2908654082661265 * A7 + .046968461718182496 * A8 - 1.3032507226926875 * A9 - .3869505573901816 * A10 - .576758942714624 * A11 + .733950948138724 * A12 - .8165448928888854 * A13 - .7829774638420676 * A14 + .8271138932054339 * A15 - 1.1938014761139502);
+            double B4 = EvNNF1(-1.7752744872132218 * A0 - .38179690865280363 * A1 - .23954240320655673 * A2 + .21936827874024445 * A3 - 2.3769225461378642 * A4 + .8111980311628033 * A5 + .747424573972328 * A6 - .6651302392800124 * A7 - .20667686816392214 * A8 + .7850012599914834 * A9 - .7001847810611918 * A10 + .616913387197615 * A11 + .4918923203221846 * A12 - 1.0583486102928992 * A13 - .4949096458648162 * A14 - .6566395346679728 * A15 - .070583800534248);
+            double B5 = EvNNF1(.23788739760537386 * A0 - 1.2350522951489635 * A1 - .1693994274128821 * A2 - 1.8211067461733799 * A3 - .20759199590675287 * A4 + .3522044009835585 * A5 - .7895285840297781 * A6 + 1.3919916183905996 * A7 - .516066249698682 * A8 + 1.1753297940856902 * A9 - .0036309605439236183 * A10 + .044145480468437116 * A11 + .1288745788264109 * A12 - .7021613279778405 * A13 + .5936177726302553 * A14 + .9922458787114133 * A15 - .29778183515333767);
+            double B6 = EvNNF1(-.607204120301669 * A0 + .504181327943233 * A1 + .5408933832341137 * A2 + .6852238021888096 * A3 - .8694204755462717 * A4 - 2.0020954626637915 * A5 + .6072123051515698 * A6 + .6478561097415824 * A7 - .38878600005143366 * A8 - 1.846708375723111 * A9 + .5244790392487505 * A10 + .2952851132825455 * A11 + .09003046911205426 * A12 + .5582006409413914 * A13 - .9941700966273607 * A14 + .01726911404559954 * A15 + .02289710578361245);
+            double B7 = EvNNF1(-.8280723170638278 * A0 + 1.4948039053341877 * A1 - .7167415116896612 * A2 - 2.0743703436235346 * A3 + .13124510787653154 * A4 + .17028318419757565 * A5 - .10584454545793598 * A6 + .4263432173593843 * A7 + 1.4286596871663129 * A8 - .05493018503719309 * A9 + .10340877868816728 * A10 - 1.5704340483994672 * A11 + .6741483906687511 * A12 - .1026861096563212 * A13 - 1.3005739314227531 * A14 + .9806039488699464 * A15 + .6226755824596502);
+            double B8 = EvNNF1(.09518458028849523 * A0 - 1.3348385680403336 * A1 - 1.2097181970946587 * A2 + .6169263322312254 * A3 + .7515044008987602 * A4 - 1.1567835441888321 * A5 + .20191123193424593 * A6 - 1.090357433399104 * A7 + .9001690781414188 * A8 - .6798765819642757 * A9 + .9510786466563118 * A10 - 1.0510359487781242 * A11 - .14730614496811373 * A12 + .6169157696337026 * A13 - .929140785651846 * A14 + .6148252005680904 * A15 - 1.0450309200173584);
+            double B9 = EvNNF1(.5094077050008651 * A0 - .1595904931634793 * A1 - .085927866720952 * A2 - .9985215177777437 * A3 - .13264382771239147 * A4 - .09247893671191433 * A5 - 1.242037664256496 * A6 + 1.171470278757055 * A7 - .3384263087886569 * A8 - .4543705013120933 * A9 - .8541750317681269 * A10 + .9194533758248042 * A11 + .07854481776023466 * A12 + .836587562899599 * A13 + .3108337832533169 * A14 - .007425396466211433 * A15 - .47403900362003726);
+            double B10 = EvNNF1(-.22032731018032933 * A0 - .3793651102025629 * A1 + .7002503973741587 * A2 + .3401837705466615 * A3 + .24586680470475328 * A4 + .7610007021026415 * A5 + .8704193624086144 * A6 + .30714891712141223 * A7 - .8622619867099882 * A8 + 1.0785318356830613 * A9 - .2659835001622739 * A10 + .05687892399925499 * A11 - .36496596120663866 * A12 - .8368781890930398 * A13 - .41748508735991396 * A14 - .2595875598399085 * A15 - .8018462298127501);
+            double B11 = EvNNF1(.6779972550885937 * A0 + .5499883045837233 * A1 + .8121852691570575 * A2 - .27568907388536756 * A3 + .4051178288012074 * A4 - 1.4149590096942706 * A5 + .05736774563887564 * A6 - .6525002237201808 * A7 + 1.5273315515976211 * A8 + .027956689231701616 * A9 - 1.3603893600550412 * A10 - .6640407293541395 * A11 - .552715469861783 * A12 - .3641354520557283 * A13 - .42996618653393937 * A14 + 1.2108498248299548 * A15 - .5707794521553853);
+            double B12 = EvNNF1(-.13899559706054798 * A0 + .057281693056448674 * A1 - 1.3567362144432153 * A2 + .36974623535893575 * A3 - .11334634881145728 * A4 - 1.149150070890495 * A5 - 1.042646520988977 * A6 - .1404528804581147 * A7 - .045286260101313966 * A8 + .4561096974457888 * A9 + .6572557316235605 * A10 + .7297122248657536 * A11 - 1.1016390509173013 * A12 - .952567088283 * A13 - .7031377434075385 * A14 - 1.0358707788384387 * A15 + .7277280401312023);
+            double B13 = EvNNF1(.5336646127848031 * A0 + 1.6362474355342072 * A1 - 2.083067035518955 * A2 + .35897937427824306 * A3 + .8257782187903588 * A4 + .1473426797730498 * A5 - .12729188776835237 * A6 + .8515418137848204 * A7 + .6561408326955902 * A8 - .11245168152658001 * A9 - .08084616474694505 * A10 + .9377459869481372 * A11 + .5815275701125212 * A12 + .7037608808949753 * A13 - .6727493998988614 * A14 - .5597606176452271 * A15 + .30627398109292575);
+            double B14 = EvNNF1(.8607698049182083 * A0 - .7824317690456337 * A1 - .49247386062330817 * A2 - .6010574043446629 * A3 - .7803128681126518 * A4 + 1.160739191058728 * A5 + .07701187282883191 * A6 + .6818257522385021 * A7 - .1105610343751127 * A8 - .8588765316138365 * A9 - 1.4057325373149074 * A10 + .22825059956763202 * A11 - 1.2322127469779618 * A12 + .459985925313804 * A13 - .02341015559912013 * A14 - .8831682256231324 * A15 + .6799816175929229);
+            double B15 = EvNNF1(1.2277958749304922 * A0 - .21073478912750682 * A1 + .3371033705008725 * A2 - 1.128479110405675 * A3 + .7619855986591171 * A4 + .7507507517612837 * A5 + .5135144945600948 * A6 + .7662121806291072 * A7 - 1.1253360637117475 * A8 + .9407692090809474 * A9 + .3367552370806927 * A10 - 1.1387442776529226 * A11 - .4926892719289247 * A12 - .6357420866734486 * A13 - .9587499919715513 * A14 - 1.1158301404908015 * A15 - .8226540560516297);
+            double C0 = EvNNF1(-.35724918648929443 * B0 - .39163346923279563 * B1 - .5346354484693351 * B2 - .8282489657370495 * B3 + .75978632035218 * B4 + .1278234662983048 * B5 + .873879760922478 * B6 - 1.433801615061863 * B7 - 1.4507607447759026 * B8 - .6596013145778689 * B9 - .002089065237445665 * B10 - .09322076337303528 * B11 - 1.0640423354712902 * B12 - .703103810161366 * B13 - .8446084553041362 * B14 + 1.460815625930577 * B15 + .4728837623919909);
+            double C1 = EvNNF1(-.22912234342736693 * B0 - .5232626879249168 * B1 - .5616630274284575 * B2 - 1.61032161447203 * B3 + .6767566515695113 * B4 + .6833384711540798 * B5 - .7695118923170944 * B6 - .5519459626227795 * B7 + .9346439623265069 * B8 + .5915881309713791 * B9 - .16919172488880502 * B10 - 1.3024978188987397 * B11 - 1.4014117976396436 * B12 + .13697199476782643 * B13 + .626780697723774 * B14 - 1.424226014308863 * B15 - .36360790497492734);
+            double C2 = EvNNF1(.6101607733132933 * B0 + 1.0682648898392482 * B1 + 1.112702575107594 * B2 - .6016822257312276 * B3 + .658987445367127 * B4 - .11186328363207174 * B5 - 1.3246589314279509 * B6 - .7426476232094859 * B7 + 1.1440748272940764 * B8 + .7157448267011045 * B9 - .6534831634748303 * B10 + .5295295596931714 * B11 + .5839448097701005 * B12 - 1.9103400623838256 * B13 + 1.0262088384474062 * B14 - .9243031189692708 * B15 - .7310704083002796);
+            double C3 = EvNNF1(-1.46807266560381 * B0 - .3459119396085605 * B1 - .7482268916530818 * B2 + .8251506806920794 * B3 - .784207606405777 * B4 - .42767483903323966 * B5 - .7638300787382759 * B6 - .4486447502377349 * B7 + .23899209794571452 * B8 + .4285331120275911 * B9 + .48068800834836767 * B10 + 1.4538144471018484 * B11 - .07892913427405951 * B12 - 2.236319575001519 * B13 + .7826769514214652 * B14 + .538748334784718 * B15 + .5594732374870587);
+            double C4 = EvNNF1(-.4384762506011758 * B0 - .0949464930326346 * B1 + .8959573457590285 * B2 - .8212184242246426 * B3 + .20307471665142046 * B4 + .2602621816200917 * B5 + .7965407336364749 * B6 - .6624951471787777 * B7 - 1.1870201283246566 * B8 + .8415231046846449 * B9 - .16851409897431144 * B10 + .48790159736823246 * B11 - .838535178922647 * B12 + .14557996533955447 * B13 - .43627235585561425 * B14 + .8690867381835783 * B15 - 1.0241227372259494);
+            double C5 = EvNNF1(-1.761159021978136 * B0 - .7383899128270007 * B1 - .29412388670335143 * B2 + 1.3614775908263996 * B3 - .48718350287708506 * B4 - .8724959992943854 * B5 - .9931026441634874 * B6 + .4911563982933518 * B7 - .9920358757573798 * B8 - 1.0610537808428095 * B9 - .4217707075704957 * B10 + .3761292383153669 * B11 + .716198291637229 * B12 - .7818137308092747 * B13 + .2597083619312224 * B14 + .5243675175564089 * B15 + .5829375229217898);
+            double C6 = EvNNF1(-.5299267986149926 * B0 + 1.1236674941527551 * B1 - .6013721330290317 * B2 + .07164092308088514 * B3 - 1.3929597933572235 * B4 + 1.7089226288288522 * B5 + 1.3098930359464998 * B6 + .7483491651834436 * B7 + .9535147323075123 * B8 - .2117248735481771 * B9 - 1.3206167787607574 * B10 + .6018241305542019 * B11 + .5036467023297091 * B12 + .6080927990850712 * B13 - 1.750941046708813 * B14 + .2195638904693054 * B15 - .9189772430298926);
+            double C7 = EvNNF1(-1.0602650616728273 * B0 + .5822686351761024 * B1 - .613541670346213 * B2 - .03531632924236996 * B3 + .21783338882075348 * B4 - 1.5930798783797933 * B5 - .866347960647118 * B6 + .23037908577024307 * B7 + .6417207066200955 * B8 - 1.4310414446151931 * B9 + .20818715804086915 * B10 + .23636183091994165 * B11 - .05915142678912938 * B12 - .01336747610513445 * B13 + .9816443134288294 * B14 - 1.4465915169119623 * B15 + .3043468014815169);
+            return EvNNF2(-1.334734807318012 * C0 - .9700065651193572 * C1 - 1.468390289121036 * C2 + 1.8293397735687222 * C3 - .6800303922632096 * C4 - 1.1871399203595059 * C5 + .9119948658732946 * C6 + 1.2239918631534419 * C7 - .26164839918250454);
+        }
+
+        public static double EvNNF1(double val)
+        {
+            if (val < 0d) return 0.4d * val;
+            return val;
+        }
+        public static int EvNNF2(double val)
+        {
+            return (int)((1d / (1d + Math.Exp(-val)) - .5) * 1000d);
+        }
+
+        public static double ParametricReLU(double val)
+        {
+            //return val < 0d ? 0.1d * val : val;
+
+            if (val < 0d) return 0.1d * val;
+            return val;
+        }
+
+
+        private static NeuralNetwork neuNet2 = new NeuralNetwork(
+
+        NeuronFunctions.ParametricReLU, NeuronFunctions.ParametricReLUDerivative, // STANDARD NEURON FUNCTION
+        NNSigmoid, NNSigmoidDerivative, // OUTPUT NEURON FUNCTION
+        NeuronFunctions.SquaredDeviation, NeuronFunctions.SquareDeviationDerivative, // DEVIATION FUNCTION
+
+        768, 16, 16, 8, 1);
+
+
+        public static double NNSigmoid(double val)
+        {
+            return 1d / (1d + Math.Exp(-0.00625 * val));
+        }
+
+        public static double NNSigmoidDerivative(double val)
+        {
+            return 0.00625 * (val = NNSigmoid(val)) * (1 - val);
+        }
+
+        public static double NNSpecialSquaredDeviation(double val, double expectedVal)
+        {
+            if (Math.Sign(val) == Math.Sign(expectedVal)) return (val - expectedVal) * (val - expectedVal);
+            return 10 * (val - expectedVal) * (val - expectedVal);
+        }
+
+        public static double NNSpecialSquareDeviationDerivative(double val, double expectedVal)
+        {
+            if (Math.Sign(val) == Math.Sign(expectedVal)) return 2 * (val - expectedVal);
+            return 20 * (val - expectedVal);
+        }
+
+        public static void LoadNN2()
+        {
+            neuNet2.LoadNNFromString(
+                File.ReadAllText(PathManager.GetTXTPath("OTHER/CUR_NN"))
+            );
+
+            neuNet2.GetEvaluationFunctionStr();
+
+            double[] tinps = ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(@"8/5k2/5p1p/3p1PpP/1p1P2P1/1P3K2/8/8 b - - 0 59"));
+
+            Console.WriteLine(
+                ConvertNNSigmoidtoCPVals(neuNet2.CalculateOutputs(tinps)[0])
+            );
+        }
+
+        public static void TrainNN2()
+        {
+            const int SIZE_OF_TEST_DATA = 4000;
+
+            neuNet2.GenerateRandomNetwork(new System.Random(), -1f, 1f, -1f, 1f);
+            Console.WriteLine("Generated NN");
+
+            List<TrainingData> tTrainingData = new List<TrainingData>();
+
+            string[] data = File.ReadAllLines(PathManager.GetTXTPath(@"OTHER/OnlyPawnSituations, D = 9, C = 113k"));
+            int skippedLines = 0;
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i].Length < 10)
+                {
+                    skippedLines++;
+                    continue;
+                }
+
+                tTrainingData.Add(new TrainingData(ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(data[i])), new double[] { ConvertCPValsToNNSigmoid(GetCPValFromTXTLine(data[i])) }));
+            }
+
+            Console.WriteLine(skippedLines);
+
+            TrainingData[] TrainingDataArr = RearrangeTrainingData(tTrainingData);
+
+            int tL = TrainingDataArr.Length;
+            TrainingData[] TrainingDataArrPureTraining = new TrainingData[tL - SIZE_OF_TEST_DATA];
+            TrainingData[] TrainingDataArrGeneralizationTest = new TrainingData[SIZE_OF_TEST_DATA];
+            
+            for (int i = 0; i < tL; i++)
+            {
+                if (i < SIZE_OF_TEST_DATA) TrainingDataArrGeneralizationTest[i] = TrainingDataArr[i];
+                else TrainingDataArrPureTraining[i - SIZE_OF_TEST_DATA] = TrainingDataArr[i];
+            }
+
+            TrainingData[][] TrainingDataBatches = TrainingData.CreateMiniBatches(TrainingDataArrPureTraining, 40);
+            int batchCount = TrainingDataBatches.Length;
+            Console.WriteLine("BatchCount: " + batchCount);
+
+            int curBatch = 0;
+            int epoch = 0;
+            double recordDeviation = 1000d;
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < 7_500_000; i++)
+            {
+                neuNet2.GradientDescent(TrainingDataBatches[curBatch], 50, false);
+
+                if (i % batchCount == 0)
+                {
+                    Console.WriteLine(sw.Elapsed);
+                    LogManager.LogText("\n\n\n<<< EPOCH " + ++epoch + " >>> \n");
+
+                    (double, double) testDatasetDeviation = neuNet2.CalculateDeviationTwice(TrainingDataArrGeneralizationTest);
+                    Console.WriteLine("EPOCH " + epoch + ": " + testDatasetDeviation.Item1 + " | " + testDatasetDeviation.Item2);
+
+                    if (recordDeviation > testDatasetDeviation.Item1)
+                    {
+                        neuNet2.RawLog();
+                        recordDeviation = testDatasetDeviation.Item1;
+                        //(double, double) tdev = neuNet2.CalculateDeviationTwice(TrainingDataArrPureTraining);
+                        //Console.WriteLine(tdev.Item1 + " | " + testDatasetDeviation.Item2);
+                    }
+                }
+                if (++curBatch == batchCount) curBatch = 0;
+            }
+
+            Console.WriteLine(neuNet2.CalculateDeviation(TrainingDataArr));
+
+            //neuNet2.RawLog();
+        }
+
+        private static double[] ULONGARRS_TO_NNINPUTS(ulong[] pULArrs)
+        {
+            int tL = pULArrs.Length, a = 0;
+            double[] rArr = new double[tL * 64];
+            for (int j = 0; j < tL; j++)
+                for (int i = 0; i < 64; i++)
+                    rArr[a++] = (pULArrs[j] >> i) & 1;
+            return rArr;
+        }
+
+        public static void PlayThroughDatabase2(BoardManager pBM)
+        {
+            const int MAX_GAME_AMOUNT = 100000;
+
+            pBM.LoadFenString(ENGINE_VALS.DEFAULT_FEN);
+            pBM.SetJumpState();
+
+            List<TrainingData> tTrainingData = new List<TrainingData>();
+
+            //ulong[] ttULArr = new ulong[12];
+
+            Stopwatch swww = Stopwatch.StartNew();
+            //
+            //for (int i = 0; i < 1_000_000; i++)
+            //{
+            //    double[] tArr = NNUE_DB_DATA.ULONGARRS_TO_NNINPUTS(ttULArr);
+            //}
+            //
+            //sw.Stop();
+
+            //Console.WriteLine(DATABASE_SIZE);
+
+            List<string> tempFENS = new List<string>();
+            int[,,,] pieceTypeMatchups = new int[5, 5, 5, 3];
+            int[,,,] pieceTypeMatchupsMoves = new int[5, 5, 5, 3];
+            int ccount = 0, cccount = 0;
+
+            for (int e = 0; e < DATABASE_SIZE && e < MAX_GAME_AMOUNT; e++)
+            {
+
+                List<string> temptempFENS = new List<string>();
+
+                pBM.LoadJumpState();
+                string pStr = DATABASE[e];
+                int tL = pStr.Length;
+                List<char> tchars = new List<char>();
+                List<ulong[]> gameMoveInputs = new List<ulong[]>();
+
+                bool[,,,] gameBlock = new bool[5, 5, 5, 3];
+                bool b = false;
+
+                for (int cpos = 1; cpos < tL; cpos++)
+                {
+
+                    char ch = pStr[cpos];
+                    if (ch == ',')
+                    {
+                        int tMoveHash = NuCRe.GetNumber(new String(tchars.ToArray()));
+                        List<Move> tMoves = new List<Move>();
+                        pBM.GetLegalMoves(ref tMoves);
+                        int ti_tL = tMoves.Count;
+                        for (int m = 0; m < ti_tL; m++)
+                        {
+                            Move tM = tMoves[m];
+                            if (tM.moveHash == tMoveHash)
+                            {
+                                pBM.PlainMakeMove(tM);
+
+                                //ulong[] tULArr = new ulong[12];
+
+                                int[] pieceTypeCounts = new int[7];
+
+                                for (int i = 0; i < 64; i++)
+                                {
+                                    int tPT = pBM.pieceTypeArray[i];
+                                    pieceTypeCounts[tPT]++;
+                                    //if (ULONG_OPERATIONS.IsBitOne(pBM.whitePieceBitboard, i)) tULArr[tPT - 1] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT - 1], i);
+                                    //else if (ULONG_OPERATIONS.IsBitOne(pBM.blackPieceBitboard, i)) tULArr[tPT + 5] = ULONG_OPERATIONS.SetBitToOne(tULArr[tPT + 5], i);
+                                }
+
+                                if (pieceTypeCounts[2] > 4 || pieceTypeCounts[3] > 4 || pieceTypeCounts[4] > 4 || pieceTypeCounts[5] > 2)
+                                {
+                                    if (!b) cccount++;
+                                    b = true;
+                                    break;
+                                }
+
+                                if (pieceTypeCounts[2] == 0 && pieceTypeCounts[3] == 0 && pieceTypeCounts[4] == 0 && pieceTypeCounts[5] == 0)
+                                    tempFENS.Add(pBM.CreateFenString());
+                                if (!gameBlock[pieceTypeCounts[2], pieceTypeCounts[3], pieceTypeCounts[4], pieceTypeCounts[5]]) {
+                                    pieceTypeMatchups[pieceTypeCounts[2], pieceTypeCounts[3], pieceTypeCounts[4], pieceTypeCounts[5]]++;
+                                    gameBlock[pieceTypeCounts[2], pieceTypeCounts[3], pieceTypeCounts[4], pieceTypeCounts[5]] = true;
+                                    ccount++;
+                                }
+                                pieceTypeMatchupsMoves[pieceTypeCounts[2], pieceTypeCounts[3], pieceTypeCounts[4], pieceTypeCounts[5]]++;
+                                // gameMoveInputs.Add(tULArr);
+
+
+                                //for (int j = 0; j < 12; j++)
+                                //    Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(tULArr[j]));
+
+                                break;
+                            }
+                        }
+
+                        tchars.Clear();
+                    }
+                    else tchars.Add(ch);
+                }
+
+                //NNUE_DB_DATA tNDD = new NNUE_DB_DATA(gameMoveInputs, Convert.ToInt32(new String(tchars.ToArray())));
+                //tTrainingData.AddRange(tNDD.TrainingData);
+
+                //if (temptempFENS.Count != 0) tempFENS.Add(temptempFENS[databaseRNG.Next(0, temptempFENS.Count)]);
+
+                if (e % 1000 == 0) Console.WriteLine(e + " Done!");
+            }
+
+            Console.WriteLine(tTrainingData.Count);
+            Console.WriteLine(swww.ElapsedMilliseconds);
+
+            for (int i = 0; i < 5; i++)
+            {
+                for (int i2 = 0; i2 < 5; i2++)
+                {
+                    for (int i3 = 0; i3 < 5; i3++)
+                    {
+                        for (int i4 = 0; i4 < 3; i4++)
+                        {
+                            ConsoleColor consoleColor = (i % 2 == 0 && i2 % 2 == 0 && i3 % 2 == 0 && i4 % 2 == 0) ? ConsoleColor.Green : ((i + i2 + i3 + i4) % 2 == 0 ? ConsoleColor.Yellow :  ConsoleColor.Red);
+
+                            Console.ForegroundColor = consoleColor;
+
+                            Console.WriteLine(
+                                "[" + i + " Knights, " + i2 + " Bishops, " + i3 + " Rooks, " + i4 + " Queens] " + pieceTypeMatchups[i, i2, i3, i4] + " | " + pieceTypeMatchupsMoves[i, i2, i3, i4]
+                                );
+                        }
+                    }
+                }
+            }
+
+            // [4 Knights, 2 Bishops, 2 Rooks, 2 Queens] 473 | 3145
+
+            File.WriteAllLines(PathManager.GetTXTPath("OTHER/TempFenList"), tempFENS);
+
+            Console.WriteLine(cccount);
+
+            return;
+            NeuralNetwork neuNet = new NeuralNetwork(
+
+                NeuronFunctions.ParametricReLU, NeuronFunctions.ParametricReLUDerivative, // STANDARD NEURON FUNCTION
+                OUTPUT_SIGMOID, OUTPUT_SIGMOID_DERIVATIVE, // OUTPUT NEURON FUNCTION
+                NeuronFunctions.SquaredDeviation, NeuronFunctions.SquareDeviationDerivative, // DEVIATION FUNCTION
+
+                768, 16, 8, 7, 1);
+
+            neuNet.GenerateRandomNetwork(new System.Random(), -1f, 1f, -1f, 1f);
+
+            Console.WriteLine("Generated NN");
+
+            TrainingData[] TrainingDataArr = RearrangeTrainingData(tTrainingData);
+            TrainingData[][] TrainingDataBatches = TrainingData.CreateMiniBatches(TrainingDataArr, 40);
+
+            int batchCount = TrainingDataBatches.Length;
+            Console.WriteLine("BatchCount: " + batchCount);
+            int curBatch = 0;
+            int epoch = 0;
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            // ~((0.48/250)*8719)*4
+
+            for (int i = 0; i < 1_500_000; i++)
+            {
+                neuNet.GradientDescent(TrainingDataBatches[curBatch], 1d, false);
+
+                if (i % batchCount == 0)
+                {
+                    Console.WriteLine(sw.Elapsed);
+                    LogManager.LogText("\n\n\n<<< EPOCH " + epoch + " >>> \n");
+                    if (epoch++ % 3 == 0)
+                    {
+                        Console.WriteLine("EPOCH " + epoch + ": " + neuNet.CalculateDeviation(TrainingDataArr));
+                    }
+                    neuNet.RawLog();
+                }
+                if (++curBatch == batchCount) curBatch = 0;
+            }
+
+            Console.WriteLine(neuNet.CalculateDeviation(TrainingDataArr));
+
+            //Console.WriteLine(sw.Elapsed);
+
+            neuNet.RawLog();
+
+            //nnv.InitNeuralNetworkVisualizor(neuNet.layer, new Vector2(-5f, -5f), new Vector2(5f, 5f), valueColorCodeGradient, selectInfoText, new GameObject[4] { knotPrefab, linePrefab, worldSpaceTextPrefab, worldSpaceCanvas });
+            //neuNet.CalculateOutputs(new double[2] { 0.5d, 0.7d }, nnv);
+            //UpdateAIOutputDots();
+            //selectInfoText.text = "Deviation: " + neuNet.CalculateDeviation(trainingData);
+        }
+
+        public static int GetCPValFromTXTLine(string tLine)
+        {
+            int tL = tLine.Length, total = 0, y = 1;
+
+            for (int i = tL; i-- > 0;)
+            {
+                switch (tLine[i])
+                {
+                    case '|':
+                        return total;
+                    case '-':
+                        return -total;
+                }
+
+                total += y * (tLine[i] - 48);
+                y *= 10;
+            }
+
+            return total;
+        }
+
+        public static ulong[] GetNNParamsFromFEN(string pFEN)
+        {
+            int tCharCount = pFEN.Length, tPos = 0;
+            ulong[] uls = new ulong[12];
+            for (int i = 0; i < tCharCount; i++)
+            {
+                int tChar = pFEN[i];
+                if (tChar > 48 && tChar < 58)
+                {
+                    tPos += tChar - 48; // 49 ist die 1; 57 die 9
+                    continue;
+                }
+
+                if (tChar == 32)
+                {
+                    uls[0] |= (((ulong)pFEN[++i] & 1) == 1) ? 1ul : 0ul;
+
+                    break;
+                }
+                
+                switch (tChar)
+                {
+                    case 47:
+                        continue;
+
+
+                    case 75: //K
+                        uls[10] = ULONG_OPERATIONS.SetBitToOne(uls[10], tPos);
+                        break;
+                    case 107: //k
+                        uls[11] = ULONG_OPERATIONS.SetBitToOne(uls[11], tPos);
+                        break;
+                    case 78: //N
+                        uls[2] = ULONG_OPERATIONS.SetBitToOne(uls[2], tPos);
+                        break;
+                    case 110: //n
+                        uls[3] = ULONG_OPERATIONS.SetBitToOne(uls[3], tPos);
+                        break;
+                    case 82: //R
+                        uls[6] = ULONG_OPERATIONS.SetBitToOne(uls[6], tPos);
+                        break;
+                    case 114: //r
+                        uls[7] = ULONG_OPERATIONS.SetBitToOne(uls[7], tPos);
+                        break;
+                    case 66: // B
+                        uls[4] = ULONG_OPERATIONS.SetBitToOne(uls[4], tPos);
+                        break;
+                    case 98: //b
+                        uls[5] = ULONG_OPERATIONS.SetBitToOne(uls[5], tPos);
+                        break;
+                    case 81: //Q
+                        uls[8] = ULONG_OPERATIONS.SetBitToOne(uls[8], tPos);
+                        break;
+                    case 113: //q
+                        uls[9] = ULONG_OPERATIONS.SetBitToOne(uls[9], tPos);
+                        break;
+                    case 80: //P
+                        uls[0] = ULONG_OPERATIONS.SetBitToOne(uls[0], tPos);
+                        break;
+                    case 112: //p
+                        uls[1] = ULONG_OPERATIONS.SetBitToOne(uls[1], tPos); //tPos + 56 - (tPos - tPos % 8)
+                        break;
+                }
+
+                tPos++;
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                uls[i] = ULONG_OPERATIONS.ReverseByteOrder(uls[i]);
+            }
+
+            return uls;
+        }
+
+        public static double ConvertCPValsToNNSigmoid(int pInt)
+        {
+            return 1 / (Math.Exp(-1 / 160d * pInt) + 1);
+        }
+
+        public static double ConvertNNSigmoidtoCPVals(double pD)
+        {
+            return -160 * Math.Log(1 / pD - 1);
+        }
+        public static double ConvertNNSpecialSigmoidtoCPVals(double pD)
+        {
+            return -160 * Math.Log(1 / pD - 1) + .00004 * pD;
         }
 
         public static void PlayThroughDatabase(BoardManager pBM)
@@ -257,6 +747,17 @@ namespace Miluva
             return 1 / (pVal + 1);
         }
 
+        private static double OUTPUT_SPECIAL_SIGMOID(double pVal)
+        {
+            return .00004 * pVal + 1 / (Math.Exp(-1 / 160d * pVal) + 1);
+        }
+
+        private static double OUTPUT_SPECIAL_SIGMOID_DERIVATIVE(double pVal)
+        {
+            double d = Math.Exp(-.00625*pVal);
+            return d / (160 * (2 * d + Math.Exp(-.0125 * pVal) + 1)) + .00004;
+        }
+         
         private static double OUTPUT_SIGMOID(double pVal)
         {
             return 2d / (Math.Exp(-pVal) + 1);

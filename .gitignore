@@ -408,3 +408,7 @@ Chessbot/DATABASES/OpeningDatabaseV1.txt
 Miluva/DATABASES/OpeningDatabaseV1.txt
 Miluva/DATABASES/TLM_DB1.txt
 Miluva/OTHER/ReLeResults.txt
+Miluva/OTHER/OnlyPawnSituations, D = 9, C = 113k.txt
+Miluva/OTHER/OnlyPawnSituations, D = 14, C = 3588.txt
+Miluva/OTHER/OnlyPawn D=14.txt
+Miluva/OTHER/TempFenList.txt

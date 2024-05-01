@@ -212,9 +212,11 @@ namespace Miluva
         private NeuralNetworkLayer outputLayer;
         public NeuralNetworkLayer[] layer { get; private set; }
 
-        private Func<double, double> neuronFunction, neuronDerivativeFunction, diviationFunction, deviationDerivativeFunction, outputNeuronFunction, outputNeuronDerivativeFunction;
+        private Func<double, double> neuronFunction, neuronDerivativeFunction;
+        private Func<double, double, double> diviationFunction, deviationDerivativeFunction;
+        private Func<double, double> outputNeuronFunction, outputNeuronDerivativeFunction;
 
-        public NeuralNetwork(Func<double, double> pNeuronFunction, Func<double, double> pNeuronDerivativeFunction, Func<double, double> pOutputNeuronFunction, Func<double, double> pOutputNeuronDerivativeFunction, Func<double, double> pDeviationFunction, Func<double, double> pDeviationDerivativeFunction, int pInputAmount, params int[] pLayersNodeAmount)
+        public NeuralNetwork(Func<double, double> pNeuronFunction, Func<double, double> pNeuronDerivativeFunction, Func<double, double> pOutputNeuronFunction, Func<double, double> pOutputNeuronDerivativeFunction, Func<double, double, double> pDeviationFunction, Func<double, double, double> pDeviationDerivativeFunction, int pInputAmount, params int[] pLayersNodeAmount)
         {
             layer = new NeuralNetworkLayer[layerAmount = pLayersNodeAmount.Length];
             outputAmount = pLayersNodeAmount[layerAmount - 1];
@@ -232,6 +234,70 @@ namespace Miluva
         public void AddAdditionalNeuronFunctionToOutputLayer(Func<double[], int, double[]> pFunc, Func<double[], int, double[]> pDerivativeFunc)
         {
             outputLayer.AddAdditionalNeuronFunction(pFunc, pDerivativeFunc);
+        }
+
+        public void GetEvaluationFunctionStr()
+        {
+            int prevCountl0 = layer[0].previousLayerNodeAmount, tCountl1 = layer[0].thisLayerNodeAmount;
+            string result0 = "private double[,] NNUE_FIRST_LAYER_WEIGHTS = new double[" + prevCountl0 + "," + tCountl1 + "]{", resultBiases = "private double[] NNUE_FIRST_LAYER_BIASES = new double[" + tCountl1 + "] {" + RemoveLeading0OfDouble(layer[0].biases[0]);
+
+            for (int j = 1; j < tCountl1; j++)
+            {
+                resultBiases += "," + RemoveLeading0OfDouble(layer[0].biases[j]);
+            }
+
+            resultBiases += "};" + Environment.NewLine;
+
+            for (int i = 0; i < prevCountl0; i++)
+            {
+                result0 += "{" + RemoveLeading0OfDouble(layer[0].weights[i, 0]);
+                for (int j = 1; j < tCountl1; j++)
+                {
+                    result0 += "," + RemoveLeading0OfDouble(layer[0].weights[i, j]);
+                }
+                result0 += "}" + (prevCountl0 == i + 1 ? "" : ",");
+            }
+            result0 += "};" + Environment.NewLine + Environment.NewLine+ Environment.NewLine+ Environment.NewLine+ Environment.NewLine;
+
+            string result = "double A0=EvNNF1(NNUE_FIRST_LAYER_VALUES[0])";
+            int prevCountl1 = layer[1].previousLayerNodeAmount;
+
+            for (int p = 1; p < prevCountl1; p++)
+                result += ",A" + p + "=EvNNF1(NNUE_FIRST_LAYER_VALUES[" + p + "])";
+
+            result += ";" + Environment.NewLine;
+
+            for (int i = 1; i < layerAmount; i++)
+            {
+                int prevCount = layer[i].previousLayerNodeAmount, thisCount = layer[i].thisLayerNodeAmount;
+
+                for (int j = 0; j < thisCount; j++)
+                {
+                    result += (layerAmount == i + 1 ? "return EvNNF2" : "double " + (char)(65 + i) + j + "=EvNNF1") + "(";
+
+                    for (int prev = 0; prev < prevCount; prev++) {
+
+                        result += RemoveLeading0OfDouble(layer[i].weights[prev, j]) + "*" + (char)(64 + i) + prev + "+";
+
+                    }
+
+                    result += RemoveLeading0OfDouble(layer[i].biases[j]) + ");" + Environment.NewLine;
+                }
+            }
+
+            Console.WriteLine(resultBiases + result0 + result.Replace("+-", "-"));
+            //Console.WriteLine((char)65);
+        }
+
+        private string RemoveLeading0OfDouble(double pD)
+        {
+            string tStr = pD.ToString().Replace(",", ".");
+            if (pD < 1d && pD != 0d && pD > -1d)
+            {
+                //Console.WriteLine(pD);
+                return pD < 0d ? "-" + tStr.Substring(2, tStr.Length - 2) : tStr.Substring(1, tStr.Length - 1);
+            }
+            return tStr;
         }
 
         public void LoadNNFromString(string pStr)
@@ -337,7 +403,11 @@ namespace Miluva
         public void UpdateAllDeviationGradients(TrainingData pData)
         {
             double[] tNEVCAs;
-            CalculateOutputs(pData.inputs);
+            double[] nnlOutputs = CalculateOutputs(pData.inputs);
+            //double rDeviation = 0d;
+            //for (int outputNode = 0; outputNode < outputAmount; outputNode++)
+            //    rDeviation += diviationFunction(nnlOutputs[outputNode] - pData.expectedOutputs[outputNode]);
+
             NeuralNetworkLayer tNNL = outputLayer;
             tNNL.UpdateLayerGradients(tNEVCAs = tNNL.CalculateOutputLayerNEVCAs(pData.expectedOutputs));
             for (int l = layerAmount - 2; l > -1; l--)
@@ -386,10 +456,34 @@ namespace Miluva
         {
             double rDeviation = 0d;
             double[] nnlOutputs = CalculateOutputs(pData.inputs);
-            NeuralNetworkLayer outputNNL = outputLayer;
             for (int outputNode = 0; outputNode < outputAmount; outputNode++)
-                rDeviation += diviationFunction(nnlOutputs[outputNode] - pData.expectedOutputs[outputNode]);
+            {
+                rDeviation += diviationFunction(nnlOutputs[outputNode], pData.expectedOutputs[outputNode]);
+            }
             return rDeviation;
+        }
+        public (double, double) CalculateDeviationTwice(TrainingData[] pDataArr)
+        {
+            double rDeviation = 0d, rRealDeviation = 0d; ;
+            int arrLen = pDataArr.Length;
+            for (int iData = 0; iData < arrLen; iData++)
+            {
+                (double, double) tdd = CalculateDeviationTwice(pDataArr[iData]);
+                rDeviation += tdd.Item1;
+                rRealDeviation += tdd.Item2;
+            }
+            return (rDeviation / arrLen, rRealDeviation / arrLen);
+        }
+        public (double, double) CalculateDeviationTwice(TrainingData pData)
+        {
+            double rDeviation = 0d, rRealDeviation = 0d;
+            double[] nnlOutputs = CalculateOutputs(pData.inputs);
+            for (int outputNode = 0; outputNode < outputAmount; outputNode++)
+            {
+                rDeviation += diviationFunction(nnlOutputs[outputNode], pData.expectedOutputs[outputNode]);
+                rRealDeviation += Math.Abs(nnlOutputs[outputNode] - pData.expectedOutputs[outputNode]);
+            }
+            return (rDeviation, rRealDeviation);
         }
 
         public double[] GetSortedOutputs(double[] pInputs)
@@ -421,12 +515,13 @@ namespace Miluva
 
         private double[] lastReceivedInputValues, lastReceivedNEVs, lastGivenOutputs;
 
-        private Func<double, double> neuronFunction, neuronDerivativeFunction, diviationFunction, deviationDerivativeFunction;
+        private Func<double, double> neuronFunction, neuronDerivativeFunction;
+        private Func<double, double, double> diviationFunction, deviationDerivativeFunction;
         private Func<double[], int, double[]> additionalNeuronFunction, derivativeOfAdditionalNeuronFunction;
 
         private bool hasAdditionalNeuronFunction = false;
 
-        public NeuralNetworkLayer(int pPrevLayerNodeAmount, int pThisLayerNodeAmount, Func<double, double> pNeuronFunction, Func<double, double> pNeuronDerivativeFunction, Func<double, double> pDiviationFunction, Func<double, double> pDeviationDerivativeFunction)
+        public NeuralNetworkLayer(int pPrevLayerNodeAmount, int pThisLayerNodeAmount, Func<double, double> pNeuronFunction, Func<double, double> pNeuronDerivativeFunction, Func<double, double, double> pDiviationFunction, Func<double, double, double> pDeviationDerivativeFunction)
         {
             neuronFunction = pNeuronFunction;
             neuronDerivativeFunction = pNeuronDerivativeFunction;
@@ -475,7 +570,7 @@ namespace Miluva
         {
             double[] rNEVCA = new double[thisLayerNodeAmount];
             for (int outputNode = 0; outputNode < thisLayerNodeAmount; outputNode++)
-                rNEVCA[outputNode] = neuronDerivativeFunction(lastReceivedNEVs[outputNode]) * deviationDerivativeFunction(lastGivenOutputs[outputNode] - pExpectedOutputs[outputNode]);
+                rNEVCA[outputNode] = neuronDerivativeFunction(lastReceivedNEVs[outputNode]) * deviationDerivativeFunction(lastGivenOutputs[outputNode], pExpectedOutputs[outputNode]);
 
             if (hasAdditionalNeuronFunction)
             {
@@ -613,14 +708,15 @@ namespace Miluva
             return val;
         }
 
-        public static double SquaredDeviation(double val)
+        public static double SquaredDeviation(double val, double expectedVal)
         {
+            val = val - expectedVal;
             return val * val;
         }
 
-        public static double SquareDeviationDerivative(double val)
+        public static double SquareDeviationDerivative(double val, double expectedVal)
         {
-            return 2 * val;
+            return 2 * (val - expectedVal);
         }
 
         public static double ThirdPowerDeviation(double val)
@@ -691,7 +787,7 @@ namespace Miluva
 
         public static double ParametricReLU(double val)
         {
-            if (val < 0d) return 0.1d * val;
+            if (val < 0d) return 0.4d * val;
             return val;
         }
 
@@ -702,7 +798,7 @@ namespace Miluva
 
         public static double ParametricReLUDerivative(double val)
         {
-            return (val > 0d) ? 1d : 0.1d;
+            return (val > 0d) ? 1d : 0.4d;
         }
 
         #endregion

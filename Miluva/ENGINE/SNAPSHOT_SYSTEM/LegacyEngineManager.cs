@@ -162,12 +162,12 @@ namespace Miluva
                 tMove = pWhite.ReturnNextMove(tMove, 1L);
                 if (tMove != null) movehashnucreStrs.Add(NuCRe.GetNuCRe(tMove.moveHash) + ",");
                 tState = pWhite.GameState(false);
-                Console.WriteLine(tMove);
+                //Console.WriteLine(tMove);
                 if (tState != 3) break;
                 tMove = pBlack.ReturnNextMove(tMove, 1L);
                 if (tMove != null) movehashnucreStrs.Add(NuCRe.GetNuCRe(tMove.moveHash) + ",");
                 tState = pBlack.GameState(true);
-                Console.WriteLine(tMove);
+                //Console.WriteLine(tMove);
             } while (tState == 3);
 
             if (tState == 3) Console.WriteLine("?!?!?!?!??!");
@@ -192,7 +192,7 @@ namespace Miluva
         {
             string tstr = File.ReadAllText(PathManager.GetTXTPath("ENGINE/SNAPSHOT_SYSTEM/RawSnapshots"));
 
-            string tstr2 = String.Concat("//AUTO GENERATED USING LegacyEngineManager.cs and the corresponding txt file\r\n#pragma warning disable\r\nusing System.Diagnostics; namespace ChessBot { ", tstr, "}");
+            string tstr2 = String.Concat("//AUTO GENERATED USING LegacyEngineManager.cs and the corresponding txt file\r\n#pragma warning disable\r\nusing System.Diagnostics; namespace Miluva { ", tstr, "}");
 
             File.WriteAllText(PathManager.GetPath("ENGINE/SNAPSHOT_SYSTEM/Snapshots", "cs"), tstr2);
 

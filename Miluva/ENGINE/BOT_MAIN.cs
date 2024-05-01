@@ -42,15 +42,48 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //TLMDatabase.OptimizeSizeOfDatabase();
 
-            //TLMDatabase.LoadNN();
 
+            //double d = -2;
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
+            //for (int i = 0; i < 10_000_000; i++)
+            //    Math.Sign(d);
+            //sw.Stop();
+
+
+            //Console.WriteLine((ulong)d << 63);
+
+
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
+
+            //BoardManager bm = new BoardManager(@"8/3pp3/7p/6p1/p1PPPk2/3K2P1/7P/8 b - - 0 63");
+            //bm.PlayGameOnConsoleAgainstHuman(@"8/3pp3/7p/5kp1/p1PP4/3KP3/6PP/8 w - - 0 62", false, 50_000_000L);
+
+
+            //TLMDatabase.LoadNN2();
+            //TLMDatabase.TrainNN2();
+            //Console.WriteLine(TLMDatabase.EfficientProcessOfNN2());
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
+            //for (int i = 0; i < 10_000_000; i++)
+            //    TLMDatabase.EfficientProcessOfNN2();
+            //sw.Stop();
+
+            //Console.WriteLine(sw.ElapsedTicks + " (" + sw.ElapsedMilliseconds + "ms)");
+
+            //FirmataArdControl.TEST();
+
+            //FirmataArdControl.TEST();
+
+            //TLMDatabase.GetNNParamsFromFEN("8/p7/8/3p4/P1pP1k1p/2P5/6K1/8 w - - 2 48|-666");
+            //Console.WriteLine(TLMDatabase.ConvertCPValsToNNSigmoid(TLMDatabase.GetCPValFromTXTLine("8/p7/8/3p4/P1pP1k1p/2P5/6K1/8 w - - 2 48|-666")));
+
+            //TLMDatabase.PlayThroughDatabase2(new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
 
 
 
@@ -73,7 +106,10 @@ namespace Miluva
             //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
 
             //FirmataArdControl.TEST() ;
-            FirmataArdControl.CalculateAndExecuteRochadePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), new Move(4, 6, 7, 5));
+            //FirmataArdControl.CalculateAndExecuteCapturePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), 2, 26);
+            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), 4, 6);
+            //FirmataArdControl.CalculateAndExecuteRochadePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8, 17, 26, 19, 12, 13, 14, 15), new Move(4, 6, 7, 5)); //ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15)
+            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8, 17, 26, 19, 12, 13, 14, 15), 4, 6);
 
             /*MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(
                 
@@ -109,7 +145,7 @@ namespace Miluva
 
             //FirmataArdControl.ARDUINO_GAME();
 
-            //MEM_CreateSnapshot("SNAPSHOT_V02_05_001"); 
+            //MEM_CreateSnapshot("SNAPSHOT_V02_06_007"); 
 
             //_ = new ReLe_AIHandler();
 
@@ -123,6 +159,7 @@ namespace Miluva
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
             //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
 
+            //MEM_SnapshotClash();
             //MEM_UpdateSnapshotCS();
 
             //MEM_SnapshotClash();
@@ -167,23 +204,27 @@ namespace Miluva
          *  $ V02_03_009: low-fail-rate Delta Pruning
          *  $ V02_03_016: NMH seems to be not helpful under any condition, therefore only new DP Vals
          *  $ V02_04_000: Futility Pruning & QS-TT-Adds
-         * ++ V02_04_001: Rev. Futitlity Pruning / SNMH
+         *  $ V02_04_001: Rev. Futitlity Pruning / SNMH
          *  $ V02_05_000: More or less casual HH & Killer Heuristic
-         *  $ V02_05_001: Countermove Heuristic
+         * ++ V02_05_001: Countermove Heuristic
          *  $ LMR
-         */ 
+         *  $ V02_06_001: NNUEEM (just the ZZZZ-Case)
+         *  $ V02_06_002: no NNUE Eval, but infrastructure
+         *  $ V02_06_003: prev without LMR (BAD!)
+         *  $ V02_06_004: LMR > 3
+         */
 
         private static void MEM_SnapshotClash()
         {
             isFirstBoardManagerInitialized = true;
 
-            IBoardManager[] oppBoards = new BoardManager[16];
-            IBoardManager[] ownBoards = new SNAPSHOT_V02_05_001[16];
+            IBoardManager[] oppBoards = new SNAPSHOT_V02_05_001[16];
+            IBoardManager[] ownBoards = new SNAPSHOT_V02_06_007[16];
             
             for (int i = 0; i < 16; i++)
             {
-                oppBoards[i] = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
-                ownBoards[i] = new SNAPSHOT_V02_05_001(ENGINE_VALS.DEFAULT_FEN);
+                oppBoards[i] = new SNAPSHOT_V02_05_001(ENGINE_VALS.DEFAULT_FEN);
+                ownBoards[i] = new SNAPSHOT_V02_06_007(ENGINE_VALS.DEFAULT_FEN);
             }
 
             LegacyEngineManager.PlayBetweenTwoSnapshots(ownBoards, oppBoards, new TimeFormat() { Time = 40_000_000L, Increment = 100_000L }, 128);

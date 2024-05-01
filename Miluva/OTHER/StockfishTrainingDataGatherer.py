@@ -1,6 +1,8 @@
 from stockfish import Stockfish
+import time
+import os
 
-START_POS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+START_POS = "4k3/2P1P3/5PPp/1K1p4/8/8/8/8 w - - 5 35";
 SEARCH_DEPTH = 3
 
 def ANALYZE_STOCKFISH_RETURN(pRet, pMoveList, pDepth):
@@ -53,12 +55,54 @@ def ANALYZE_STOCKFISH_RETURN(pRet, pMoveList, pDepth):
 
 stockfish = Stockfish(
 	path=r"C:\Users\tpmen\Downloads\stockfish-windows-x86-64-avx2\stockfish\stockfish-windows-x86-64-avx2.exe",
-	depth = 5, 
-	parameters={ "Threads": 10, "UCI_Elo": 4000 }
+	depth = 9, 
+	parameters={ "Threads": 15, "UCI_Elo": 4000, "Hash": 512 }
 )
 
 print(stockfish.get_parameters())
 
-stockfish.set_fen_position(START_POS)
+#stockfish.set_fen_position(START_POS)
+#print(stockfish.get_evaluation())
 
-ANALYZE_STOCKFISH_RETURN(stockfish.get_top_moves(256), [], SEARCH_DEPTH)
+
+
+fenFile = open("TempFenList.txt", "r")
+lns = fenFile.readlines()
+fenFile.close()
+
+fenCount = len(lns)
+
+print(fenCount)
+
+resultArr = [0] * fenCount;
+
+tt = time.time()
+
+for i in range(0, fenCount):
+
+	if (i % 100 == 0): print(i)
+
+	stockfish.set_position(["e2e4", "e7e6"])
+
+	#stockfish.set_fen_position(lns[i])
+
+	#teval = stockfish.get_evaluation()
+	#
+	#if (len(teval["type"]) == 4): 
+	#	if (teval["value"] > 0): resultArr[i] = 9999
+	#	else: resultArr[i] = -9999
+	#
+	#else: resultArr[i] = teval["value"]
+
+print(time.time() - tt)
+
+newFenFile = open("TempFenList2.txt", "w")
+for i in range(0, fenCount):
+	newFenFile.write(lns[i].replace("\n", "").replace("\r", "") + "|" + str(resultArr[i]) + os.linesep)
+newFenFile.close()
+
+# On Depth 9:
+# 1k in 2.7s (Depth 8 <= 2s)
+# 376 * 2.7 = 1015.2 [~17min]
+
+#ANALYZE_STOCKFISH_RETURN(stockfish.get_top_moves(256), [], SEARCH_DEPTH)

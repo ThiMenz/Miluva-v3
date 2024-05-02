@@ -195,7 +195,7 @@ namespace Miluva
 
             neuNet2.GetEvaluationFunctionStr();
 
-            double[] tinps = ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(@"8/5k2/5p1p/3p1PpP/1p1P2P1/1P3K2/8/8 b - - 0 59"));
+            double[] tinps = ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(@"2r4k/p4bp1/4pq2/1p1p4/2n2P2/P2B4/1P5P/1K1RR3 w - - 8 28"));
 
             Console.WriteLine(
                 ConvertNNSigmoidtoCPVals(neuNet2.CalculateOutputs(tinps)[0])
@@ -204,15 +204,18 @@ namespace Miluva
 
         public static void TrainNN2()
         {
-            const int SIZE_OF_TEST_DATA = 4000;
+            const int SIZE_OF_TEST_DATA = 10000;
 
             neuNet2.GenerateRandomNetwork(new System.Random(), -1f, 1f, -1f, 1f);
             Console.WriteLine("Generated NN");
 
             List<TrainingData> tTrainingData = new List<TrainingData>();
 
-            string[] data = File.ReadAllLines(PathManager.GetTXTPath(@"OTHER/OnlyPawnSituations, D = 9, C = 113k"));
-            int skippedLines = 0;
+            string[] data = File.ReadAllLines(@"C:\Users\tpmen\Downloads\chessData.csv\chessData.csv");
+            int skippedLines = 0, ccount = 0;
+
+            int[] cpcategories = new int[6];
+            bool[] bcpcategories = new bool[6];
 
             for (int i = 0; i < data.Length; i++)
             {
@@ -222,10 +225,39 @@ namespace Miluva
                     continue;
                 }
 
-                tTrainingData.Add(new TrainingData(ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(data[i])), new double[] { ConvertCPValsToNNSigmoid(GetCPValFromTXTLine(data[i])) }));
+                int tCPV = GetCPValFromTXTLineV2(data[i]);
+
+                int tcomp = Math.Abs(tCPV), tI;
+                if (tcomp < 50) tI = 0;
+                else if (tcomp < 100) tI = 1;
+                else if (tcomp < 200) tI = 2;
+                else if (tcomp < 400) tI = 3;
+                else if (tcomp < 800) tI = 4;
+                else tI = 5;
+
+                if (cpcategories[tI] >= 80_000)
+                {
+                    if (!bcpcategories[tI])
+                    {
+                        bcpcategories[tI] = true;
+                        Console.WriteLine(tI + ": " + i);
+                    }
+                    if (ccount >= 480_000)
+                    {
+                        Console.WriteLine(i);
+                        break;
+                    }
+                    continue;
+                }
+
+                ccount++;
+                cpcategories[tI]++;
+
+                tTrainingData.Add(new TrainingData(ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(data[i])), new double[] { ConvertCPValsToNNSigmoid(tCPV) }));
             }
 
             Console.WriteLine(skippedLines);
+            Console.WriteLine(tTrainingData.Count);
 
             TrainingData[] TrainingDataArr = RearrangeTrainingData(tTrainingData);
 
@@ -478,6 +510,39 @@ namespace Miluva
             //selectInfoText.text = "Deviation: " + neuNet.CalculateDeviation(trainingData);
         }
 
+        public static int GetCPValFromTXTLineV2(string tLine)
+        {
+            int tL = tLine.Length, total = 0, y = 1;
+
+            for (int i = tL; i-- > 0;)
+            {
+                switch (tLine[i])
+                {
+                    case '#':
+                        if (total > 0) total = 9999;
+                        else total = -9999;
+                        break;
+                    case '-':
+                        total = -total;
+                        break;
+                    case '+':
+                        break;
+
+                    case ',':
+                        return total;
+
+                    default:
+
+                        total += y * (tLine[i] - 48);
+                        y *= 10;
+
+                        break;
+                }
+            }
+
+            return total;
+        }
+
         public static int GetCPValFromTXTLine(string tLine)
         {
             int tL = tLine.Length, total = 0, y = 1;
@@ -514,7 +579,7 @@ namespace Miluva
 
                 if (tChar == 32)
                 {
-                    uls[0] |= (((ulong)pFEN[++i] & 1) == 1) ? 1ul : 0ul;
+                    uls[0] |= (((ulong)pFEN[++i] & 1) == 1) ? 127ul : 0ul;
 
                     break;
                 }
@@ -569,6 +634,8 @@ namespace Miluva
             for (int i = 0; i < 12; i++)
             {
                 uls[i] = ULONG_OPERATIONS.ReverseByteOrder(uls[i]);
+
+                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(uls[i]));
             }
 
             return uls;

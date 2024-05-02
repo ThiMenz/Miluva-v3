@@ -787,7 +787,7 @@ namespace Miluva
 
         public static double ParametricReLU(double val)
         {
-            if (val < 0d) return 0.4d * val;
+            if (val < 0d) return 0.04d * val;
             return val;
         }
 
@@ -798,7 +798,7 @@ namespace Miluva
 
         public static double ParametricReLUDerivative(double val)
         {
-            return (val > 0d) ? 1d : 0.4d;
+            return (val > 0d) ? 1d : 0.04d;
         }
 
         #endregion

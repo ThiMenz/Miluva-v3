@@ -62,9 +62,10 @@ namespace Miluva
             //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
 
             //BoardManager bm = new BoardManager(@"8/3pp3/7p/6p1/p1PPPk2/3K2P1/7P/8 b - - 0 63");
-            //bm.PlayGameOnConsoleAgainstHuman(@"8/3pp3/7p/5kp1/p1PP4/3KP3/6PP/8 w - - 0 62", false, 50_000_000L);
+            //bm.PlayGameOnConsoleAgainstHuman(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false, 50_000_000L);
 
-
+            //TLMDatabase.GetNNParamsFromFEN("2r4k/p4bp1/4pq2/1p1p4/2n2P2/P2B4/1P5P/1K1RR3 w - - 8 28");
+            //
             //TLMDatabase.LoadNN2();
             //TLMDatabase.TrainNN2();
             //Console.WriteLine(TLMDatabase.EfficientProcessOfNN2());

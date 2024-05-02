@@ -11,7 +11,6 @@
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="SolidSoils.Arduino.Client" Version="1.1.1" />
-    <PackageReference Include="Stockfish.NET" Version="1.0.7" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.3" />
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
   </ItemGroup>

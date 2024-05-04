@@ -5,6 +5,29 @@
 
 namespace Miluva
 {
+    // Also was noch gemacht werden muss:
+
+    // - - - - - - - -
+    // Software (Zwangsweise notwendig)
+    // [100%] -> En-Passant Pathfinder
+    // [100%?] -> Image Directions
+    // - - - - - - - -
+    // Software (Wäre cool)
+    // [25%] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
+    // -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
+    // -> Arduino Cam Analysis Error Panel
+
+    // - - - - - - - -
+    // Hardware (Zwangsweise notwendig)
+    // [50%] -> Unterteile kleben
+    // [90%] -> Schachuhr
+    // -> Magnet-Hoch-und-Runter-Mechanismus
+    // -> Figuren CAD & Druck (in richtiger / stabiler Form + weiß)
+    // - - - - - - - -
+
+    // -> Portfolio
+    // -> Video & (Vortragskrempel)
+
     public static class BOT_MAIN
     {
         public readonly static string[] FIGURE_TO_ID_LIST = new string[] { "Nichts", "Bauer", "Springer", "Läufer", "Turm", "Dame", "König" };
@@ -42,7 +65,11 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
+            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(PNG_EXTRACTOR.TurnPerspective(ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 1, 2, 3, 32))));
 
+            //FirmataArdControl.TEST();
+            //FirmataArdControl.SetupArduinoConnection();
+            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(8, 9, 10, 11, 12, 13, 14, 15), new Move(4, 6, 7, 5));
 
             //double d = -2;
             //Stopwatch sw = new Stopwatch();
@@ -67,6 +94,7 @@ namespace Miluva
             //TLMDatabase.GetNNParamsFromFEN("2r4k/p4bp1/4pq2/1p1p4/2n2P2/P2B4/1P5P/1K1RR3 w - - 8 28");
             //
             //TLMDatabase.LoadNN2();
+
             //TLMDatabase.TrainNN2();
             //Console.WriteLine(TLMDatabase.EfficientProcessOfNN2());
             //Stopwatch sw = new Stopwatch();

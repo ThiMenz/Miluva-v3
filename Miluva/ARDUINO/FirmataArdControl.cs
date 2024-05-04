@@ -4,6 +4,7 @@ using System.IO.Ports;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using MathNet.Numerics.Statistics.Mcmc;
 
 namespace Miluva
 {
@@ -14,7 +15,7 @@ namespace Miluva
         private static ArduinoSession? SESSION;
         private static ISerialConnection? CONNECTION;
 
-        private const bool X_MOTOR = true, Y_MOTOR = false, DOWN = false, UP = true, LEFT = false, RIGHT = true;
+        private const bool X_MOTOR = true, Y_MOTOR = false, DOWN = false, UP = true, LEFT = true, RIGHT = false;
 
         public static void SetupArduinoConnection()
         {
@@ -44,6 +45,7 @@ namespace Miluva
         private static ChessClock? HUMAN_CHESS_CLOCK, BOT_CHESS_CLOCK;
         private static int[] promTypeConversionArray = new int[7] { 0, 0, 3, 2, 1, 0, 0 };
         private static int[] promTypeConversionArrayBack = new int[4] { 5, 4, 3, 2 };
+        private static bool CURRENTLY_WHITES_TURN = true;
 
         private static void Classic_Arduino_Game()
         {
@@ -54,9 +56,16 @@ namespace Miluva
             humanChessClock.Set(tfHUMAN);
             HUMAN_CHESS_CLOCK = humanChessClock;
 
+            Move? tM = null;
             BOT_MAIN.SetupParallelBoards();
-            IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0];
+            IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0], AlternativeBoardManager = BOT_MAIN.boardManagers[0];
+            BoardManager NonPlayingBoardManager = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
+
+            if (!(ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.WHITE_ENTITY && ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE)) AlternativeBoardManager = MainBoardManager;
+            else AlternativeBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
             MainBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
+            NonPlayingBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
+
             BOT_CHESS_CLOCK = MainBoardManager.chessClock;
             BOT_CHESS_CLOCK.Set(tfBOT);
 
@@ -65,153 +74,147 @@ namespace Miluva
             bool startFENstartswithwhite = ARDUINO_GAME_SETTINGS.START_FEN.Split('/')[7].Split(' ')[1] == "w";
 
             ChangePanel(1, 0, false, startFENstartswithwhite);
-
-            if (ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ startFENstartswithwhite)
-            {
-                WaitUntilPinIsOne(3);
-
-                Move? tM = MainBoardManager.ReturnNextMove(null, 100_000_000L);
-
-                if (tM == null) // Bot has lost
-                {
-                    ChangePanel(6, 0, false, true);
-                    return;
-                }
-                else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
-                else ChangePanel(7, 0, false, false);
-
-                CalculateAndExecutePath(MainBoardManager.allPieceBitboard, tM);
-
-                WaitUntilPinIsOne(4); // Wait until move has been done
-
-                if (tM.isPromotion)
-                {
-                    ChangePanel(5, promTypeConversionArray[tM.promotionType], false, false);
-                }
-
-                ChangePanel(2, 0, false, !startFENstartswithwhite);
-            }
+            if ( (ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE && startFENstartswithwhite)
+             ||  (ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE && !startFENstartswithwhite) ) WaitUntilPinIsOne(3);
 
             while (true)
             {
-
-                //**********************
-                // HUMAN'S TURN
-                //**********************
-
-                int ttimeC = WaitUntilPinIsOne(9);
-                HUMAN_CHESS_CLOCK.MoveFinished(ttimeC * 5_000_000L);
-
-            ReAnalysis:
-                List<ulong> camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
-                List<Move> tLegalMoves = new List<Move>();
-                MainBoardManager.GetLegalMoves(ref tLegalMoves);
-                MainBoardManager.SetJumpState();
-                Move? tM = null;
-                int tC = tLegalMoves.Count;
-                bool legalMoveFound = false;
-                for (int i = 0; i < tC; i++)
+                if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
+                if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite) != 3) return;
+                switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
                 {
-                    tM = tLegalMoves[i];
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
+                        tM = RealLifePlayerTurn(NonPlayingBoardManager);
+                        break;
 
-                    MainBoardManager.LoadJumpState();
-                    MainBoardManager.PlainMakeMove(tM);
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
+                        tM = EngineTurn(MainBoardManager, tM);
+                        break;
 
-                    //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(MainBoardManager.allPieceBitboard));
-
-                    if (camAnlysisResult.Contains(MainBoardManager.allPieceBitboard))
-                    {
-                        if (tM.isPromotion)
-                        {
-                            ChangePanel(4, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
-                            WaitUntilPinIsOne(10);
-
-                            long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
-                            int tpromType = (int)(ps7 | (ps8 << 1));
-                            MainBoardManager.LoadJumpState();
-
-                            for (int j = 0; j < tC; j++)
-                            {
-                                tM = tLegalMoves[j];
-                                MainBoardManager.PlainMakeMove(tM);
-                                if (camAnlysisResult.Contains(MainBoardManager.allPieceBitboard) && tpromType == tM.promotionType)
-                                {
-                                    legalMoveFound = true;
-                                    break;
-                                }
-                            }
-
-                        }
-                        else legalMoveFound = true;
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
 
                         break;
-                    }
                 }
-
-                MainBoardManager.LoadJumpState();
-
-                if (!legalMoveFound)
+                if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
+                if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite) != 3) return;
+                switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
                 {
-                    ChangePanel(3, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
-                    WaitForTickCount(10_000_000L);
-                    WaitUntilPinIsOne(9);
-                    goto ReAnalysis;
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
+                        tM = RealLifePlayerTurn(NonPlayingBoardManager);
+                        break;
+
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
+                        tM = EngineTurn(MainBoardManager, tM);
+                        break;
+
+                    case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
+
+                        break;
                 }
+            }
+        }
 
-                Console.WriteLine("MOVE FOUND: " + tM);
+        // DC Message Formate
+        // -> Von Figur an gesprochene Version:  (Ziehe / Bewege / Move / Ich möchte den) König [auf / von C3] zu C4 (ziehen) 
+        // -> Simple Algebraic Notation:  oder d2d4[=Q]
 
-                ChangePanel(2, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+        // Erlaubte weiße / schwarze DC IDs
+        // Check für Legimität
 
+        private static Move? EngineTurn(IBoardManager pBoardManager, Move? pMove)
+        {
+            if (pMove == null) return null; // Pretty much irrelevant, just to not get the warning
 
+            Move? tbM = pBoardManager.ReturnNextMove(pMove, 100_000_000L);
 
-                //**********************
-                // BOT'S TURN
-                //**********************
+            if (tbM == null) // Bot has lost
+            {
+                ChangePanel(6, 0, false, true);
+                return null;
+            }
+            else if (pBoardManager.GameState(!CURRENTLY_WHITES_TURN) != 3) return null;
+            else ChangePanel(7, 0, false, false);
 
-                if (tM == null) return; // Pretty much irrelevant, just to not get the warning
+            CalculateAndExecutePath(pBoardManager.allPieceBitboard, tbM);
 
-                Move? tbM = MainBoardManager.ReturnNextMove(tM, 100_000_000L);
+            WaitUntilPinIsOne(4); // Wait until move has been done
 
-                if (tbM == null) // Bot has lost
-                {
-                    ChangePanel(6, 0, false, true);
-                    return;
-                }
-                else if (MainBoardManager.GameState(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE) != 3) return;
-                else ChangePanel(7, 0, false, false);
-
-                CalculateAndExecutePath(MainBoardManager.allPieceBitboard, tbM);
-
-                WaitUntilPinIsOne(4); // Wait until move has been done
-
-                if (tbM.isPromotion)
-                {
-                    ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
-                }
-
-                ChangePanel(2, 0, false, ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+            if (tbM.isPromotion)
+            {
+                ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
             }
 
-            //
-            //WaitForTickCount(5_000_000L);
-            //while (SESSION.GetPinState(10).Value == 0)
-            //{
-            //    WaitForTickCount(5_000_000L);
-            //}
-            //long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
-            //
-            //Console.WriteLine(ps7 | (ps8 << 1));
+            ChangePanel(2, 0, false, ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
 
+            return tbM;
+        }
 
-            // Links = Weiß
+        private static Move? RealLifePlayerTurn(IBoardManager pMainBoardManager)
+        {
+            int ttimeC = WaitUntilPinIsOne(9);
+            HUMAN_CHESS_CLOCK.MoveFinished(ttimeC * 5_000_000L);
 
-            //Console.WriteLine((int)((ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ? humanChessClock : botChessClock).curRemainingTime / 1000000));
-            //
-            //ARDUINO_ACTION PANEL_CHANGE2 = new PANEL_CHANGE(1, 0, false, 
-            //    (
-            //    ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE, true, (int)((ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ? humanChessClock : botChessClock).curRemainingTime / 1000000)
-            //    ) 
-            //);
+        ReAnalysis:
+            List<ulong> camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
+            List<Move> tLegalMoves = new List<Move>();
+            pMainBoardManager.GetLegalMoves(ref tLegalMoves);
+            pMainBoardManager.SetJumpState();
+            Move? tM = null;
+            int tC = tLegalMoves.Count;
+            bool legalMoveFound = false;
+            for (int i = 0; i < tC; i++)
+            {
+                tM = tLegalMoves[i];
+
+                pMainBoardManager.LoadJumpState();
+                pMainBoardManager.PlainMakeMove(tM);
+
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(MainBoardManager.allPieceBitboard));
+
+                if (camAnlysisResult.Contains(pMainBoardManager.allPieceBitboard))
+                {
+                    if (tM.isPromotion)
+                    {
+                        ChangePanel(4, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+                        WaitUntilPinIsOne(10);
+
+                        long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
+                        int tpromType = (int)(ps7 | (ps8 << 1));
+                        pMainBoardManager.LoadJumpState();
+
+                        for (int j = 0; j < tC; j++)
+                        {
+                            tM = tLegalMoves[j];
+                            pMainBoardManager.PlainMakeMove(tM);
+                            if (camAnlysisResult.Contains(pMainBoardManager.allPieceBitboard) && tpromType == tM.promotionType)
+                            {
+                                legalMoveFound = true;
+                                break;
+                            }
+                        }
+
+                    }
+                    else legalMoveFound = true;
+
+                    break;
+                }
+            }
+
+            pMainBoardManager.LoadJumpState();
+
+            if (!legalMoveFound)
+            {
+                ChangePanel(3, 0, false, !CURRENTLY_WHITES_TURN);
+                WaitForTickCount(10_000_000L);
+                WaitUntilPinIsOne(9);
+                goto ReAnalysis;
+            }
+
+            Console.WriteLine("MOVE FOUND: " + tM);
+
+            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
+
+            return tM;
         }
 
         private static void ChangePanel(int pPanelID, int pUniVal, bool pUniBool, bool pNextsWhiteTurn)
@@ -280,10 +283,10 @@ namespace Miluva
 
             Console.WriteLine("?!");
 
-            ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * 5, 160, DOWN); // Unten
-            ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * 5, 160, UP); // Oben
-            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * 5, 160, LEFT);
-            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * 5, 160, RIGHT);
+            ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * 5, 160, DOWN); // Unten
+            ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * 5, 160, UP); // Oben
+            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 5, 160, LEFT);
+            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 5, 160, RIGHT);
             ARDUINO_ACTION MAGNET_UP = new MAGNET_STATE_SET(true);
             ARDUINO_ACTION MAGNET_DOWN = new MAGNET_STATE_SET(false);
             
@@ -294,10 +297,10 @@ namespace Miluva
             
             ExecuteActions(
                 (MAGNET_UP, 200),
-                //(X_RIGHT, 200),
-                //(Y_UP, 200),
+                (X_RIGHT, 200),
                 (X_LEFT, 200),
-                (Y_DOWN, 200),
+                (X_RIGHT, 200),
+                (X_LEFT, 200),
                 (MAGNET_DOWN, 200)
             
             );
@@ -318,9 +321,13 @@ namespace Miluva
             CONNECTION.Close();
         }
 
+        //En Passant Move Sequences are actually missing
         public static void CalculateAndExecutePath(ulong pBlockedSquares, Move pMove)
         {
-            CalculateAndExecutePath(pBlockedSquares, pMove.startPos, pMove.endPos);
+            if (pMove.isRochade) CalculateAndExecuteRochadePath(pBlockedSquares, pMove);
+            else if (pMove.isEnPassant) CalculateAndExecuteEnPassantPath(pBlockedSquares, pMove);
+            else if (pMove.isCapture) CalculateAndExecuteCapturePath(pBlockedSquares, pMove.startPos, pMove.endPos);
+            else CalculateAndExecutePath(pBlockedSquares, pMove.startPos, pMove.endPos);
         }
 
         public static void CalculateAndExecutePath(ulong pBlockedSquares, int pFrom, int pTo)
@@ -344,6 +351,7 @@ namespace Miluva
             string[] DEUTSCHE_ANWEISUNGEN = new string[5] { "Oben", "Unten", "Links", "Rechts", "MAGNET" };
             int tC = 1, fC = 0;
             (int, bool) ll = (-1, false);
+            Console.WriteLine(MagnetMovePathfinder.FINAL_ACTIONS.Count);
             for (int i = 0; i < MagnetMovePathfinder.FINAL_ACTIONS.Count; i++)
             {
                 (int, bool) tAct = MagnetMovePathfinder.FINAL_ACTIONS[i];
@@ -368,6 +376,7 @@ namespace Miluva
             }
 
             Console.WriteLine("[" + fC + " Actions]  " + outp);
+            Console.WriteLine(tActions.Count);
 
             ExecuteActions(tActions.ToArray());
         }
@@ -384,6 +393,23 @@ namespace Miluva
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculateCapturePath(pBlockedSquares, pFrom, pTo); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
 
             FinalPathCalcsAndExecutions();
+        }
+
+        public static void CalculateAndExecuteEnPassantPath(ulong pBlockedSquares, Move pMove)// MISSING
+        {
+            int pFrom = SwapRowAndColumn(pMove.startPos), pTo = SwapRowAndColumn(pMove.endPos);
+            int pEPSq = SwapRowAndColumn(pMove.enPassantOption);
+
+            pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
+
+            MagnetMoveSequence mms = MagnetMovePathfinder.CalculateEnPassantPath(pBlockedSquares, pFrom, pTo, pEPSq);
+
+            FinalPathCalcsAndExecutions();
+
+
+            // 1. Zu König ohne Magnet
+            // 2. König 2-3 Felder
+            // 3. Von dort aus: Turm Algorithmus (Turm Algorithmus von 0 bis zum ersten Magnet UP, folglich ohne Magnet bis dahin und dann die abfolge)
         }
 
         public static void CalculateAndExecuteRochadePath(ulong pBlockedSquares, Move pMove)// MISSING
@@ -413,22 +439,31 @@ namespace Miluva
             const int tRPM = 160;
             const int tDelay = 200;
 
+            if (pMagnetState != pAction.Item2)
+            {
+                Console.WriteLine("=> " + pList.Count);
+
+                pMagnetState = pAction.Item2;
+                ARDUINO_ACTION MAGNET = new MAGNET_STATE_SET(pMagnetState);
+                pList.Add((MAGNET, tDelay));
+            }
+
             switch (pAction.Item1)
             {
                 case 0: // Oben
-                    ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 163 * pCount, tRPM, UP);
+                    ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * pCount, tRPM, UP);
                     pList.Add((Y_UP, tDelay));
                     break;
                 case 1: // Unten
-                    ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 163 * pCount, tRPM, DOWN);
+                    ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * pCount, tRPM, DOWN);
                     pList.Add((Y_DOWN, tDelay));
                     break;
                 case 2: // Links
-                    ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 163 * pCount, tRPM, LEFT);
+                    ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * pCount, tRPM, LEFT);
                     pList.Add((X_LEFT, tDelay));
                     break;
                 case 3: // Rechts
-                    ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 163 * pCount, tRPM, RIGHT);
+                    ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * pCount, tRPM, RIGHT);
                     pList.Add((X_RIGHT, tDelay));
                     break;
                 //case 4: // Magnet
@@ -437,13 +472,6 @@ namespace Miluva
                 //    pList.Add((MAGNET, tDelay));
                 //    pMagnetState = !pMagnetState;
                 //    break;
-            }
-
-            if (pMagnetState != pAction.Item2)
-            {
-                pMagnetState = pAction.Item2;
-                ARDUINO_ACTION MAGNET = new MAGNET_STATE_SET(pMagnetState);
-                pList.Add((MAGNET, tDelay));
             }
         }
 

@@ -402,6 +402,21 @@ namespace Miluva
             return combinedMMS;
         }
 
+        public static MagnetMoveSequence CalculateEnPassantPath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex, int enPassantSquareIndex)
+        {
+            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, enPassantSquareIndex, 31, true);
+            pblockedSquares = ULONG_OPERATIONS.SetBitToZero(pblockedSquares, enPassantSquareIndex);
+            MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
+
+            FINAL_ACTIONS.Clear();
+            MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
+            combinedMMS.dirMoves.AddRange(mms1.dirMoves);
+            combinedMMS.dirMoves.AddRange(mms2.dirMoves);
+            combinedMMS.GetDirectionMoveString(false);
+
+            return combinedMMS;
+        }
+
         public static MagnetMoveSequence CalculatePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex, bool isCapturePath)
         {
             CheckForSetup();

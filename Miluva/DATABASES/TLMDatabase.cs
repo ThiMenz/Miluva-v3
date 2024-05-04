@@ -159,11 +159,22 @@ namespace Miluva
         private static NeuralNetwork neuNet2 = new NeuralNetwork(
 
         NeuronFunctions.ParametricReLU, NeuronFunctions.ParametricReLUDerivative, // STANDARD NEURON FUNCTION
-        NNSigmoid, NNSigmoidDerivative, // OUTPUT NEURON FUNCTION
+        SpecialNNSigmoid, SpecialNNSigmoidDerivative, // OUTPUT NEURON FUNCTION
         NeuronFunctions.SquaredDeviation, NeuronFunctions.SquareDeviationDerivative, // DEVIATION FUNCTION
 
         768, 16, 16, 8, 1);
 
+        public static double SpecialNNSigmoid(double val)
+        {
+            return 1d / (1d + Math.Exp(-0.00625 * val)) + 0.00004 * val;
+        }
+
+        public static double SpecialNNSigmoidDerivative(double val)
+        {
+            double v1 = Math.Exp(-0.00625*val);
+            double v2 = Math.Exp(-0.0125 * val);
+            return (633 * v1 + 4 * v2 + 4) / (200000 * v1 + 100000 * v2 + 100000);
+        }
 
         public static double NNSigmoid(double val)
         {
@@ -198,7 +209,7 @@ namespace Miluva
             double[] tinps = ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(@"2r4k/p4bp1/4pq2/1p1p4/2n2P2/P2B4/1P5P/1K1RR3 w - - 8 28"));
 
             Console.WriteLine(
-                ConvertNNSigmoidtoCPVals(neuNet2.CalculateOutputs(tinps)[0])
+                neuNet2.CalculateOutputs(tinps)[0]
             );
         }
 
@@ -253,7 +264,7 @@ namespace Miluva
                 ccount++;
                 cpcategories[tI]++;
 
-                tTrainingData.Add(new TrainingData(ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(data[i])), new double[] { ConvertCPValsToNNSigmoid(tCPV) }));
+                tTrainingData.Add(new TrainingData(ULONGARRS_TO_NNINPUTS(GetNNParamsFromFEN(data[i])), new double[] { SpecialNNSigmoid(tCPV) }));
             }
 
             Console.WriteLine(skippedLines);
@@ -283,7 +294,7 @@ namespace Miluva
 
             for (int i = 0; i < 7_500_000; i++)
             {
-                neuNet2.GradientDescent(TrainingDataBatches[curBatch], 50, false);
+                neuNet2.GradientDescent(TrainingDataBatches[curBatch], 1, false);
 
                 if (i % batchCount == 0)
                 {
@@ -635,7 +646,7 @@ namespace Miluva
             {
                 uls[i] = ULONG_OPERATIONS.ReverseByteOrder(uls[i]);
 
-                Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(uls[i]));
+                //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(uls[i]));
             }
 
             return uls;

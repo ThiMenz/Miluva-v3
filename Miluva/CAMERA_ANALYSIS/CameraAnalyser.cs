@@ -1618,12 +1618,27 @@ namespace Miluva
             
             for (int sol = 0; sol < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS; sol++)
             {
-                STATIC_MAIN_CAMERA_ANALYSER.RESULT.Add(finalBoard ^ finalBoardChanges[sol]);
+                STATIC_MAIN_CAMERA_ANALYSER.RESULT.Add(TurnPerspective(finalBoard ^ finalBoardChanges[sol]));
             }
 
             //STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
 
             #endregion
+        }
+
+        public static ulong TurnPerspective(ulong pULInp)
+        {
+            switch (ARDUINO_GAME_SETTINGS.CAM_LINE)
+            {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+                    return pULInp;
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a1_h1:
+                    return ULONG_OPERATIONS.ReverseByteOrder(ULONG_OPERATIONS.FlipBoard90Degress(pULInp));
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+                    return ULONG_OPERATIONS.FlipBoardHorizontally(ULONG_OPERATIONS.FlipBoard90Degress(pULInp));
+                default:
+                    return ULONG_OPERATIONS.ReverseByteOrder(ULONG_OPERATIONS.FlipBoardHorizontally(pULInp));
+            }
         }
 
         #region | SPECIFIC IMAGE ANALYSIS FUNCTIONS |

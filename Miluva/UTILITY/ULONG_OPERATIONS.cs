@@ -43,6 +43,16 @@ namespace Miluva
 
             return ru;
         }
+
+        private static int[] vertFlipArr = new int[8] { 7, 5, 3, 1, -1, -3, -5, -7 };
+        public static ulong FlipBoardHorizontally(ulong u)
+        {
+            ulong ru = 0ul;
+            for (int i = 0; i < 64; i++)
+                if (IsBitOne(u, i)) ru = SetBitsToOne(ru, i + vertFlipArr[i % 8]);
+            return ru;
+        }
+
         public static string GetStringBoardVisualizationV0(ulong u)
         {
             string r = "";

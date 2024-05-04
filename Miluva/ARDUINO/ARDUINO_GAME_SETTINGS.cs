@@ -2,7 +2,6 @@
 {
     public static class ARDUINO_GAME_SETTINGS
     {
-
         public static readonly string GAME_MODE = "CLASSIC"; // { Classic }
 
         // [CLASSIC]
@@ -12,10 +11,19 @@
         public static readonly double BOT_INCREMENT_IN_SEC = 2.5;
 
         // [CLASSIC]
-        public static readonly bool HUMAN_PLAYS_WHITE = true;
+        public static ENTITY_TYPE WHITE_ENTITY = ENTITY_TYPE.PLAYER       ,
+                                  BLACK_ENTITY = ENTITY_TYPE.ENGINE       ;
+        public enum ENTITY_TYPE { PLAYER, ENGINE, DISCORD };
 
         // [CLASSIC]
         public static readonly string START_FEN = ENGINE_VALS.DEFAULT_FEN;
-        
+
+        // [CLASSIC]
+        public static readonly CAMERA_BOTTOM_LINE CAM_LINE = CAMERA_BOTTOM_LINE.h8_a8;
+        public enum CAMERA_BOTTOM_LINE { h1_h8, a1_h1, a8_a1, h8_a8 };
+
+
+
+        public static readonly bool HUMAN_PLAYS_WHITE = true;
     }
 }

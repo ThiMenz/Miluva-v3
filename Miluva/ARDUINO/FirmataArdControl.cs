@@ -10,7 +10,7 @@ namespace Miluva
 {
     public static class FirmataArdControl
     {
-        private static Stopwatch sw = new Stopwatch();
+        private static Stopwatch sw = Stopwatch.StartNew();
 
         private static ArduinoSession? SESSION;
         private static ISerialConnection? CONNECTION;
@@ -19,7 +19,6 @@ namespace Miluva
 
         public static void SetupArduinoConnection()
         {
-            sw.Start();
             CONNECTION = GetConnection();
 
             if (CONNECTION != null)
@@ -92,7 +91,7 @@ namespace Miluva
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
-
+                        tM = DiscordTurn(NonPlayingBoardManager);
                         break;
                 }
                 if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
@@ -108,18 +107,102 @@ namespace Miluva
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
-
+                        tM = DiscordTurn(NonPlayingBoardManager);
                         break;
                 }
             }
         }
 
-        // DC Message Formate
-        // -> Von Figur an gesprochene Version:  (Ziehe / Bewege / Move / Ich möchte den) König [auf / von C3] zu C4 (ziehen) 
-        // -> Simple Algebraic Notation:  oder d2d4[=Q]
+        //private static string[] on_words = new string[4] { "von", "on", "auf", "from" };
+        private static string[] to_words = new string[4] { "to", "nach", "zu", "auf" };
 
-        // Erlaubte weiße / schwarze DC IDs
-        // Check für Legimität
+        private static string[,] piece_words = new string[6, 2]
+        {
+            { "bauer", "pawn" },
+            { "springer", "knight" },
+            { "läufer", "bishop" },
+            { "turm", "rook" },
+            { "dame", "queen" },
+            { "könig", "king" }
+        };
+
+        private static int PieceTypeFromString(string pStr)
+        {
+            for (int i = 0; i < piece_words.GetLength(0); i++)
+            {
+                for (int j = 0; j < piece_words.GetLength(1); j++)
+                {
+                    if (pStr == piece_words[i, j])
+                        return i + 1;
+                } 
+            }
+            return 0;
+        } 
+
+        public static int GetSquareFromChars(char pC1, char pC2)
+        {
+            return pC1 - 97 + (pC2 - 49) * 8;
+        }
+
+        public static Move? GetMoveFromDCMessage(string pStr, IBoardManager pB)
+        {
+            List<Move> tMoves = new List<Move>();
+            pB.GetLegalMoves(ref tMoves);
+
+            pStr = pStr.ToLower();
+            bool spokenVersion = false;
+
+            for (int i = 0; i < to_words.Length; i++)
+                if (pStr.Contains(" " + to_words[i] + " "))
+                    spokenVersion = true;
+
+            int pieceStartPos = -1, pieceType = -1, pieceEndpos = -1;
+
+            if (spokenVersion)
+            {
+                string[] pStrSpl = pStr.Split(' ');
+
+                for (int p = 0; p < pStrSpl.Length; p++)
+                {
+                    int tPT = PieceTypeFromString(pStrSpl[p]);
+
+                    if (tPT != 0) pieceType = tPT;
+
+                    if (to_words.Contains(pStrSpl[p]))
+                    {
+                        string pPSq = pStrSpl[--p];
+
+                        if (pPSq.Length != 2) { p++; continue; } 
+
+                        pieceStartPos = GetSquareFromChars(pPSq[0], pPSq[1]);
+                        p += 2;
+                        pPSq = pStrSpl[p];
+                        pieceEndpos = GetSquareFromChars(pPSq[0], pPSq[1]);
+
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                pStr = pStr.Replace(" ", "");
+
+                if (pStr.Length != 4) return null;
+
+                pieceStartPos = GetSquareFromChars(pStr[0], pStr[1]);
+                pieceEndpos = GetSquareFromChars(pStr[2], pStr[3]);
+            }
+
+            for (int i = 0; i < tMoves.Count; i++)
+            {
+                Move tM = tMoves[i];
+                if ((pieceStartPos == -1 || pieceStartPos == tM.startPos) &&
+                    (pieceEndpos == -1 || pieceEndpos == tM.endPos) &&
+                    (pieceType == -1 || pieceType == tM.pieceType)) return tM;
+            }
+
+            return null;
+        }
 
         private static Move? EngineTurn(IBoardManager pBoardManager, Move? pMove)
         {
@@ -144,9 +227,40 @@ namespace Miluva
                 ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
             }
 
-            ChangePanel(2, 0, false, ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
 
             return tbM;
+        }
+
+        public static Move? DiscordTurn(IBoardManager pBoardManager)
+        {
+            Move? tM = null;
+            while (tM == null) {
+                string tStr = "";
+                while (tStr == "")
+                {
+                    WaitForTickCount(1_000_000L);
+                    tStr = File.ReadAllText(PathManager.GetTXTPath("OTHER/DiscordMessages"));
+                }
+                //for (int i = 0; i < tStr.Length; i++) // Eig nicht notwendig, da der DC-Bot sowieso immer nur die aktuelle Zeile beibehält
+                //{
+                int tL = tStr.Length;
+                Console.WriteLine(tStr);
+                if (!(CURRENTLY_WHITES_TURN ? ARDUINO_GAME_SETTINGS.WHITE_DISCORD_IDS : ARDUINO_GAME_SETTINGS.BLACK_DISCORD_IDS).Contains(tStr.Split(':')[0]))
+                    continue;
+
+                for (int j = 0; j < tL; j++)
+                {
+                    char tCh = tStr[j];
+                    if (tCh == ':')
+                    {
+                        string tMessage = tStr.Substring(j + 1);
+                        tM = GetMoveFromDCMessage(tMessage, pBoardManager); // Überprüft auch direkt die Legimität des Zuges
+                        if (tM != null) break;
+                    }
+                }
+            }
+            return tM;
         }
 
         private static Move? RealLifePlayerTurn(IBoardManager pMainBoardManager)
@@ -175,7 +289,7 @@ namespace Miluva
                 {
                     if (tM.isPromotion)
                     {
-                        ChangePanel(4, 0, false, !ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE);
+                        ChangePanel(4, 0, false, CURRENTLY_WHITES_TURN);
                         WaitUntilPinIsOne(10);
 
                         long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
@@ -221,7 +335,7 @@ namespace Miluva
         {
             if (HUMAN_CHESS_CLOCK == null || BOT_CHESS_CLOCK == null) return;
 
-            bool tHT = !(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
+            bool tHT = CURRENTLY_WHITES_TURN; //!(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
             ARDUINO_ACTION PANEL_CHANGE = new PANEL_CHANGE(pPanelID, pUniVal, pUniBool,
             (tHT, pNextsWhiteTurn, (int)((tHT ? HUMAN_CHESS_CLOCK : BOT_CHESS_CLOCK).curRemainingTime / 1000000)));
             ExecuteActions(PANEL_CHANGE);

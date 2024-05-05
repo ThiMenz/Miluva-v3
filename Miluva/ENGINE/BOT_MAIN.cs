@@ -13,7 +13,7 @@ namespace Miluva
     // [100%?] -> Image Directions
     // - - - - - - - -
     // Software (Wäre cool)
-    // [25%] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
+    // [100%?] [Das ist n' sehr großes Fragezeichen xD; noch nicht getestet] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
     // -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
     // -> Arduino Cam Analysis Error Panel
 
@@ -64,6 +64,8 @@ namespace Miluva
             ULONG_OPERATIONS.SetUpCountingArray();
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
+
+            Console.WriteLine(FirmataArdControl.DiscordTurn(new BoardManager(ENGINE_VALS.DEFAULT_FEN)));
 
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(PNG_EXTRACTOR.TurnPerspective(ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 1, 2, 3, 32))));
 

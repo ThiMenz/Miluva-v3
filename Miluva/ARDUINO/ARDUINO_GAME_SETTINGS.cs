@@ -13,6 +13,12 @@
         // [CLASSIC]
         public static ENTITY_TYPE WHITE_ENTITY = ENTITY_TYPE.PLAYER       ,
                                   BLACK_ENTITY = ENTITY_TYPE.ENGINE       ;
+
+        public static List<string> WHITE_DISCORD_IDS = new List<string>()
+        { "719886222809628674" };
+        public static List<string> BLACK_DISCORD_IDS = new List<string>()
+        { };
+
         public enum ENTITY_TYPE { PLAYER, ENGINE, DISCORD };
 
         // [CLASSIC]
@@ -24,6 +30,6 @@
 
 
 
-        public static readonly bool HUMAN_PLAYS_WHITE = true;
+        //public static readonly bool HUMAN_PLAYS_WHITE = true;
     }
 }

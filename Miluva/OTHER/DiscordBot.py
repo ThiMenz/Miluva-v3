@@ -25,3 +25,7 @@ async def on_message(message):
     MFILE.close()
 
 client.run(TOKEN)
+
+MFILE = open("DiscordMessages.txt", "w")
+MFILE.write("")
+MFILE.close()

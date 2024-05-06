@@ -11,17 +11,22 @@ namespace Miluva
     // Software (Zwangsweise notwendig)
     // [100%] -> En-Passant Pathfinder
     // [100%?] -> Image Directions
+    // [100%] -> Fixing 1024+ Motor Steps Bug
     // - - - - - - - -
     // Software (Wäre cool)
-    // [100%?] [Das ist n' sehr großes Fragezeichen xD; noch nicht getestet] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
+    // [85%?] [Das ist n' sehr großes Fragezeichen xD; noch nicht getestet] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
     // -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
-    // -> Arduino Cam Analysis Error Panel
+    
+    
+    //Arduino Cam Analysis Error Panel (glaub tatsächlich nicht das wir es brauchen)
+
+
 
     // - - - - - - - -
     // Hardware (Zwangsweise notwendig)
     // [50%] -> Unterteile kleben
     // [90%] -> Schachuhr
-    // -> Magnet-Hoch-und-Runter-Mechanismus
+    // [100%?] -> Magnet-Hoch-und-Runter-Mechanismus - habs anders gelöst (glaub ich zumindest xD)
     // -> Figuren CAD & Druck (in richtiger / stabiler Form + weiß)
     // - - - - - - - -
 
@@ -65,11 +70,11 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            Console.WriteLine(FirmataArdControl.DiscordTurn(new BoardManager(ENGINE_VALS.DEFAULT_FEN)));
+            //Console.WriteLine(FirmataArdControl.DiscordTurn(new BoardManager(ENGINE_VALS.DEFAULT_FEN)));
 
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(PNG_EXTRACTOR.TurnPerspective(ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 1, 2, 3, 32))));
 
-            //FirmataArdControl.TEST();
+            FirmataArdControl.TEST();
             //FirmataArdControl.SetupArduinoConnection();
             //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(8, 9, 10, 11, 12, 13, 14, 15), new Move(4, 6, 7, 5));
 

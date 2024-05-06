@@ -260,6 +260,13 @@ namespace Miluva
                     }
                 }
             }
+
+            ChangePanel(7, 0, false, false);
+            CalculateAndExecutePath(pBoardManager.allPieceBitboard, tM);
+            WaitUntilPinIsOne(4); // Wait until move has been done
+
+            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
+
             return tM;
         }
 
@@ -399,8 +406,8 @@ namespace Miluva
 
             ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * 5, 160, DOWN); // Unten
             ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * 5, 160, UP); // Oben
-            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 5, 160, LEFT);
-            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 5, 160, RIGHT);
+            ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 7, 160, LEFT);
+            ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * 7, 160, RIGHT);
             ARDUINO_ACTION MAGNET_UP = new MAGNET_STATE_SET(true);
             ARDUINO_ACTION MAGNET_DOWN = new MAGNET_STATE_SET(false);
             
@@ -413,11 +420,13 @@ namespace Miluva
                 (MAGNET_UP, 200),
                 (X_RIGHT, 200),
                 (X_LEFT, 200),
-                (X_RIGHT, 200),
-                (X_LEFT, 200),
+                //(X_RIGHT, 200),
+                //(X_LEFT, 200),
                 (MAGNET_DOWN, 200)
             
             );
+
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(X_LEFT.VAL));
             
             /*                (Y_DOWN, 200),
                 (X_LEFT, 200),
@@ -710,7 +719,9 @@ namespace Miluva
 
             public STEPPER_MOTOR_TURN(bool pMotorAxis, int pSteps, int pRPM, bool pDir)
             {
-                VAL = (pMotorAxis ? 8ul : 0ul) | (pDir ? 4096ul : 0ul) | ((ulong)pRPM << 13) | ((ulong)pSteps << 21);
+                bool b;
+                if (b = pSteps > 1023) pSteps -= 1024;
+                VAL = (b ? 4ul : 0ul) | (pMotorAxis ? 8ul : 0ul) | (pDir ? 4096ul : 0ul) | ((ulong)pRPM << 13) | ((ulong)pSteps << 21);
             }
         }
 

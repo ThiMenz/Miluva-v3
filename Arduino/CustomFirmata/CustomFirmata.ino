@@ -273,19 +273,18 @@ void processCustomNumberData(long pData) {
 
     case 0: // 0 => TURN WITH MOVEMENT SPECIFICATIONS [% ******** *]
 
-      //Serial.print("Steps: ");
-      //Serial.println(remainingData >> 9);
-      //Serial.print("RPM: ");
-      //Serial.println((remainingData >> 1) & 255);
-      //Serial.print("Direction: ");
-      //Serial.println(remainingData & 1);
-      //Serial.print("Axis: ");
-      //Serial.println(bInformation);
-
-      //TURN(450, 150, true, false);
-
       TURN(
         remainingData >> 9, // Steps
+        (remainingData >> 1) & 255,  // RPM
+        remainingData & 1, // Direction
+        bInformation // Axis
+      );
+      break;
+
+    case 4: // 0 => TURN WITH MOVEMENT SPECIFICATIONS AND ADDED 1024 rotations [% ******** *]
+
+      TURN(
+        (remainingData >> 9) + 1024, // Steps
         (remainingData >> 1) & 255,  // RPM
         remainingData & 1, // Direction
         bInformation // Axis
@@ -373,7 +372,7 @@ void processCustomNumberData(long pData) {
 }
 
 void ChangeMagnetState(bool pState) {
-  if (pState == curMagnetState) return;
+  //if (pState == curMagnetState) return;
 
   curMagnetState = pState;
   stepper.setSpeed(MOTOR_RPM_5V);

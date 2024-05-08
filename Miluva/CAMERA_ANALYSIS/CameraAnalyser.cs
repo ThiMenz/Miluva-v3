@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
 using System.Transactions;
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Miluva
 {
@@ -28,11 +30,12 @@ namespace Miluva
         public const int MAX_LINE_WIDTH = 4;
 
         // Prezentsatz der gefüllten Pixel, damit eine horizontale / vertikale Linie als sicher relevant anerkannt werden kann
-        public const double HORIZONTALLINE_FULL_SECURE_DETERMINANT = .28;
+        public const double HORIZONTALLINE_FULL_SECURE_DETERMINANT = .12;
         public const double VERTICALLINE_FULL_SECURE_DETERMINANT = .1;
 
         // Mindestabstand zwischen den einzelnen relevanten Linien; in diesem Intervall entscheidet sich der Algorithmus für die prozentual stärkste Linie
         public const int HORIZONTALLINE_MIN_DIST = 20;
+        public const int VERTICALLINE_MIN_DIST = 20;
 
         // Zwei Horizontale Linien dürfen nicht mehr als dieser Multiplikator des Abstands zur vorherigen Linie auseinander liegen 
         public const double MAX_HORIZONTALLINE_DIST_INCR = 1.5;
@@ -51,14 +54,14 @@ namespace Miluva
         // Zur Verfeinerung dieser Posierung müssen aber mindestens diese Anzahl an Wertpunkten gefunden werden
         public const int HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS = 55;
 
-        public const int HORIZONTALLINE_INTEGRAL_SIZE = 14;
+        public const int HORIZONTALLINE_INTEGRAL_SIZE = 7;
         public const int HORIZONTALLINE_INTEGRAL_MIN_DIST = 14;
 
         // Der mindeste Prozentsatz an benötigten ausgefüllten Pixeln, damit ein gefülltes Objekt als Feld anerkannt werden kann
         public const double SQUARYNESS_DETERMINANT = .47;
 
         // Minimale Größe (Summe aller Pixel) für solch ein Objekt
-        public const double MIN_FILL_OBJECT_SIZE = 1300;
+        public const double MIN_FILL_OBJECT_SIZE = 300;
 
         // Maximales Aspect Ratio für [...]
         public const double SQUARE_MAX_ASPECT_RATIO_DISTORTION = 1.4;
@@ -69,7 +72,8 @@ namespace Miluva
 
         // Sobald eine an ein als Square anerkanntes Objekt angrenzende Linie gefunden wurde; wird sie mit folgedem zusätzlichem addierten Prozentsatz gewichtet
         public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST = 0.2;
-        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL = 0.01;
+        public const double SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL = 0.2;
+        public const double FIRST_HORIZONTAL_LINE_DETECTION_BOOST = 2000;
 
         // Nach der Erstellung des Gitters der Felder; Maximale Anzahl an Randpixeln dieser Felder
         public const int SQUARE_MAX_EDGE_PIXEL = 0;
@@ -81,7 +85,7 @@ namespace Miluva
         public const bool MAIN_AREA_SELECTION_WITH_PIXELCOUNT = true;
 
         // Zusätze zur Main Area benötigen mindestens diese Größe (erneut Pixelmasse)
-        public const int MAIN_AREA_ADDITION_MIN_SIZE = 70000000;
+        public const int MAIN_AREA_ADDITION_MIN_SIZE = 14000000;
 
         // Quadrierter maximaler Abstand, den ein Pixel zu einem anderen der Main Area haben muss
         public const double MAIN_AREA_ADDITION_DIST_THRESHOLD = 100;
@@ -348,762 +352,640 @@ namespace Miluva
 
         public PNG_EXTRACTOR(string pathToPNG, string[] pathToResultPNGs)
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
-            #region | STEP 1 - Color Difference with LAB |
-
-            img = new Bitmap(pathToPNG);
-            height = img.Height;
-            width = img.Width;
-
-            BitmapData imageData = img.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-            byte[] imageBytes = new byte[Math.Abs(imageData.Stride) * height];
-            int[] pixelInts = new int[imageBytes.Length / 3];
-            IntPtr scan0 = imageData.Scan0;
-            Marshal.Copy(scan0, imageBytes, 0, imageBytes.Length);
-
-            pixelCount = pixelInts.Length;
-            int a = 0;
-            activatedPixels = new bool[pixelCount];
-            lookedThroughPixels = new bool[pixelCount];
-            bool[] activatedPixelsSaveState = new bool[pixelCount];
-            bool[] activatedPixelsSaveState2 = new bool[pixelCount];
-            pixelRowVals = new int[pixelCount];
-            pixelColumnVals = new int[pixelCount];
-            pixelToLeftVals = new int[pixelCount];
-            pixelToRightVals = new int[pixelCount];
-
-            for (int i = 0; i < pixelCount; i++)
+            try
             {
-                pixelInts[i] = imageBytes[a] | (imageBytes[a + 1] << 8) | (imageBytes[a + 2] << 16);
-                a += 3;
-            }
 
-            int byteA = 0;
-            for (int i = 0; i < pixelCount; i++)
-            {
-                int tPix = pixelInts[i];
-                if ((i + 1) % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i + 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (i % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i - 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (i + width < pixelCount && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i + width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (width <= i && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i - width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
 
-                activatedPixels[i] = imageBytes[byteA] == edgeColorByte;
+                #region | STEP 1 - Color Difference with LAB |
 
-                byteA += 3;
-            }
+                img = new Bitmap(pathToPNG);
+                height = img.Height;
+                width = img.Width;
 
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[0], ImageFormat.Png);
-            img.UnlockBits(imageData);
-            activatedPixelsSaveState = (bool[])activatedPixels.Clone();
+                BitmapData imageData = img.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+                byte[] imageBytes = new byte[Math.Abs(imageData.Stride) * height];
+                int[] pixelInts = new int[imageBytes.Length / 3];
+                IntPtr scan0 = imageData.Scan0;
+                Marshal.Copy(scan0, imageBytes, 0, imageBytes.Length);
 
-            #endregion
+                pixelCount = pixelInts.Length;
+                int a = 0;
+                activatedPixels = new bool[pixelCount];
+                lookedThroughPixels = new bool[pixelCount];
+                bool[] activatedPixelsSaveState = new bool[pixelCount];
+                bool[] activatedPixelsSaveState2 = new bool[pixelCount];
+                pixelRowVals = new int[pixelCount];
+                pixelColumnVals = new int[pixelCount];
+                pixelToLeftVals = new int[pixelCount];
+                pixelToRightVals = new int[pixelCount];
 
-            #region | STEP 2 - Main Connected Area |
-
-            Console.WriteLine("STEP 1 - Color Difference with LAB   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-            int recordSize = 0, recordSizeSecondary = 0;
-            List<int> recordField = new List<int>();
-            List<List<int>> allFields = new List<List<int>>();
-            List<int> squareSizes = new List<int>();
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                int tRow = (i - i % width) / width, tColumn = i % width;
-                pixelRowVals[i] = tRow;
-                pixelColumnVals[i] = tColumn;
-                pixelToLeftVals[i] = -1;
-                pixelToRightVals[i] = -1;
-            }
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                if (lookedThroughPixels[i])
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    continue;
+                    pixelInts[i] = imageBytes[a] | (imageBytes[a + 1] << 8) | (imageBytes[a + 2] << 16);
+                    a += 3;
                 }
 
-                int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
-
-                int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
-
-                if (activatedPixels[i])
+                int byteA = 0;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    List<int> tField = new List<int>();
-                    RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
+                    int tPix = pixelInts[i];
+                    if ((i + 1) % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i + 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (i % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i - 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (i + width < pixelCount && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i + width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (width <= i && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference(tPix, pixelInts[i - width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
 
-                    allFields.Add(tField);
+                    activatedPixels[i] = imageBytes[byteA] == edgeColorByte;
 
-                    int tSize = (tHighX - tLowX) * (tHighY - tLowY);
-                    squareSizes.Add(tSize);
-                    if (CAM_SETTINGS.MAIN_AREA_SELECTION_WITH_PIXELCOUNT) tSize = tField.Count;
+                    byteA += 3;
+                }
 
-                    //Console.WriteLine(tField.Count);
-                    if (tSize > recordSize)
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[0], ImageFormat.Png);
+                img.UnlockBits(imageData);
+                activatedPixelsSaveState = (bool[])activatedPixels.Clone();
+
+                #endregion
+
+                #region | STEP 2 - Main Connected Area |
+
+                Console.WriteLine("STEP 1 - Color Difference with LAB   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+                int recordSize = 0, recordSizeSecondary = 0;
+                List<int> recordField = new List<int>();
+                List<List<int>> allFields = new List<List<int>>();
+                List<int> squareSizes = new List<int>();
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    int tRow = (i - i % width) / width, tColumn = i % width;
+                    pixelRowVals[i] = tRow;
+                    pixelColumnVals[i] = tColumn;
+                    pixelToLeftVals[i] = -1;
+                    pixelToRightVals[i] = -1;
+                }
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    if (lookedThroughPixels[i])
                     {
-                        recordSizeSecondary = (tHighX - tLowX) * (tHighY - tLowY);
-                        recordField = tField;
-                        recordSize = tSize;
+                        continue;
+                    }
+
+                    int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
+
+                    int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
+
+                    if (activatedPixels[i])
+                    {
+                        List<int> tField = new List<int>();
+                        RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
+
+                        allFields.Add(tField);
+
+                        int tSize = (tHighX - tLowX) * (tHighY - tLowY);
+                        squareSizes.Add(tSize);
+                        if (CAM_SETTINGS.MAIN_AREA_SELECTION_WITH_PIXELCOUNT) tSize = tField.Count;
+
+                        //Console.WriteLine(tField.Count);
+                        if (tSize > recordSize)
+                        {
+                            recordSizeSecondary = (tHighX - tLowX) * (tHighY - tLowY);
+                            recordField = tField;
+                            recordSize = tSize;
+                        }
                     }
                 }
-            }
 
-            int rfc = recordField.Count;
-            bool[] tactPixels = new bool[pixelCount];
-            for (int i = 0; i < rfc; i++)
-            {
-                tactPixels[recordField[i]] = true;
-            }
-
-            List<(int, int)> checkPoints = new List<(int, int)>();
-            for (int i = 0; i < width; i += 3)
-            {
-                int tA = 0;
-                while (tA < pixelCount && !tactPixels[tA]) tA += width;
-                if (tA < pixelCount) checkPoints.Add((pixelColumnVals[tA], pixelRowVals[tA]));
-                tA = pixelCount - i - 1;
-                while (tA > -1 && !tactPixels[tA]) tA -= width;
-                if (tA > -1) checkPoints.Add((pixelColumnVals[tA], pixelRowVals[tA]));
-            }
-
-            int testtest = 0;
-            int afc = allFields.Count, cpc = checkPoints.Count;
-            for (int i = 0; i < afc; i++)
-            {
-                int tC = allFields[i].Count;
-                if (tC < CAM_SETTINGS.MAIN_AREA_ADDITION_MIN_SIZE || squareSizes[i] < recordSizeSecondary) continue;
-
-                for (int j = 0; j < tC; j++)
+                int rfc = recordField.Count;
+                bool[] tactPixels = new bool[pixelCount];
+                for (int i = 0; i < rfc; i++)
                 {
-                    int tidx = allFields[i][j];
-                    int tX = pixelColumnVals[tidx], tY = pixelRowVals[tidx];
+                    tactPixels[recordField[i]] = true;
+                }
 
-                    for (int c = 0; c < cpc; c++)
+                List<(int, int)> checkPoints = new List<(int, int)>();
+                for (int i = 0; i < width; i += 3)
+                {
+                    int tA = 0;
+                    while (tA < pixelCount && !tactPixels[tA]) tA += width;
+                    if (tA < pixelCount) checkPoints.Add((pixelColumnVals[tA], pixelRowVals[tA]));
+                    tA = pixelCount - i - 1;
+                    while (tA > -1 && !tactPixels[tA]) tA -= width;
+                    if (tA > -1) checkPoints.Add((pixelColumnVals[tA], pixelRowVals[tA]));
+                }
+
+                int testtest = 0;
+                int afc = allFields.Count, cpc = checkPoints.Count;
+                for (int i = 0; i < afc; i++)
+                {
+                    int tC = allFields[i].Count;
+                    if (tC < CAM_SETTINGS.MAIN_AREA_ADDITION_MIN_SIZE || squareSizes[i] < recordSizeSecondary) continue;
+
+                    for (int j = 0; j < tC; j++)
                     {
+                        int tidx = allFields[i][j];
+                        int tX = pixelColumnVals[tidx], tY = pixelRowVals[tidx];
 
-                        testtest++;
-
-                        if (EfficientAlternativeToVec2IntTupleDistance((tX, tY), checkPoints[c]) < CAM_SETTINGS.MAIN_AREA_ADDITION_DIST_THRESHOLD)
+                        for (int c = 0; c < cpc; c++)
                         {
-                            for (int k = 0; k < tC; k++)
+
+                            testtest++;
+
+                            if (EfficientAlternativeToVec2IntTupleDistance((tX, tY), checkPoints[c]) < CAM_SETTINGS.MAIN_AREA_ADDITION_DIST_THRESHOLD)
                             {
-                                tactPixels[allFields[i][k]] = true;
+                                for (int k = 0; k < tC; k++)
+                                {
+                                    tactPixels[allFields[i][k]] = true;
+                                }
+
+                                goto ContinueWithOtherAreas;
                             }
 
-                            goto ContinueWithOtherAreas;
                         }
-
                     }
+
+                ContinueWithOtherAreas:;
                 }
 
-            ContinueWithOtherAreas:;
-            }
+                //Console.WriteLine(cpc);
+                //Console.WriteLine(testtest);
 
-            //Console.WriteLine(cpc);
-            //Console.WriteLine(testtest);
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++)
-            {
-                if (tactPixels[i])
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    activatedPixels[i] = true;
-                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    if (tactPixels[i])
+                    {
+                        activatedPixels[i] = true;
+                        imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    }
+                    else
+                    {
+                        activatedPixels[i] = false;
+                        imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                    }
+
+                    lookedThroughPixels[i] = false;
+                    byteA += 3;
                 }
-                else
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[1], ImageFormat.Png);
+                activatedPixelsSaveState2 = (bool[])activatedPixels.Clone();
+
+                #endregion
+
+                #region | STEP 3 - Recognizable Square Selection |
+
+                Console.WriteLine("STEP 2 - Main Connected Area   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+                for (int i = 0; i < width; i++)
                 {
-                    activatedPixels[i] = false;
-                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-                }
-
-                lookedThroughPixels[i] = false;
-                byteA += 3;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[1], ImageFormat.Png);
-            activatedPixelsSaveState2 = (bool[])activatedPixels.Clone();
-
-            #endregion
-
-            #region | STEP 3 - Recognizable Square Selection |
-
-            Console.WriteLine("STEP 2 - Main Connected Area   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-            for (int i = 0; i < width; i++)
-            {
-                if (lookedThroughPixels[i] || activatedPixels[i])
-                {
-                    continue;
-                }
-                List<int> fillL = new List<int>();
-                FillReplacementDetermination(ref fillL, i);
-                int tC = fillL.Count;
-                for (int j = 0; j < tC; j++)
-                {
-                    activatedPixels[fillL[j]] = true;
-                    int tA = fillL[j] * 3;
-                    imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = edgeColorByte;
-                }
-            }
-
-            for (int i = 0; i < pixelCount; i++) lookedThroughPixels[i] = false;
-
-            int tminDistToMid = 100000;
-            int ssqC = 0;
-            int ssqHorizontalX = 0, ssqHorizontalY = 0, ssqAvrgHorY = 0;
-            int ssqVerticalX = 0;
-            List<int> vertlineidxs = new List<int>();
-            List<(double, int)> securevertlines = new List<(double, int)>();
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                if (lookedThroughPixels[i] || activatedPixels[i])
-                {
-                    continue;
-                }
-                List<int> fillL = new List<int>();
-                if (FillReplacementDetermination(ref fillL, i))
-                {
+                    if (lookedThroughPixels[i] || activatedPixels[i])
+                    {
+                        continue;
+                    }
+                    List<int> fillL = new List<int>();
+                    FillReplacementDetermination(ref fillL, i);
                     int tC = fillL.Count;
                     for (int j = 0; j < tC; j++)
                     {
                         activatedPixels[fillL[j]] = true;
                         int tA = fillL[j] * 3;
-                        imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b11110000;
+                        imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = edgeColorByte;
                     }
                 }
-                else
+
+                for (int i = 0; i < pixelCount; i++) lookedThroughPixels[i] = false;
+
+                int tminDistToMid = 100000;
+                int ssqC = 0;
+                int ssqHorizontalX = 0, ssqHorizontalY = 0, ssqAvrgHorY = 0;
+                int ssqVerticalX = 0, ssqVerticalY = 0;
+                int ssq_VerticalX = 0, ssq_VerticalY = 0;
+
+                List<(int, int)> recogQuEdgePoints = new List<(int, int)>();
+                List<int> recogQuIncludedPoints = new List<int>();
+
+                List<int> vertlineidxs = new List<int>();
+                List<(double, int)> securevertlines = new List<(double, int)>();
+
+                for (int i = 0; i < pixelCount; i++)
                 {
-                    int tC = fillL.Count;
-                    int tavrgRow = 0, tavrgCol = 0;
-
-                    for (int j = 0; j < tC; j++)
+                    if (lookedThroughPixels[i] || activatedPixels[i])
                     {
-                        int tRow = pixelRowVals[fillL[j]], tColumn = pixelColumnVals[fillL[j]];
-
-                        tavrgRow += tRow;
-                        tavrgCol += tColumn;
+                        continue;
                     }
-
-                    tavrgCol /= tC;
-                    tavrgRow /= tC;
-
-                    (int, int)[] edgePoints = new (int, int)[4];
-                    int[] edgePointDists = new int[4] { -1, -1, -1, -1 };
-
-                    for (int j = 0; j < tC; j++)
+                    List<int> fillL = new List<int>();
+                    if (FillReplacementDetermination(ref fillL, i))
                     {
-                        int tRow = pixelRowVals[fillL[j]], tColumn = pixelColumnVals[fillL[j]];
-
-                        int tidx;
-                        if (tRow > tavrgRow) tidx = tColumn > tavrgCol ? 0 : 3;
-                        else tidx = tColumn > tavrgCol ? 1 : 2;
-
-                        int tsqPosYDist = tRow - tavrgRow, tsqPosXDist = tColumn - tavrgCol;
-                        int t_ti_D;
-
-                        if ((t_ti_D = (int)Math.Sqrt(tsqPosYDist * tsqPosYDist + tsqPosXDist * tsqPosXDist)) > edgePointDists[tidx])
+                        int tC = fillL.Count;
+                        for (int j = 0; j < tC; j++)
                         {
-                            edgePointDists[tidx] = t_ti_D;
-                            edgePoints[tidx] = (tColumn, tRow);
+                            activatedPixels[fillL[j]] = true;
+                            int tA = fillL[j] * 3;
+                            imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b11110000;
                         }
                     }
-
-                    int sqAvrgXPosDist = tavrgCol - CAM_SETTINGS.SQUARE_POSX_PREFERATION;
-                    int sqAvrgYPosDist = tavrgRow - CAM_SETTINGS.SQUARE_POSY_PREFERATION;
-                    int tD;
-
-                    ssqHorizontalX += edgePoints[1].Item1 - edgePoints[2].Item1 + edgePoints[0].Item1 - edgePoints[3].Item1;
-                    ssqHorizontalY += edgePoints[1].Item2 - edgePoints[2].Item2 + edgePoints[0].Item2 - edgePoints[3].Item2;
-
-                    ssqC++;
-
-                    double tLine1Ye1X, tLine2Ye1X;
-                    int txvertPos1 =
-                    GetStartXPosOfVerticalLine(
-                        tLine1Ye1X = Scale2DoubleTupleYTo(
-                            (edgePoints[0].Item1 - edgePoints[1].Item1, edgePoints[0].Item2 - edgePoints[1].Item2),
-                            1d
-                        ).Item1,
-                        edgePoints[1]
-                    );
-
-                    int txvertPos2 =
-                    GetStartXPosOfVerticalLine(
-                        tLine2Ye1X = Scale2DoubleTupleYTo(
-                            (edgePoints[3].Item1 - edgePoints[2].Item1, edgePoints[3].Item2 - edgePoints[2].Item2),
-                            1d
-                        ).Item1,
-                        edgePoints[2]
-                    );
-
-                    ssqVerticalX += Math.Abs(txvertPos1 - txvertPos2);
-
-                    vertlineidxs.AddRange(GetVerticalLine(tLine1Ye1X, txvertPos1));
-                    vertlineidxs.AddRange(GetVerticalLine(tLine2Ye1X, txvertPos2));
-
-                    securevertlines.Add((tLine1Ye1X, txvertPos1));
-                    securevertlines.Add((tLine2Ye1X, txvertPos2));
-
-                    versqstartpos[txvertPos1] = true;
-                    versqstartpos[txvertPos2] = true;
-                    versqstartposd[txvertPos1] = tLine1Ye1X;
-                    versqstartposd[txvertPos2] = tLine2Ye1X;
-
-                    int txhorPos1 =
-                    GetStartYPosOfHorizontalLine(
-                        tLine1Ye1X = Scale2DoubleTupleXTo(
-                            (edgePoints[1].Item1 - edgePoints[2].Item1, edgePoints[1].Item2 - edgePoints[2].Item2),
-                            1d
-                        ).Item2,
-                        edgePoints[2]
-                    );
-
-                    int txhorPos2 =
-                    GetStartYPosOfHorizontalLine(
-                        tLine2Ye1X = Scale2DoubleTupleXTo(
-                            (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2),
-                            1d
-                        ).Item2,
-                        edgePoints[0]
-                    );
-
-                    //Console.WriteLine(txhorPos1 + " | " + txhorPos2);
-                    //Console.WriteLine(edgePoints[0] + " | " + edgePoints[3] + " => " + (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2) + " => " + txhorPos2);
-                    //Console.WriteLine(tLine1Ye1X);
-                    //Console.WriteLine((edgePoints[1].Item1 - edgePoints[2].Item1, edgePoints[1].Item2 - edgePoints[2].Item2));
-                    //Console.WriteLine(tLine2Ye1X);
-                    //Console.WriteLine((edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2));
-
-                    horsqstartpos[txhorPos1] = true;
-                    horsqstartpos[txhorPos2] = true;
-                    horsqstartposd[txhorPos1] = tLine1Ye1X;
-                    horsqstartposd[txhorPos2] = tLine2Ye1X;
-
-                    ssqAvrgHorY += Math.Abs(txhorPos1 - txhorPos2);
-                    if ((tD = (int)Math.Sqrt(sqAvrgXPosDist * sqAvrgXPosDist + sqAvrgYPosDist * sqAvrgYPosDist)) < tminDistToMid)
+                    else
                     {
-                        tminDistToMid = tD;
-                    }
-                }
-            }
+                        int tC = fillL.Count;
+                        int tavrgRow = 0, tavrgCol = 0;
 
-            ssqHorizontalX /= ssqC * 2;
-            ssqHorizontalY /= ssqC * 2;
-            ssqVerticalX /= ssqC;
-            ssqAvrgHorY /= ssqC;
-
-            double xe1HorLineVecY = Scale2DoubleTupleXTo(Normalize2IntTuple((ssqHorizontalX, ssqHorizontalY)), 1).Item2;
-
-            double[] vertlineLinRegIdxArr = new double[securevertlines.Count];
-            double[] vertlineLinRegValArr = new double[securevertlines.Count];
-
-            for (int i = 0; i < securevertlines.Count; i++)
-            {
-                vertlineLinRegIdxArr[i] = securevertlines[i].Item2;
-                vertlineLinRegValArr[i] = securevertlines[i].Item1;
-            }
-
-            (double, double) angleCorrelationVertLines = LinearRegression(vertlineLinRegIdxArr, vertlineLinRegValArr);
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[2], ImageFormat.Png);
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-            for (int i = 0; i < vertlineidxs.Count; i++)
-            {
-                int tidx = vertlineidxs[i];
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[8], ImageFormat.Png);
-
-            #endregion
-
-            #region | STEP 4 - Vertical Lines |
-
-            Console.WriteLine("STEP 3 - Recognizable Square Selection   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-            for (int i = 0; i < pixelCount; i++)
-            {
-                if ((pixelToLeftVals[i] = (i % width == 0 || !activatedPixelsSaveState2[i]) ? 0 : (pixelToLeftVals[i - 1] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH || !activatedPixelsSaveState2[i]) activatedPixels[i] = false;
-                int idx2 = pixelCount - i - 1;
-                if ((pixelToRightVals[idx2] = ((idx2 + 1) % width == 0 || !activatedPixelsSaveState2[idx2]) ? 0 : (pixelToRightVals[idx2 + 1] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH) activatedPixels[idx2] = false;
-                lookedThroughPixels[i] = false;
-            }
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                pixelToLeftVals[i] = pixelToRightVals[i] = -1;
-                if (lookedThroughPixels[i])
-                {
-                    continue;
-                }
-
-                int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
-
-                int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
-
-                if (activatedPixels[i])
-                {
-                    List<int> tField = new List<int>();
-                    RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
-                    int tSize = tField.Count;
-                    if (tSize <= CAM_SETTINGS.MAX_DISTORTION_SIZE)
-                    {
-                        for (int j = 0; j < tSize; j++)
+                        for (int j = 0; j < tC; j++)
                         {
-                            activatedPixels[tField[j]] = false;
+                            int tRow = pixelRowVals[fillL[j]], tColumn = pixelColumnVals[fillL[j]];
+
+                            tavrgRow += tRow;
+                            tavrgCol += tColumn;
                         }
-                    }
-                }
-            }
 
-            double[] vertlinePrecentageVals = new double[width];
-            int tvertlidx = 0;
-            double thighestvertl = 0d;
-            for (int i = CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST; i < width - CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST; i++)
-            {
-                if ((vertlinePrecentageVals[i] = GetFilledPrecentageOfVerticalLine(angleCorrelationVertLines.Item1 * i + angleCorrelationVertLines.Item2, i)) > thighestvertl)
-                {
-                    tvertlidx = i;
-                    thighestvertl = vertlinePrecentageVals[i];
-                }
-            }
+                        tavrgCol /= tC;
+                        tavrgRow /= tC;
 
-            int[] vertlidxs = new int[9] { tvertlidx, 0, 0, 0, 0, 0, 0, 0, 0 };
-            int vCurAddLB = ssqVerticalX, vCurAddHB = ssqVerticalX;
-            int tvLBpos = tvertlidx, tvHBpos = tvertlidx;
+                        (int, int)[] edgePoints = new (int, int)[4];
+                        int[] edgePointDists = new int[4] { -1, -1, -1, -1 };
 
-            for (int i = 0; i < 8; i++)
-            {
-                int tLBPOS = tvLBpos - vCurAddLB;
-                int tHBPOS = tvHBpos + vCurAddHB;
-                int tpos = -1;
-                double thighest = -1;
-                bool b = false;
-
-                for (int j = -CAM_SETTINGS.VERTICALLINE_MAX_DEVIATION_FROM_AVERAGE; j < CAM_SETTINGS.VERTICALLINE_MAX_DEVIATION_FROM_AVERAGE + 1; j++)
-                {
-                    double LBprecentage = tLBPOS + j > -1 ? vertlinePrecentageVals[tLBPOS + j] : -1;
-                    double HBprecentage = tHBPOS + j < width - CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST ? vertlinePrecentageVals[tHBPOS + j] : -1;
-                    if (LBprecentage > thighest)
-                    {
-                        thighest = LBprecentage;
-                        tpos = tLBPOS + j;
-                        b = true;
-                    }
-                    if (HBprecentage > thighest)
-                    {
-                        thighest = HBprecentage;
-                        tpos = tHBPOS + j;
-                        b = false;
-                    }
-                }
-
-                if (b)
-                {
-                    vCurAddLB = Math.Abs(tpos - tvLBpos);
-                    tvLBpos = tpos;
-                }
-                else
-                {
-                    vCurAddHB = Math.Abs(tpos - tvHBpos);
-                    tvHBpos = tpos;
-                }
-
-                vertlidxs[i + 1] = tpos;
-            }
-
-            List<int> pixIdxs2 = new List<int>();
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-            for (int i = 0; i < 9; i++)
-            {
-                List<int> tLine = GetVerticalLine(angleCorrelationVertLines.Item1 * vertlidxs[i] + angleCorrelationVertLines.Item2, vertlidxs[i]);
-                pixIdxs2.AddRange(tLine);
-                finalVertLinePoses[i] = tLine;
-            }
-            for (int i = 0; i < pixIdxs2.Count; i++)
-            {
-                int tidx = pixIdxs2[i];
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[10], ImageFormat.Png);
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3)
-            {
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = activatedPixels[i] ? edgeColorByte : bgColorByte;
-                activatedPixels[i] = true;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[3], ImageFormat.Png);
-
-            byteA = 0; for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-            for (int i = 0; i < verlineids.Count; i++)
-            {
-                int tidx = verlineids[i];
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = verlineidstrengths[i];
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[9], ImageFormat.Png);
-
-            #endregion
-
-            #region | STEP 5 - Horizontal Lines |
-
-            Console.WriteLine("STEP 4 - Vertical Lines   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-            for (int i = 0; i < pixelCount; i++)
-            {
-                int idx1 = i;
-                int idx2 = pixelCount - idx1 - 1;
-                if ((pixelToRightVals[idx2] = (idx2 + width >= pixelCount || !activatedPixelsSaveState2[idx2]) ? 0 : (pixelToRightVals[idx2 + width] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH) activatedPixels[idx2] = false;
-                if ((pixelToLeftVals[idx1] = (idx1 - width < 0 || !activatedPixelsSaveState2[idx1]) ? 0 : (pixelToLeftVals[idx1 - width] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH || !activatedPixelsSaveState2[idx1]) activatedPixels[idx1] = false;
-                lookedThroughPixels[i] = false;
-            }
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                pixelToLeftVals[i] = pixelToRightVals[i] = -1;
-                if (lookedThroughPixels[i])
-                {
-                    continue;
-                }
-
-                int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
-
-                int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
-
-                if (activatedPixels[i])
-                {
-                    List<int> tField = new List<int>();
-                    RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
-                    int tSize = tField.Count;
-                    if (tSize <= CAM_SETTINGS.MAX_DISTORTION_SIZE)
-                    {
-                        for (int j = 0; j < tSize; j++)
+                        for (int j = 0; j < tC; j++)
                         {
-                            activatedPixels[tField[j]] = false;
-                        }
-                    }
-                }
-            }
+                            int tRow = pixelRowVals[fillL[j]], tColumn = pixelColumnVals[fillL[j]];
 
-            int l = -1;
-            List<int> distsBetweenLines = new List<int>();
-            List<int> linePositions = new List<int>();
-            List<(int, int)> positionsBetweenLines = new List<(int, int)>();
-            int until = height; // - (int)(xe1HorLineVecY * 400)
-            double toverallhighest = 0d;
-            int toverallhighestidx = 0;
-            double[] horlinePrecentageVals = new double[until];
+                            int tidx;
+                            if (tRow > tavrgRow) tidx = tColumn > tavrgCol ? 0 : 3;
+                            else tidx = tColumn > tavrgCol ? 1 : 2;
 
-            for (int i = 0; i < until; i++)
-            {
-                double tval;
-                if ((tval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i)) > CAM_SETTINGS.HORIZONTALLINE_FULL_SECURE_DETERMINANT)
-                {
-                    double thighest = tval;
-                    int tidx = i;
+                            int tsqPosYDist = tRow - tavrgRow, tsqPosXDist = tColumn - tavrgCol;
+                            int t_ti_D;
 
-                    for (int j = 0; j < CAM_SETTINGS.HORIZONTALLINE_MIN_DIST; j++)
-                    {
-                        if (++i == until) break;
-                        double ttval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i);
-                        if (ttval > thighest)
-                        {
-                            thighest = ttval;
-                            tidx = i;
-                            if (thighest > toverallhighest)
+                            if ((t_ti_D = (int)Math.Sqrt(tsqPosYDist * tsqPosYDist + tsqPosXDist * tsqPosXDist)) > edgePointDists[tidx])
                             {
-                                toverallhighestidx = tidx;
-                                toverallhighest = thighest;
+                                edgePointDists[tidx] = t_ti_D;
+                                edgePoints[tidx] = (tColumn, tRow);
+                            }
+                        }
+
+
+                        for (int e = 0; e < 4; e++)
+                        {
+                            (int, int) tPoint = edgePoints[e];
+                            for (int r = 0; r < recogQuEdgePoints.Count; r++)
+                            {
+                                (int, int) tRPoint = recogQuEdgePoints[r];
+                                if (EfficientAlternativeToVec2IntTupleDistance(tPoint, recogQuEdgePoints[r]) < 400)
+                                {
+                                    int tV = ++recogQuIncludedPoints[r];
+                                    double tNewMult = 1d / tV, tOldMult = (tV - 1d) / tV;
+
+                                    recogQuEdgePoints[r] = (
+                                        (int)(tNewMult * tPoint.Item1 + tOldMult * tRPoint.Item1),
+                                        (int)(tNewMult * tPoint.Item2 + tOldMult * tRPoint.Item2) );
+
+                                    goto SkipAddEdgePoint;
+                                }
+                            }
+
+                            recogQuEdgePoints.Add(tPoint);
+                            recogQuIncludedPoints.Add(1);
+
+                        SkipAddEdgePoint:;
+                        }
+
+
+                        int sqAvrgXPosDist = tavrgCol - CAM_SETTINGS.SQUARE_POSX_PREFERATION;
+                        int sqAvrgYPosDist = tavrgRow - CAM_SETTINGS.SQUARE_POSY_PREFERATION;
+                        int tD;
+
+
+                        ssqHorizontalX += edgePoints[1].Item1 - edgePoints[2].Item1 + edgePoints[0].Item1 - edgePoints[3].Item1;
+                        ssqHorizontalY += edgePoints[1].Item2 - edgePoints[2].Item2 + edgePoints[0].Item2 - edgePoints[3].Item2;
+                        ssq_VerticalX += edgePoints[0].Item1 - edgePoints[1].Item1 + edgePoints[3].Item1 - edgePoints[2].Item1;
+                        ssq_VerticalY += edgePoints[0].Item2 - edgePoints[1].Item2 + edgePoints[3].Item2 - edgePoints[2].Item2;
+
+
+                        ssqC++;
+
+                        double tLine1Ye1X, tLine2Ye1X;
+                        int txvertPos1 =
+                        GetStartXPosOfVerticalLine(
+                            tLine1Ye1X = Scale2DoubleTupleYTo(
+                                (edgePoints[0].Item1 - edgePoints[1].Item1, edgePoints[0].Item2 - edgePoints[1].Item2),
+                                1d
+                            ).Item1,
+                            edgePoints[1]
+                        );
+
+                        int txvertPos2 =
+                        GetStartXPosOfVerticalLine(
+                            tLine2Ye1X = Scale2DoubleTupleYTo(
+                                (edgePoints[3].Item1 - edgePoints[2].Item1, edgePoints[3].Item2 - edgePoints[2].Item2),
+                                1d
+                            ).Item1,
+                            edgePoints[2]
+                        );
+
+                        ssqVerticalX += Math.Abs(txvertPos1 - txvertPos2);
+
+                        vertlineidxs.AddRange(GetVerticalLine(tLine1Ye1X, txvertPos1));
+                        vertlineidxs.AddRange(GetVerticalLine(tLine2Ye1X, txvertPos2));
+
+                        securevertlines.Add((tLine1Ye1X, txvertPos1));
+                        securevertlines.Add((tLine2Ye1X, txvertPos2));
+
+                        versqstartpos[txvertPos1] = true;
+                        versqstartpos[txvertPos2] = true;
+                        versqstartposd[txvertPos1] = tLine1Ye1X;
+                        versqstartposd[txvertPos2] = tLine2Ye1X;
+
+                        int txhorPos1 =
+                        GetStartYPosOfHorizontalLine(
+                            tLine1Ye1X = Scale2DoubleTupleXTo(
+                                (edgePoints[1].Item1 - edgePoints[2].Item1, edgePoints[1].Item2 - edgePoints[2].Item2),
+                                1d
+                            ).Item2,
+                            edgePoints[2]
+                        );
+
+                        int txhorPos2 =
+                        GetStartYPosOfHorizontalLine(
+                            tLine2Ye1X = Scale2DoubleTupleXTo(
+                                (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2),
+                                1d
+                            ).Item2,
+                            edgePoints[0]
+                        );
+
+                        //Console.WriteLine(txhorPos1 + " | " + txhorPos2);
+                        //Console.WriteLine(edgePoints[0] + " | " + edgePoints[3] + " => " + (edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2) + " => " + txhorPos2);
+                        //Console.WriteLine(tLine1Ye1X);
+                        //Console.WriteLine((edgePoints[1].Item1 - edgePoints[2].Item1, edgePoints[1].Item2 - edgePoints[2].Item2));
+                        //Console.WriteLine(tLine2Ye1X);
+                        //Console.WriteLine((edgePoints[0].Item1 - edgePoints[3].Item1, edgePoints[0].Item2 - edgePoints[3].Item2));
+
+                        horsqstartpos[txhorPos1] = true;
+                        horsqstartpos[txhorPos2] = true;
+                        horsqstartposd[txhorPos1] = tLine1Ye1X;
+                        horsqstartposd[txhorPos2] = tLine2Ye1X;
+
+                        ssqAvrgHorY += Math.Abs(txhorPos1 - txhorPos2);
+                        if ((tD = (int)Math.Sqrt(sqAvrgXPosDist * sqAvrgXPosDist + sqAvrgYPosDist * sqAvrgYPosDist)) < tminDistToMid)
+                        {
+                            tminDistToMid = tD;
+                        }
+                    }
+                }
+
+                double tdivider = ssqC * 2;
+
+                double tssqHX = ssqHorizontalX / tdivider, tssqHY = ssqHorizontalY / tdivider,
+                       tssqVX = ssq_VerticalX / tdivider, tssqVY = ssq_VerticalY / tdivider;
+
+                ssqHorizontalX = (int)(tssqHX * 100);
+                ssqHorizontalY = (int)(tssqHY * 100);
+                ssq_VerticalX = (int)(tssqVX * 100);
+                ssq_VerticalY = (int)(tssqVY * 100);
+
+                ssqAvrgHorY /= ssqC;
+                ssqVerticalX /= ssqC;
+
+                double xe1HorLineVecY = Scale2DoubleTupleXTo(Normalize2IntTuple((ssqHorizontalX, ssqHorizontalY)), 1).Item2;
+                double ye1VerLineVecX = Scale2DoubleTupleYTo(Normalize2IntTuple((ssq_VerticalX, ssq_VerticalY)), 1).Item1;
+
+                Console.WriteLine(xe1HorLineVecY + " | " + ye1VerLineVecX);
+
+                double[] vertlineLinRegIdxArr = new double[securevertlines.Count];
+                double[] vertlineLinRegValArr = new double[securevertlines.Count];
+
+                for (int i = 0; i < securevertlines.Count; i++)
+                {
+                    vertlineLinRegIdxArr[i] = securevertlines[i].Item2;
+                    vertlineLinRegValArr[i] = securevertlines[i].Item1;
+                }
+
+                (double, double) angleCorrelationVertLines = LinearRegression(vertlineLinRegIdxArr, vertlineLinRegValArr);
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[2], ImageFormat.Png);
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                for (int i = 0; i < vertlineidxs.Count; i++)
+                {
+                    int tidx = vertlineidxs[i];
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[8], ImageFormat.Png);
+
+                #endregion
+
+                #region | STEP 4.5 - Alternative Line Detection |
+
+
+                List<int> pixIdxs2 = new List<int>(), pixIdxs = new List<int>();
+
+                for (int i = 0; i < pixelCount; i++) activatedPixels[i] = false;
+                for (int i = 0; i < recogQuEdgePoints.Count; i++) activatedPixels[recogQuEdgePoints[i].Item2 * width + recogQuEdgePoints[i].Item1] = true;
+
+                // angleCorrelationVertLines.Item1 * i + angleCorrelationVertLines.Item2
+
+                int prevID = -100;
+                List<int> tAltVerticalLineIDs = new List<int>(), tAltHorizontalLineIDs = new List<int>();
+                List<int> tLids = new List<int>();
+                for (int i = 0; i < width; i++)
+                {
+                    double tD = GetFilledPrecentageOfVerticalLine(ye1VerLineVecX, i);
+
+                    if (tD != 0d)
+                    {
+                        if (i > prevID)
+                        {
+                            prevID = i + 10;
+                            if (tLids.Count != 0)
+                            {
+                                int tSum = 0;
+                                for (int c = 0; c < tLids.Count; c++) tSum += tLids[c];
+                                tAltVerticalLineIDs.Add((int)(tSum / (double)tLids.Count));
+                                tLids.Clear();
+                            }
+                            tLids.Add(i);
+                        }
+                        else
+                        {
+                            tLids.Add(i);
+                            prevID = i + 10;
+                        }
+                    } 
+                }
+
+                if (tLids.Count != 0)
+                {
+                    int tSum = 0;
+                    for (int c = 0; c < tLids.Count; c++) tSum += tLids[c];
+                    tAltVerticalLineIDs.Add((int)(tSum / (double)tLids.Count));
+                    tLids.Clear();
+                }
+
+                prevID = -100;
+                for (int i = 0; i < height; i++)
+                {
+                    double tD = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i);
+
+                    if (tD != 0d)
+                    {
+                        if (i > prevID)
+                        {
+                            prevID = i + 10;
+                            if (tLids.Count != 0)
+                            {
+                                int tSum = 0;
+                                for (int c = 0; c < tLids.Count; c++) tSum += tLids[c];
+                                tAltHorizontalLineIDs.Add((int)(tSum / (double)tLids.Count));
+                                tLids.Clear();
+                            }
+                            tLids.Add(i);
+                        }
+                        else
+                        {
+                            tLids.Add(i);
+                            prevID = i + 10;
+                        }
+                    }
+                }
+
+                if (tLids.Count != 0)
+                {
+                    int tSum = 0;
+                    for (int c = 0; c < tLids.Count; c++) tSum += tLids[c];
+                    tAltHorizontalLineIDs.Add((int)(tSum / (double)tLids.Count));
+                    tLids.Clear();
+                }
+
+                if (tAltVerticalLineIDs.Count == 9 && tAltHorizontalLineIDs.Count == 9)
+                {
+                    for (int i = 0; i < 9; i++)
+                    {
+                        finalHorLinePoses[i] = new List<int>();
+                        finalVertLinePoses[i] = new List<int>();
+                        List<int> tLine = GetVerticalLine(ye1VerLineVecX, tAltVerticalLineIDs[i]);
+                        List<int> tLine2 = GetHorizontalLine(xe1HorLineVecY, tAltHorizontalLineIDs[i]);
+                        pixIdxs2.AddRange(tLine);
+                        pixIdxs.AddRange(tLine2);
+                        finalHorLinePoses[i].AddRange(tLine2);
+                        finalVertLinePoses[i].AddRange(tLine);
+                    }
+
+                    goto SkipLineCalcs;
+                }
+
+                #endregion
+
+                #region | STEP 4 - Vertical Lines |
+
+                Console.WriteLine("STEP 3 - Recognizable Square Selection   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    if ((pixelToLeftVals[i] = (i % width == 0 || !activatedPixelsSaveState2[i]) ? 0 : (pixelToLeftVals[i - 1] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH || !activatedPixelsSaveState2[i]) activatedPixels[i] = false;
+                    int idx2 = pixelCount - i - 1;
+                    if ((pixelToRightVals[idx2] = ((idx2 + 1) % width == 0 || !activatedPixelsSaveState2[idx2]) ? 0 : (pixelToRightVals[idx2 + 1] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH) activatedPixels[idx2] = false;
+                    lookedThroughPixels[i] = false;
+                }
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    pixelToLeftVals[i] = pixelToRightVals[i] = -1;
+                    if (lookedThroughPixels[i])
+                    {
+                        continue;
+                    }
+
+                    int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
+
+                    int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
+
+                    if (activatedPixels[i])
+                    {
+                        List<int> tField = new List<int>();
+                        RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
+                        int tSize = tField.Count;
+                        if (tSize <= CAM_SETTINGS.MAX_DISTORTION_SIZE)
+                        {
+                            for (int j = 0; j < tSize; j++)
+                            {
+                                activatedPixels[tField[j]] = false;
                             }
                         }
                     }
-
-                    horlinePrecentageVals[tidx] = thighest;
-
-                    if (l != -1)
-                    {
-                        int tv = tidx - l;
-                        distsBetweenLines.Add(tv);
-                        positionsBetweenLines.Add((l, tidx));
-                    }
-
-                    linePositions.Add(l = tidx);
                 }
-                //else horlinePrecentageVals[i] = tval;
-            }
 
-            int[] tsortidxarr = new int[until];
-
-            string str = "DatenFunktion({";
-            for (int i = 0; i < until; i++)
-            {
-                tsortidxarr[i] = i;
-                if (horlinePrecentageVals[i] < 0.02) horlinePrecentageVals[i] = 0;
-
-                str += i + (i == until - 1 ? "},{" : ",");
-            }
-
-            double[] tintegralVals = new double[until];
-
-            for (int i = 0; i < until; i++)
-            {
-                double tintegral = 0;
-                for (int j = -(CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE - 1); j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE; j++)
+                double[] vertlinePrecentageVals = new double[width];
+                int tvertlidx = 0;
+                double thighestvertl = 0d;
+                for (int i = CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST; i < width - CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST; i++)
                 {
-                    int t = i + j;
-                    if (t > 0 && t < until)
+                    if ((vertlinePrecentageVals[i] = GetFilledPrecentageOfVerticalLine(angleCorrelationVertLines.Item1 * i + angleCorrelationVertLines.Item2, i)) > thighestvertl)
                     {
-                        double v1 = horlinePrecentageVals[t - 1];
-                        double v2 = horlinePrecentageVals[t];
+                        tvertlidx = i;
+                        thighestvertl = vertlinePrecentageVals[i];
+                    }
+                }
 
-                        if (v1 < v2) {
-                            double d = v2;
-                            v2 = v1;
-                            v1 = d;
+                //int[] vertlidxs = new int[9] { tvertlidx, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+                List<int> tVertLIdxs = new List<int>() { };
+                List<double> tVertLIdxsVals = new List<double>() { };
+
+                for (int i = 0; i < vertlinePrecentageVals.Length; i++)
+                {
+                    int tI = i;
+                    double tval;
+                    if ((tval = vertlinePrecentageVals[i]) > CAM_SETTINGS.VERTICALLINE_FULL_SECURE_DETERMINANT)
+                    {
+                        double thighest = tval;
+                        int tidx = i;
+
+                        for (int j = 0; j < CAM_SETTINGS.VERTICALLINE_MIN_DIST; j++)
+                        {
+                            if (++i == vertlinePrecentageVals.Length) break;
+                            double ttval = vertlinePrecentageVals[i];
+                            if (ttval > thighest)
+                            {
+                                thighest = ttval;
+                                tidx = i;
+                            }
                         }
 
-                        tintegral += (v1 - v2) / 2d + v2;
+                        i += tidx - tI;
+
+                        Console.WriteLine(tidx);
+                        tVertLIdxs.Add(tidx);
+                        tVertLIdxsVals.Add(tval);
                     }
                 }
 
-                tintegralVals[i] = tintegral;
+                int[] vertlidxs = tVertLIdxs.ToArray();
+                Array.Sort(vertlidxs, tVertLIdxsVals.ToArray());
+                Array.Reverse(vertlidxs);
 
-                str += horlinePrecentageVals[i].ToString().Replace(",", ".") + (i == until - 1 ? "})" : ",");
-            }
+                /*int vCurAddLB = ssqVerticalX, vCurAddHB = ssqVerticalX;
+                int tvLBpos = tvertlidx, tvHBpos = tvertlidx;
 
-            Array.Sort(tintegralVals, tsortidxarr);
-            Array.Reverse(tintegralVals);
-            Array.Reverse(tsortidxarr);
-
-
-            Console.WriteLine(str);
-
-            bool[] activatedPixelsSaveState3 = new bool[pixelCount];
-            activatedPixelsSaveState3 = (bool[])activatedPixels.Clone();
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3)
-            {
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = activatedPixels[i] ? edgeColorByte : bgColorByte;
-                activatedPixels[i] = false;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[4], ImageFormat.Png);
-
-
-            byteA = 0; for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-            for (int i = 0; i < horlineids.Count; i++)
-            {
-                int tidx = horlineids[i];
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = horlineidstrengths[i];
-                activatedPixels[tidx] = true;
-            }
-
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[6], ImageFormat.Png);
-
-            int tHPos = toverallhighestidx, tLPos = toverallhighestidx;
-            int tHPosAdd = ssqAvrgHorY, tLPosAdd = ssqAvrgHorY;
-
-            //Console.WriteLine(tLPos);
-
-            int[] furtherLines = new int[9] { toverallhighestidx, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-            bool[] tusedUpVals = new bool[until];
-
-            for (int i = 0, k = 0; k < 9; i++)
-            {
-                int tidx = tsortidxarr[i];
-                for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
-                    if (tidx + j > -1 && tidx + j < until && tusedUpVals[tidx + j]) goto SkipThisIntegral;
-                Console.WriteLine(tidx + " -> " + tintegralVals[i]);
-                furtherLines[k++] = tidx; 
-                for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
+                for (int i = 0; i < 8; i++)
                 {
-                    if (tidx + j > -1 && tidx + j < until) tusedUpVals[tidx + j] = true;
-                }
-            SkipThisIntegral:;
-            }
+                    int tLBPOS = tvLBpos - vCurAddLB;
+                    int tHBPOS = tvHBpos + vCurAddHB;
+                    int tpos = -1;
+                    double thighest = -1;
+                    bool b = false;
 
-            List<int> pixIdxs = new List<int>();
-
-            /*for (int i = 0; i < 8; i++)
-            {
-                int tLBPOS = tLPos - tLPosAdd;
-                int tHBPOS = tHPos + tHPosAdd;
-                int tpos = -1;
-                double thighest = -1;
-                bool b = false;
-
-                Console.WriteLine(tLPos + " -> " + tLBPOS + " | " + tHPos + "-> " + tHBPOS);
-                //
-                //List<(int, int)> tLinRegPointsL = tLBPOS > -1 ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tLBPOS, activatedPixels) : new List<(int, int)>();
-                //List<(int, int)> tLinRegPointsH = tHBPOS < height ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tHBPOS, activatedPixels) : new List<(int, int)>();
-                //
-                //b = tLinRegPointsH.Count < tLinRegPointsL.Count;
-                //
-                //tpos = b ? tLBPOS : tHBPOS;
-
-                //int t_ti_C = tLinRegPoints2.Count;
-                //if (tLinRegPoints3.Count > t_ti_C) {
-                //    t_ti_C = tLinRegPoints3.Count;
-                //    tLinRegPoints = tLinRegPoints3;
-                //}
-                //else tLinRegPoints = tLinRegPoints2;
-                //
-                //int[] tlinregidxs = new int[t_ti_C];
-                //int[] tlinregvals = new int[t_ti_C];
-                //for (int j = 0; j < t_ti_C; j++)
-                //{
-                //    tlinregidxs[j] = tLinRegPoints[j].Item1;
-                //    tlinregvals[j] = tLinRegPoints[j].Item2;
-                //}
-                //(double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
-                //
-                //
-                //for (int x = 0; x < width; x++)
-                //{
-                //    int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
-                //    if (x == 0) finalHorLinePoses[i] = new List<int>();
-                //    pixIdxs.Add(tID);
-                //    finalHorLinePoses[i].Add(tID);
-                //}
-
-
-                int searchWindowSizeIncr = 0;
-
-                while (thighest < 0.1 && searchWindowSizeIncr < 100) {
-
-                    ++searchWindowSizeIncr;
-
-                    for (int j = -CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_DOWN; j < CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_UP * searchWindowSizeIncr + 1; j++)
+                    for (int j = -CAM_SETTINGS.VERTICALLINE_MAX_DEVIATION_FROM_AVERAGE; j < CAM_SETTINGS.VERTICALLINE_MAX_DEVIATION_FROM_AVERAGE + 1; j++)
                     {
-                        //Console.WriteLine(tLBPOS + j + " | " +);
-                        double LBprecentage = tLBPOS + j > -1 && tLBPOS + j < tLPos - 15 ? horlinePrecentageVals[tLBPOS + j] : -1;
-                        double HBprecentage = tHBPOS + j < until && tHBPOS + j > tHPos + 15 ? horlinePrecentageVals[tHBPOS + j] : -1;
+                        double LBprecentage = tLBPOS + j > -1 ? vertlinePrecentageVals[tLBPOS + j] : -1;
+                        double HBprecentage = tHBPOS + j < width - CAM_SETTINGS.VERTICALLINE_MIN_PIC_END_DIST ? vertlinePrecentageVals[tHBPOS + j] : -1;
                         if (LBprecentage > thighest)
                         {
                             thighest = LBprecentage;
@@ -1118,512 +1000,837 @@ namespace Miluva
                         }
                     }
 
-                    //Console.WriteLine(":)");
-
-                }
-
-                if (b)
-                {
-                    tLPosAdd = Math.Abs(tpos - tLPos);
-                    tLPos = tpos;
-                }
-                else
-                {
-                    tHPosAdd = Math.Abs(tpos - tHPos);
-                    tHPos = tpos;
-                }
-
-                //Console.WriteLine(thighest + ": " + tpos);
-
-                furtherLines[i + 1] = tpos;
-            }*/
-
-            bool[] bbbbbb = new bool[pixelCount];
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-            
-            for (int i = 0; i < furtherLines.Length; i++)
-            {
-                List<(int, int)> tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState3);
-                int t_ti_C = tLinRegPoints.Count;
-            
-                if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
-                {
-                    //Console.WriteLine(i);
-                    //tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState);
-                    //t_ti_C = tLinRegPoints.Count;
-                    //if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
-                    //{
-                    List<int> tLine = GetHorizontalLine(xe1HorLineVecY, furtherLines[i]); // Theoretisch xe1HorLineVecY manchmal austauschen; aber dieser Teil sollte eig sowieso nie vorkommen
-                    finalHorLinePoses[i] = tLine;
-                    pixIdxs.AddRange(tLine);
-                    continue;
-                    //}
-                }
-            
-                int[] tlinregidxs = new int[t_ti_C];
-                int[] tlinregvals = new int[t_ti_C];
-                bool differentValueUpUntilHere = false;
-                int lVal = 0;
-                for (int j = 0; j < t_ti_C; j++)
-                {
-                    tlinregidxs[j] = tLinRegPoints[j].Item1;
-                    tlinregvals[j] = tLinRegPoints[j].Item2;
-
-                    if (j != 0 && lVal != tlinregvals[j])
+                    if (b)
                     {
-                        differentValueUpUntilHere = true;
-                    }
-
-                    lVal = tlinregvals[j];
-
-                    bbbbbb[tlinregidxs[j] + tlinregvals[j] * width] = true;
-                }
-
-                if (!differentValueUpUntilHere) tlinregvals[t_ti_C - 1]++;
-
-                (double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
-
-                for (int x = 0; x < width; x++)
-                {
-                    int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
-                    if (x == 0)
-                    {
-                        finalHorLinePoses[i] = new List<int>();
-                    }
-                    pixIdxs.Add(tID);
-                    finalHorLinePoses[i].Add(tID);
-                }
-            }
-
-
-            for (int i = 0; i < pixIdxs.Count; i++)
-            {
-                int tidx = pixIdxs[i];
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[7], ImageFormat.Png);
-
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3)
-            {
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bbbbbb[i] ? edgeColorByte : bgColorByte;
-                activatedPixels[i] = false;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[5], ImageFormat.Png);
-
-            #endregion
-
-            #region | STEP 6 - Final Squares |
-
-            Console.WriteLine("STEP 5 - Horizontal Lines   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-            int tL = pixIdxs.Count;
-            int overlapPoints = 0, sumOfXOP = 0, sumOfYOP = 0;
-            (int, int)[] OP_POINTS = new (int, int)[81];
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++, byteA += 3)
-            {
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-                activatedPixels[i] = false;
-            }
-            for (int i = 0; i < tL; i++)
-            {
-                bool bbb;
-                if ((bbb = IntListContains(pixIdxs2, pixIdxs[i])) || (pixIdxs[i] + width < pixelCount && IntListContains(pixIdxs2, pixIdxs[i] + width)))
-                {
-                    int tidx = pixIdxs[i];
-                    if (!bbb) tidx += width;
-                    activatedPixels[tidx] = true;
-
-                    for (int o = 0; o < 81; o++)
-                    {
-                        if (Vec2IntTupleDistance((pixelColumnVals[tidx], pixelRowVals[tidx]), OP_POINTS[o]) < 10)
-                        {
-                            //Console.WriteLine((pixelColumnVals[tidx], pixelRowVals[tidx]));
-                            goto SkipThisOverlap;
-                        }
-                    }
-
-                    OP_POINTS[overlapPoints++] = (pixelColumnVals[tidx], pixelRowVals[tidx]);
-
-                    sumOfXOP += pixelColumnVals[tidx];
-                    sumOfYOP += pixelRowVals[tidx];
-                    byteA = tidx * 3;
-                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                SkipThisOverlap:;
-                }
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[11], ImageFormat.Png);
-
-            sumOfXOP /= overlapPoints;
-            sumOfYOP /= overlapPoints;
-
-            for (int i = 0; i < pixelCount; i++)
-            {
-                activatedPixels[i] = false;
-                lookedThroughPixels[i] = false;
-            }
-
-            for (int i = 0; i < tL; i++)
-            {
-                int tidx = pixIdxs[i];
-                activatedPixels[tidx] = true;
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-            }
-            for (int i = 0; i < pixIdxs2.Count; i++)
-            {
-                int tidx = pixIdxs2[i];
-                activatedPixels[tidx] = true;
-                byteA = tidx * 3;
-                imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[12], ImageFormat.Png);
-
-            List<List<int>> finalSquares = new List<List<int>>();
-            for (int i = 0; i < pixelCount; i++)
-            {
-                if (lookedThroughPixels[i] || activatedPixels[i])
-                {
-                    continue;
-                }
-                List<int> fillL = new List<int>();
-                if (FillEdgeReplacementDetermination(ref fillL, i)) continue;
-
-                finalSquares.Add(fillL);
-
-                int tC = fillL.Count;
-                for (int j = 0; j < tC; j++)
-                {
-                    activatedPixels[fillL[j]] = true;
-                    int tA = fillL[j] * 3;
-                    imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b1110000;
-                }
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[13], ImageFormat.Png);
-
-            #endregion
-
-            #region | STEP 7 - Piece Recognition |
-
-            Console.WriteLine("STEP 6 - Final Squares   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-
-            for (int i = 0; i < pixelCount; i++) activatedPixels[i] = false;
-
-
-            byteA = 0;
-            for (int i = 0; i < pixelCount; i++)
-            {
-                int tPix = pixelInts[i];
-                if ((i + 1) % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i + 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (i % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i - 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (i + width < pixelCount && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i + width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else if (width <= i && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i - width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
-                else imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
-
-                activatedPixels[i] = imageBytes[byteA] == edgeColorByte;
-
-                byteA += 3;
-            }
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[15], ImageFormat.Png);
-            activatedPixelsSaveState = (bool[])activatedPixels.Clone();
-
-
-
-            int fsqC = finalSquares.Count;
-
-
-            for (int i = 0; i < pixelCount; i++) activatedPixelsSaveState2[i] = false;
-
-            double[] dets = new double[fsqC];
-            double[] pixelDetVal = new double[pixelCount];
-
-            for (int s = 0; s < fsqC; s++)
-            {
-                List<int> tsquare = finalSquares[s];
-                int tC = tsquare.Count;
-
-                int txsum = 0, tysum = 0;
-
-                //int tID = tsquare[tC / 2];
-                //for (int i = 0; i < OPPC; i++) {
-                //
-                //    if (Vec2IntTupleDistance((pixelColumnVals[tID], pixelRowVals[tID]), OP_POINTS[i]) < 5)
-                //    {
-                //
-                //    }
-                //}
-
-
-                for (int i = 0; i < tC; i++)
-                {
-                    int tID = tsquare[i];
-                    txsum += pixelColumnVals[tID];
-                    tysum += pixelRowVals[tID];
-                }
-                txsum /= tC;
-                tysum /= tC;
-
-                //int tA = (tysum * width + txsum) * 3;
-                //imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b1111110;
-
-                double[] thDists = new double[4];
-                int[] tIDs = new int[4];
-                for (int i = 0; i < tC; i++)
-                {
-                    int tID = tsquare[i], tV;
-                    int tX = pixelColumnVals[tID];
-                    int tY = pixelRowVals[tID];
-                    if (tX > txsum)
-                    {
-                        if (tY > tysum) tV = 0;
-                        else tV = 1;
+                        vCurAddLB = Math.Abs(tpos - tvLBpos);
+                        tvLBpos = tpos;
                     }
                     else
                     {
-                        if (tY > tysum) tV = 3;
-                        else tV = 2;
+                        vCurAddHB = Math.Abs(tpos - tvHBpos);
+                        tvHBpos = tpos;
                     }
 
-                    double d = Vec2IntTupleDistance((tX, tY), (txsum, tysum));
+                    vertlidxs[i + 1] = tpos;
+                }*/
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                for (int i = 0; i < 9; i++)
+                {
+                    List<int> tLine = GetVerticalLine(angleCorrelationVertLines.Item1 * vertlidxs[i] + angleCorrelationVertLines.Item2, vertlidxs[i]);
+                    pixIdxs2.AddRange(tLine);
+                    finalVertLinePoses[i] = tLine;
+                }
+                for (int i = 0; i < pixIdxs2.Count; i++)
+                {
+                    int tidx = pixIdxs2[i];
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                }
 
-                    if (d > thDists[tV])
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[10], ImageFormat.Png);
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3)
+                {
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = activatedPixels[i] ? edgeColorByte : bgColorByte;
+                    activatedPixels[i] = true;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[3], ImageFormat.Png);
+
+                byteA = 0; for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                for (int i = 0; i < verlineids.Count; i++)
+                {
+                    int tidx = verlineids[i];
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = verlineidstrengths[i];
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[9], ImageFormat.Png);
+
+                #endregion
+
+                #region | STEP 5 - Horizontal Lines |
+
+                Console.WriteLine("STEP 4 - Vertical Lines   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    int idx1 = i;
+                    int idx2 = pixelCount - idx1 - 1;
+                    if ((pixelToRightVals[idx2] = (idx2 + width >= pixelCount || !activatedPixelsSaveState2[idx2]) ? 0 : (pixelToRightVals[idx2 + width] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH) activatedPixels[idx2] = false;
+                    if ((pixelToLeftVals[idx1] = (idx1 - width < 0 || !activatedPixelsSaveState2[idx1]) ? 0 : (pixelToLeftVals[idx1 - width] + 1)) > CAM_SETTINGS.MAX_LINE_WIDTH || !activatedPixelsSaveState2[idx1]) activatedPixels[idx1] = false;
+                    lookedThroughPixels[i] = false;
+                }
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    pixelToLeftVals[i] = pixelToRightVals[i] = -1;
+                    if (lookedThroughPixels[i])
                     {
-                        thDists[tV] = d;
-                        tIDs[tV] = tID;
+                        continue;
                     }
-                }
 
-                int tCenterID = tysum * width + txsum;
-                int tCenterColor = pixelInts[tCenterID];
-                int[] tFurtherColors = new int[9] { 0, 0, 0, 0, tCenterColor, 0, 0, 0, 0 };
-                int[] tFurtherIDs = new int[4] { 0, 0, 0, 0 };
+                    int tRow = pixelRowVals[i], tColumn = pixelColumnVals[i];
 
-                for (int i = 0; i < 4; i++)
-                {
-                    int tID = tIDs[i];
-                    int tX = pixelColumnVals[tID], tY = pixelRowVals[tID];
+                    int tLowX = tRow, tHighX = tRow, tLowY = tColumn, tHighY = tColumn;
 
-                    int pointIDBetweenCenterAndEdge = (int)((txsum - tX) / 3.14) + tX + (int)(((tysum - tY) / 3.14) + tY) * width;
-
-                    tFurtherIDs[i] = pointIDBetweenCenterAndEdge;
-
-                    //imageBytes[pointIDBetweenCenterAndEdge * 3] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 1] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 2] = 0b1111110;
-
-                    tFurtherColors[i] = pixelInts[pointIDBetweenCenterAndEdge];
-                }
-
-                for (int i = 0; i < 4; i++)
-                {
-                    int nxt = (i + 1) % 4;
-                    int tID = tFurtherIDs[i], tID2 = tFurtherIDs[nxt];
-                    int tX = pixelColumnVals[tID], tY = pixelRowVals[tID];
-                    int tX2 = pixelColumnVals[tID2], tY2 = pixelRowVals[tID2];
-
-                    int pointIDBetweenCenterAndEdge = ((tX - tX2) / 2) + tX2 + (((tY - tY2) / 2) + tY2) * width;
-
-                    //imageBytes[pointIDBetweenCenterAndEdge * 3] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 1] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 2] = 0b1111110;
-
-                    tFurtherColors[i + 5] = pixelInts[pointIDBetweenCenterAndEdge];
-                }
-
-                double avrgDistFromCenter = (thDists[0] + thDists[1] + thDists[2] + thDists[3]) / 4d * CAM_SETTINGS.PIECE_RECOGNITION_FIELD_SIZE_RADIUS_MULT;
-                double KVal = 1d / (avrgDistFromCenter * Math.Sqrt(avrgDistFromCenter));
-
-                //STATIC_MAIN_CAMERA_ANALYSER.ColorDifference
-
-                double pieceDetVal = 0;
-
-
-                for (int i = 0; i < tC; i++)
-                {
-                    int tID = tsquare[i];
-                    //int tCol = pixelInts[tID];
-
-                    double X = Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID]));
-
-                    if (activatedPixelsSaveState[tID])
-                        pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - KVal * X, 0d, 1.5d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
-
-                    //Math.Exp(X - 22)
-
-                    //pieceDetVal += Math.Clamp(Math.Exp(-0.125 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) - 0.4d), 0d, 0.7d);
-
-                    //pieceDetVal += 0.01d;
-
-
-                    //pieceDetVal += Math.Clamp(Math.Exp(-0.125 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) - 0.4d), 0d, 0.4d);
-
-                    //pieceDetVal += Math.Clamp(1d / (0.2 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) + 1d), 0d, 0.2d);
-
-                    //if (tID - width > -1) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID - width], tCol), 2);
-                    //if (tID + width < pixelCount) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID + width], tCol), 2);
-                    //if ((tID + 1) % width == 0) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID + 1], tCol), 2);
-                    //if (tID % width == 0) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID - 1], tCol), 2);
-
-                    //for (int c = 0; c < 9; c++)
-                    //{
-                    //    //if (c == 4) continue;
-                    //    if (STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(tFurtherColors[c], tCol) < 3f)
-                    //    {
-                    //        int tidx = tID * 3;
-                    //        imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b11;
-                    //        break;
-                    //    }
-                    //}
-                    //if (STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(60 << 16 | 60 << 8 | 60, tCol) < 25f)
-                    //{
-                    //    int tidx = tID * 3;
-                    //    imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b11;
-                    //}
-                }
-
-                if (pieceDetVal > CAM_SETTINGS.MIN_PIECE_RECOGNITION_DETERMINANT)
-                {
-                    for (int i = 0; i < tC; i++)
+                    if (activatedPixels[i])
                     {
-                        int tID = tsquare[i];
-                        activatedPixelsSaveState2[tID] = true;
-                        int tidx = tID * 3;
-                        pixelDetVal[tID] = pieceDetVal;
-                        imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b111111;
-                    }
-                }
-
-                dets[s] = pieceDetVal;
-            }
-
-            Array.Sort(dets);
-
-            double[] detthresholds = new double[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1];
-            int kkkk = -1;
-
-            for (int i = 0; i < fsqC; i++)
-            {
-                Console.Write((int)(dets[i] * 100) / 100d + ">");
-
-                if (kkkk != -1 && kkkk + 1 < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS)
-                {
-                    detthresholds[kkkk] = dets[i];
-                    kkkk++;
-                }
-                else if (kkkk == -1 && dets[i] > CAM_SETTINGS.MIN_PIECE_RECOGNITION_DETERMINANT) {
-                    kkkk = 1;
-                    detthresholds[0] = dets[i];
-                }
-            }
-            Console.WriteLine();
-
-            Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
-            img.Save(pathToResultPNGs[14], ImageFormat.Png);
-
-            #endregion
-
-            #region | STEP 8 - Square Indexing |
-
-            Console.WriteLine("STEP 7 - Piece Recognition   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Restart();
-
-            int[] finalVertLineStartPoses = new int[9], finalHorLineStartPoses = new int[9];
-
-            for (int i = 0; i < 9; i++)
-            {
-                int tC1 = finalVertLinePoses[i].Count, tC2 = finalHorLinePoses[i].Count;
-
-                for (int k = 0; k < tC1; k++)
-                {
-                    int tID = finalVertLinePoses[i][k];
-                    if (pixelRowVals[tID] == 0)
-                    {
-                        finalVertLineStartPoses[i] = tID;
-                        break;
-                    }
-                }
-
-                for (int k = 0; k < tC2; k++)
-                {
-                    int tID = finalHorLinePoses[i][k];
-                    if (pixelColumnVals[tID] == 0)
-                    {
-                        finalHorLineStartPoses[i] = pixelRowVals[tID];
-                        break;
-                    }
-                }
-            }
-
-            Array.Sort(finalVertLineStartPoses, finalVertLinePoses);
-            Array.Sort(finalHorLineStartPoses, finalHorLinePoses);
-
-            int[][] OPys = new int[9][];
-            ulong finalBoard = 0ul;
-            ulong[] finalBoardChanges = new ulong[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS];
-
-            for (int i = 0; i < 8; i++)
-            {
-                OPys[i] = new int[9];
-                int tC1 = finalVertLinePoses[i].Count, tA = 0;
-                for (int k = 0; k < tC1; k++)
-                {
-                    int tID = finalVertLinePoses[i][k];
-                    if (Int2TupleArrayContains(OP_POINTS, (pixelColumnVals[tID], pixelRowVals[tID])))
-                    {
-                        OPys[i][tA++] = tID;
-                    }
-                }
-
-                Array.Sort(OPys[i]);
-
-                for (int j = 0; j < 8; j++)
-                {
-                    int tID = OPys[i][j] + 15 * width + 15;
-
-                    if (activatedPixelsSaveState2[tID])
-                    {
-                        finalBoard = ULONG_OPERATIONS.SetBitToOne(finalBoard, i * 8 + j);
-
-                        for (int p = 0; p < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1; p++)
+                        List<int> tField = new List<int>();
+                        RecursiveCleanUp(ref tField, ref tLowX, ref tHighX, ref tLowY, ref tHighY, i);
+                        int tSize = tField.Count;
+                        if (tSize <= CAM_SETTINGS.MAX_DISTORTION_SIZE)
                         {
-                            if (pixelDetVal[tID] <= detthresholds[p])
+                            for (int j = 0; j < tSize; j++)
                             {
-                                finalBoardChanges[p + 1] = ULONG_OPERATIONS.SetBitToOne(finalBoardChanges[p], i * 8 + j);
+                                activatedPixels[tField[j]] = false;
                             }
                         }
                     }
                 }
-            }
 
-            img.Dispose();
+                int l = -1;
+                List<int> distsBetweenLines = new List<int>();
+                List<int> linePositions = new List<int>();
+                List<(int, int)> positionsBetweenLines = new List<(int, int)>();
+                int until = height; // - (int)(xe1HorLineVecY * 400)
+                double toverallhighest = 0d;
+                int toverallhighestidx = 0;
+                double[] horlinePrecentageVals = new double[until];
 
-            Console.WriteLine("STEP 8 - Square Indexing   [ " + sw.ElapsedMilliseconds + "ms ]");
-            sw.Stop();
+                for (int i = 0; i < until; i++)
+                {
+                    double tval;
+                    if ((tval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i)) > CAM_SETTINGS.HORIZONTALLINE_FULL_SECURE_DETERMINANT)
+                    {
+                        double thighest = tval;
+                        int tidx = i;
 
-            Console.WriteLine("\n");
-            
-            for (int sol = 0; sol < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS; sol++)
+                        for (int j = 0; j < CAM_SETTINGS.HORIZONTALLINE_MIN_DIST; j++)
+                        {
+                            if (++i == until) break;
+                            double ttval = horlinePrecentageVals[i] = GetFilledPrecentageOfHorizontalLine(xe1HorLineVecY, i);
+                            if (ttval > thighest)
+                            {
+                                thighest = ttval;
+                                tidx = i;
+                                if (thighest > toverallhighest)
+                                {
+                                    toverallhighestidx = tidx;
+                                    toverallhighest = thighest;
+                                }
+                            }
+                        }
+
+                        horlinePrecentageVals[tidx] = CAM_SETTINGS.FIRST_HORIZONTAL_LINE_DETECTION_BOOST; //= thighest;
+                        Console.WriteLine(tidx);
+
+                        if (l != -1)
+                        {
+                            int tv = tidx - l;
+                            distsBetweenLines.Add(tv);
+                            positionsBetweenLines.Add((l, tidx));
+                        }
+
+                        linePositions.Add(l = tidx);
+                    }
+                    //else horlinePrecentageVals[i] = tval;
+                }
+
+                int[] tsortidxarr = new int[until];
+
+                string str = "DatenFunktion({";
+                for (int i = 0; i < until; i++)
+                {
+                    tsortidxarr[i] = i;
+                    if (horlinePrecentageVals[i] < 0.02) horlinePrecentageVals[i] = 0;
+
+                    str += i + (i == until - 1 ? "},{" : ",");
+                }
+
+                double[] tintegralVals = new double[until];
+
+                for (int i = 0; i < until; i++)
+                {
+                    bool b = false;
+                    double tintegral = 0;
+                    for (int j = -(CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE - 1); j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_SIZE; j++)
+                    {
+                        int t = i + j;
+                        if (t > 0 && t < until)
+                        {
+                            if (horsqstartpos[t])
+                            {
+                                //Console.WriteLine(t);
+                                b = true;
+                            }
+                            double v1 = horlinePrecentageVals[t - 1];
+                            double v2 = horlinePrecentageVals[t];
+
+                            if (v1 < v2)
+                            {
+                                double d = v2;
+                                v2 = v1;
+                                v1 = d;
+                            }
+
+                            tintegral += (v1 - v2) / 2d + v2;
+                        }
+                    }
+
+                    if (!b) tintegral = 0;
+
+                    tintegralVals[i] = tintegral;
+
+                    str += horlinePrecentageVals[i].ToString().Replace(",", ".") + (i == until - 1 ? "})" : ",");
+                }
+
+                Array.Sort(tintegralVals, tsortidxarr);
+                Array.Reverse(tintegralVals);
+                Array.Reverse(tsortidxarr);
+
+
+                //Console.WriteLine(str);
+
+                bool[] activatedPixelsSaveState3 = new bool[pixelCount];
+                activatedPixelsSaveState3 = (bool[])activatedPixels.Clone();
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3)
+                {
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = activatedPixels[i] ? edgeColorByte : bgColorByte;
+                    activatedPixels[i] = false;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[4], ImageFormat.Png);
+
+
+                byteA = 0; for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                for (int i = 0; i < horlineids.Count; i++)
+                {
+                    int tidx = horlineids[i];
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = horlineidstrengths[i];
+                    activatedPixels[tidx] = true;
+                }
+
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[6], ImageFormat.Png);
+
+                int tHPos = toverallhighestidx, tLPos = toverallhighestidx;
+                int tHPosAdd = ssqAvrgHorY, tLPosAdd = ssqAvrgHorY;
+
+                //Console.WriteLine(tLPos);
+
+                int[] furtherLines = new int[9] { toverallhighestidx, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+                bool[] tusedUpVals = new bool[until];
+
+                for (int i = 0, k = 0; k < 9; i++)
+                {
+                    int tidx = tsortidxarr[i];
+                    for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
+                        if (tidx + j > -1 && tidx + j < until && tusedUpVals[tidx + j]) goto SkipThisIntegral;
+                    //Console.WriteLine(tidx + " -> " + tintegralVals[i]);
+                    furtherLines[k++] = tidx;
+                    for (int j = -CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j <= CAM_SETTINGS.HORIZONTALLINE_INTEGRAL_MIN_DIST; j++)
+                    {
+                        if (tidx + j > -1 && tidx + j < until) tusedUpVals[tidx + j] = true;
+                    }
+                SkipThisIntegral:;
+                }
+
+                /*for (int i = 0; i < 8; i++)
+                {
+                    int tLBPOS = tLPos - tLPosAdd;
+                    int tHBPOS = tHPos + tHPosAdd;
+                    int tpos = -1;
+                    double thighest = -1;
+                    bool b = false;
+
+                    Console.WriteLine(tLPos + " -> " + tLBPOS + " | " + tHPos + "-> " + tHBPOS);
+                    //
+                    //List<(int, int)> tLinRegPointsL = tLBPOS > -1 ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tLBPOS, activatedPixels) : new List<(int, int)>();
+                    //List<(int, int)> tLinRegPointsH = tHBPOS < height ? GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, tHBPOS, activatedPixels) : new List<(int, int)>();
+                    //
+                    //b = tLinRegPointsH.Count < tLinRegPointsL.Count;
+                    //
+                    //tpos = b ? tLBPOS : tHBPOS;
+
+                    //int t_ti_C = tLinRegPoints2.Count;
+                    //if (tLinRegPoints3.Count > t_ti_C) {
+                    //    t_ti_C = tLinRegPoints3.Count;
+                    //    tLinRegPoints = tLinRegPoints3;
+                    //}
+                    //else tLinRegPoints = tLinRegPoints2;
+                    //
+                    //int[] tlinregidxs = new int[t_ti_C];
+                    //int[] tlinregvals = new int[t_ti_C];
+                    //for (int j = 0; j < t_ti_C; j++)
+                    //{
+                    //    tlinregidxs[j] = tLinRegPoints[j].Item1;
+                    //    tlinregvals[j] = tLinRegPoints[j].Item2;
+                    //}
+                    //(double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
+                    //
+                    //
+                    //for (int x = 0; x < width; x++)
+                    //{
+                    //    int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
+                    //    if (x == 0) finalHorLinePoses[i] = new List<int>();
+                    //    pixIdxs.Add(tID);
+                    //    finalHorLinePoses[i].Add(tID);
+                    //}
+
+
+                    int searchWindowSizeIncr = 0;
+
+                    while (thighest < 0.1 && searchWindowSizeIncr < 100) {
+
+                        ++searchWindowSizeIncr;
+
+                        for (int j = -CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_DOWN; j < CAM_SETTINGS.HORIZONTALLINE_MAX_DEVIATION_FROM_AVERAGE_UP * searchWindowSizeIncr + 1; j++)
+                        {
+                            //Console.WriteLine(tLBPOS + j + " | " +);
+                            double LBprecentage = tLBPOS + j > -1 && tLBPOS + j < tLPos - 15 ? horlinePrecentageVals[tLBPOS + j] : -1;
+                            double HBprecentage = tHBPOS + j < until && tHBPOS + j > tHPos + 15 ? horlinePrecentageVals[tHBPOS + j] : -1;
+                            if (LBprecentage > thighest)
+                            {
+                                thighest = LBprecentage;
+                                tpos = tLBPOS + j;
+                                b = true;
+                            }
+                            if (HBprecentage > thighest)
+                            {
+                                thighest = HBprecentage;
+                                tpos = tHBPOS + j;
+                                b = false;
+                            }
+                        }
+
+                        //Console.WriteLine(":)");
+
+                    }
+
+                    if (b)
+                    {
+                        tLPosAdd = Math.Abs(tpos - tLPos);
+                        tLPos = tpos;
+                    }
+                    else
+                    {
+                        tHPosAdd = Math.Abs(tpos - tHPos);
+                        tHPos = tpos;
+                    }
+
+                    //Console.WriteLine(thighest + ": " + tpos);
+
+                    furtherLines[i + 1] = tpos;
+                }*/
+
+                bool[] bbbbbb = new bool[pixelCount];
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+
+                for (int i = 0; i < furtherLines.Length; i++)
+                {
+                    List<(int, int)> tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState3);
+                    int t_ti_C = tLinRegPoints.Count;
+
+                    if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS * 100000)
+                    {
+                        //Console.WriteLine(i);
+                        //tLinRegPoints = GetHorizontalLineLinearRegressionOptimizorPoints(xe1HorLineVecY, furtherLines[i], activatedPixelsSaveState);
+                        //t_ti_C = tLinRegPoints.Count;
+                        //if (t_ti_C < CAM_SETTINGS.HORIZONTALLINE_MIN_LINREG_OPTIMIZATION_POINTS)
+                        //{
+                        List<int> tLine = GetHorizontalLine(xe1HorLineVecY, furtherLines[i]); // Theoretisch xe1HorLineVecY manchmal austauschen; aber dieser Teil sollte eig sowieso nie vorkommen
+                        finalHorLinePoses[i] = tLine;
+                        pixIdxs.AddRange(tLine);
+                        continue;
+                        //}
+                    }
+
+                    //Console.WriteLine("!");
+
+                    int[] tlinregidxs = new int[t_ti_C];
+                    int[] tlinregvals = new int[t_ti_C];
+                    bool differentValueUpUntilHere = false;
+                    int lVal = 0;
+                    for (int j = 0; j < t_ti_C; j++)
+                    {
+                        tlinregidxs[j] = tLinRegPoints[j].Item1;
+                        tlinregvals[j] = tLinRegPoints[j].Item2;
+
+                        if (j != 0 && lVal != tlinregvals[j])
+                        {
+                            differentValueUpUntilHere = true;
+                        }
+
+                        lVal = tlinregvals[j];
+
+                        bbbbbb[tlinregidxs[j] + tlinregvals[j] * width] = true;
+                    }
+
+                    if (!differentValueUpUntilHere) tlinregvals[t_ti_C - 1]++;
+
+                    (double, double) tlinregres = LinearRegression(tlinregidxs, tlinregvals);
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        int tID = (int)(tlinregres.Item1 * x + tlinregres.Item2) * width + x;
+                        if (x == 0)
+                        {
+                            finalHorLinePoses[i] = new List<int>();
+                        }
+                        pixIdxs.Add(tID);
+                        finalHorLinePoses[i].Add(tID);
+                    }
+                }
+
+
+                for (int i = 0; i < pixIdxs.Count; i++)
+                {
+                    int tidx = pixIdxs[i];
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[7], ImageFormat.Png);
+
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3)
+                {
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bbbbbb[i] ? edgeColorByte : bgColorByte;
+                    activatedPixels[i] = false;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[5], ImageFormat.Png);
+
+                #endregion
+
+                #region | STEP 6 - Final Squares |
+
+            SkipLineCalcs:
+                Console.WriteLine("STEP 5 - Horizontal Lines   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+                int tL = pixIdxs.Count;
+                int overlapPoints = 0, sumOfXOP = 0, sumOfYOP = 0;
+                (int, int)[] OP_POINTS = new (int, int)[81];
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++, byteA += 3)
+                {
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+                    activatedPixels[i] = false;
+                }
+                for (int i = 0; i < tL; i++)
+                {
+                    bool bbb;
+                    if ((bbb = IntListContains(pixIdxs2, pixIdxs[i])) || (pixIdxs[i] + width < pixelCount && IntListContains(pixIdxs2, pixIdxs[i] + width)))
+                    {
+                        int tidx = pixIdxs[i];
+                        if (!bbb) tidx += width;
+                        activatedPixels[tidx] = true;
+
+                        for (int o = 0; o < 81; o++)
+                        {
+                            if (Vec2IntTupleDistance((pixelColumnVals[tidx], pixelRowVals[tidx]), OP_POINTS[o]) < 10)
+                            {
+                                //Console.WriteLine((pixelColumnVals[tidx], pixelRowVals[tidx]));
+                                goto SkipThisOverlap;
+                            }
+                        }
+
+                        OP_POINTS[overlapPoints++] = (pixelColumnVals[tidx], pixelRowVals[tidx]);
+
+                        sumOfXOP += pixelColumnVals[tidx];
+                        sumOfYOP += pixelRowVals[tidx];
+                        byteA = tidx * 3;
+                        imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    SkipThisOverlap:;
+                    }
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[11], ImageFormat.Png);
+
+                sumOfXOP /= overlapPoints;
+                sumOfYOP /= overlapPoints;
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    activatedPixels[i] = false;
+                    lookedThroughPixels[i] = false;
+                }
+
+                for (int i = 0; i < tL; i++)
+                {
+                    int tidx = pixIdxs[i];
+                    activatedPixels[tidx] = true;
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                }
+                for (int i = 0; i < pixIdxs2.Count; i++)
+                {
+                    int tidx = pixIdxs2[i];
+                    activatedPixels[tidx] = true;
+                    byteA = tidx * 3;
+                    imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[12], ImageFormat.Png);
+
+                List<List<int>> finalSquares = new List<List<int>>();
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    if (lookedThroughPixels[i] || activatedPixels[i])
+                    {
+                        continue;
+                    }
+                    List<int> fillL = new List<int>();
+                    if (FillEdgeReplacementDetermination(ref fillL, i)) continue;
+
+                    finalSquares.Add(fillL);
+
+                    int tC = fillL.Count;
+                    for (int j = 0; j < tC; j++)
+                    {
+                        activatedPixels[fillL[j]] = true;
+                        int tA = fillL[j] * 3;
+                        imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b1110000;
+                    }
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[13], ImageFormat.Png);
+
+                #endregion
+
+                #region | STEP 7 - Piece Recognition |
+
+                Console.WriteLine("STEP 6 - Final Squares   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+
+                for (int i = 0; i < pixelCount; i++) activatedPixels[i] = false;
+
+
+                byteA = 0;
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    int tPix = pixelInts[i];
+                    if ((i + 1) % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i + 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (i % width != 0 && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i - 1])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (i + width < pixelCount && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i + width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else if (width <= i && STATIC_MAIN_CAMERA_ANALYSER.ColorDifference2(tPix, pixelInts[i - width])) imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = edgeColorByte;
+                    else imageBytes[byteA] = imageBytes[byteA + 1] = imageBytes[byteA + 2] = bgColorByte;
+
+                    activatedPixels[i] = imageBytes[byteA] == edgeColorByte;
+
+                    byteA += 3;
+                }
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[15], ImageFormat.Png);
+                activatedPixelsSaveState = (bool[])activatedPixels.Clone();
+
+
+
+                int fsqC = finalSquares.Count;
+
+
+                for (int i = 0; i < pixelCount; i++) activatedPixelsSaveState2[i] = false;
+
+                double[] dets = new double[fsqC];
+                double[] pixelDetVal = new double[pixelCount];
+
+                for (int s = 0; s < fsqC; s++)
+                {
+                    List<int> tsquare = finalSquares[s];
+                    int tC = tsquare.Count;
+
+                    int txsum = 0, tysum = 0;
+
+                    //int tID = tsquare[tC / 2];
+                    //for (int i = 0; i < OPPC; i++) {
+                    //
+                    //    if (Vec2IntTupleDistance((pixelColumnVals[tID], pixelRowVals[tID]), OP_POINTS[i]) < 5)
+                    //    {
+                    //
+                    //    }
+                    //}
+
+
+                    for (int i = 0; i < tC; i++)
+                    {
+                        int tID = tsquare[i];
+                        txsum += pixelColumnVals[tID];
+                        tysum += pixelRowVals[tID];
+                    }
+                    txsum /= tC;
+                    tysum /= tC;
+
+                    //int tA = (tysum * width + txsum) * 3;
+                    //imageBytes[tA] = imageBytes[tA + 1] = imageBytes[tA + 2] = 0b1111110;
+
+                    double[] thDists = new double[4];
+                    int[] tIDs = new int[4];
+                    for (int i = 0; i < tC; i++)
+                    {
+                        int tID = tsquare[i], tV;
+                        int tX = pixelColumnVals[tID];
+                        int tY = pixelRowVals[tID];
+                        if (tX > txsum)
+                        {
+                            if (tY > tysum) tV = 0;
+                            else tV = 1;
+                        }
+                        else
+                        {
+                            if (tY > tysum) tV = 3;
+                            else tV = 2;
+                        }
+
+                        double d = Vec2IntTupleDistance((tX, tY), (txsum, tysum));
+
+                        if (d > thDists[tV])
+                        {
+                            thDists[tV] = d;
+                            tIDs[tV] = tID;
+                        }
+                    }
+
+                    int tCenterID = tysum * width + txsum;
+                    int tCenterColor = pixelInts[tCenterID];
+                    int[] tFurtherColors = new int[9] { 0, 0, 0, 0, tCenterColor, 0, 0, 0, 0 };
+                    int[] tFurtherIDs = new int[4] { 0, 0, 0, 0 };
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int tID = tIDs[i];
+                        int tX = pixelColumnVals[tID], tY = pixelRowVals[tID];
+
+                        int pointIDBetweenCenterAndEdge = (int)((txsum - tX) / 3.14) + tX + (int)(((tysum - tY) / 3.14) + tY) * width;
+
+                        tFurtherIDs[i] = pointIDBetweenCenterAndEdge;
+
+                        //imageBytes[pointIDBetweenCenterAndEdge * 3] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 1] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 2] = 0b1111110;
+
+                        tFurtherColors[i] = pixelInts[pointIDBetweenCenterAndEdge];
+                    }
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int nxt = (i + 1) % 4;
+                        int tID = tFurtherIDs[i], tID2 = tFurtherIDs[nxt];
+                        int tX = pixelColumnVals[tID], tY = pixelRowVals[tID];
+                        int tX2 = pixelColumnVals[tID2], tY2 = pixelRowVals[tID2];
+
+                        int pointIDBetweenCenterAndEdge = ((tX - tX2) / 2) + tX2 + (((tY - tY2) / 2) + tY2) * width;
+
+                        //imageBytes[pointIDBetweenCenterAndEdge * 3] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 1] = imageBytes[pointIDBetweenCenterAndEdge * 3 + 2] = 0b1111110;
+
+                        tFurtherColors[i + 5] = pixelInts[pointIDBetweenCenterAndEdge];
+                    }
+
+                    double avrgDistFromCenter = (thDists[0] + thDists[1] + thDists[2] + thDists[3]) / 4d * CAM_SETTINGS.PIECE_RECOGNITION_FIELD_SIZE_RADIUS_MULT;
+                    double KVal = 1d / (avrgDistFromCenter * Math.Sqrt(avrgDistFromCenter));
+
+                    //STATIC_MAIN_CAMERA_ANALYSER.ColorDifference
+
+                    double pieceDetVal = 0;
+
+
+                    for (int i = 0; i < tC; i++)
+                    {
+                        int tID = tsquare[i];
+                        //int tCol = pixelInts[tID];
+
+                        double X = Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID]));
+
+                        if (activatedPixelsSaveState[tID])
+                            pieceDetVal += Math.Clamp(1 / Math.Sqrt(X) - KVal * X, 0d, 1.5d); // 1 / sqrt(X) - 0.01X -> y = [0; 0.7]
+
+                        //Math.Exp(X - 22)
+
+                        //pieceDetVal += Math.Clamp(Math.Exp(-0.125 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) - 0.4d), 0d, 0.7d);
+
+                        //pieceDetVal += 0.01d;
+
+
+                        //pieceDetVal += Math.Clamp(Math.Exp(-0.125 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) - 0.4d), 0d, 0.4d);
+
+                        //pieceDetVal += Math.Clamp(1d / (0.2 * Vec2IntTupleDistance((txsum, tysum), (pixelColumnVals[tID], pixelRowVals[tID])) + 1d), 0d, 0.2d);
+
+                        //if (tID - width > -1) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID - width], tCol), 2);
+                        //if (tID + width < pixelCount) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID + width], tCol), 2);
+                        //if ((tID + 1) % width == 0) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID + 1], tCol), 2);
+                        //if (tID % width == 0) pieceDetVal += Math.Pow(STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(pixelInts[tID - 1], tCol), 2);
+
+                        //for (int c = 0; c < 9; c++)
+                        //{
+                        //    //if (c == 4) continue;
+                        //    if (STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(tFurtherColors[c], tCol) < 3f)
+                        //    {
+                        //        int tidx = tID * 3;
+                        //        imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b11;
+                        //        break;
+                        //    }
+                        //}
+                        //if (STATIC_MAIN_CAMERA_ANALYSER.GetActualColorDifferenceVal(60 << 16 | 60 << 8 | 60, tCol) < 25f)
+                        //{
+                        //    int tidx = tID * 3;
+                        //    imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b11;
+                        //}
+                    }
+
+                    if (pieceDetVal > CAM_SETTINGS.MIN_PIECE_RECOGNITION_DETERMINANT)
+                    {
+                        for (int i = 0; i < tC; i++)
+                        {
+                            int tID = tsquare[i];
+                            activatedPixelsSaveState2[tID] = true;
+                            int tidx = tID * 3;
+                            pixelDetVal[tID] = pieceDetVal;
+                            imageBytes[tidx] = imageBytes[tidx + 1] = imageBytes[tidx + 2] = 0b111111;
+                        }
+                    }
+
+                    dets[s] = pieceDetVal;
+                }
+
+                Array.Sort(dets);
+
+                double[] detthresholds = new double[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1];
+                int kkkk = -1;
+
+                for (int i = 0; i < fsqC; i++)
+                {
+                    Console.Write((int)(dets[i] * 100) / 100d + ">");
+
+                    if (kkkk != -1 && kkkk + 1 < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS)
+                    {
+                        detthresholds[kkkk] = dets[i];
+                        kkkk++;
+                    }
+                    else if (kkkk == -1 && dets[i] > CAM_SETTINGS.MIN_PIECE_RECOGNITION_DETERMINANT)
+                    {
+                        kkkk = 1;
+                        detthresholds[0] = dets[i];
+                    }
+                }
+                Console.WriteLine();
+
+                Marshal.Copy(imageBytes, 0, scan0, imageBytes.Length);
+                img.Save(pathToResultPNGs[14], ImageFormat.Png);
+
+                #endregion
+
+                #region | STEP 8 - Square Indexing |
+
+                Console.WriteLine("STEP 7 - Piece Recognition   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Restart();
+
+                int[] finalVertLineStartPoses = new int[9], finalHorLineStartPoses = new int[9];
+
+                for (int i = 0; i < 9; i++)
+                {
+                    int tC1 = finalVertLinePoses[i].Count, tC2 = finalHorLinePoses[i].Count;
+
+                    for (int k = 0; k < tC1; k++)
+                    {
+                        int tID = finalVertLinePoses[i][k];
+                        if (pixelRowVals[tID] == 0)
+                        {
+                            finalVertLineStartPoses[i] = tID;
+                            break;
+                        }
+                    }
+
+                    for (int k = 0; k < tC2; k++)
+                    {
+                        int tID = finalHorLinePoses[i][k];
+                        if (pixelColumnVals[tID] == 0)
+                        {
+                            finalHorLineStartPoses[i] = pixelRowVals[tID];
+                            break;
+                        }
+                    }
+                }
+
+                Array.Sort(finalVertLineStartPoses, finalVertLinePoses);
+                Array.Sort(finalHorLineStartPoses, finalHorLinePoses);
+
+                int[][] OPys = new int[9][];
+                ulong finalBoard = 0ul;
+                ulong[] finalBoardChanges = new ulong[CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS];
+
+                for (int i = 0; i < 8; i++)
+                {
+                    OPys[i] = new int[9];
+                    int tC1 = finalVertLinePoses[i].Count, tA = 0;
+                    for (int k = 0; k < tC1; k++)
+                    {
+                        int tID = finalVertLinePoses[i][k];
+                        if (Int2TupleArrayContains(OP_POINTS, (pixelColumnVals[tID], pixelRowVals[tID])))
+                        {
+                            OPys[i][tA++] = tID;
+                        }
+                    }
+
+                    Array.Sort(OPys[i]);
+
+                    for (int j = 0; j < 8; j++)
+                    {
+                        int tID = OPys[i][j] + 15 * width + 15;
+
+                        if (activatedPixelsSaveState2[tID])
+                        {
+                            finalBoard = ULONG_OPERATIONS.SetBitToOne(finalBoard, i * 8 + j);
+
+                            for (int p = 0; p < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS - 1; p++)
+                            {
+                                if (pixelDetVal[tID] <= detthresholds[p])
+                                {
+                                    finalBoardChanges[p + 1] = ULONG_OPERATIONS.SetBitToOne(finalBoardChanges[p], i * 8 + j);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                img.Dispose();
+
+                Console.WriteLine("STEP 8 - Square Indexing   [ " + sw.ElapsedMilliseconds + "ms ]");
+                sw.Stop();
+
+                Console.WriteLine("\n");
+
+                for (int sol = 0; sol < CAM_SETTINGS.PIECE_RECOGNITION_SOLUTIONS; sol++)
+                {
+                    STATIC_MAIN_CAMERA_ANALYSER.RESULT.Add(TurnPerspective(finalBoard ^ finalBoardChanges[sol]));
+                }
+
+                //STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
+
+                #endregion
+
+            }catch(Exception e)
             {
-                STATIC_MAIN_CAMERA_ANALYSER.RESULT.Add(TurnPerspective(finalBoard ^ finalBoardChanges[sol]));
+                Console.WriteLine(e.ToString());
+                throw new Exception("!");
             }
-
-            //STATIC_MAIN_CAMERA_ANALYSER.RESULT = finalBoard;
-
-            #endregion
         }
 
         public static ulong TurnPerspective(ulong pULInp)
@@ -1735,100 +1942,110 @@ namespace Miluva
         }
 
         private bool FillReplacementDetermination(ref List<int> tL, int pPix)
-        {
-            int tRow = pixelRowVals[pPix], tColumn = pixelColumnVals[pPix];
-
-            int tLowestX = tColumn, tHighestX = tColumn, tLowestY = tRow, tHighestY = tRow;
-
-            recursiveLimits.Clear();
-
-            RecursiveFillFunction(ref tL, ref tLowestX, ref tHighestX, ref tLowestY, ref tHighestY, pPix, 0);
-            do
             {
-                int tC = recursiveLimits.Count;
+                int tRow = pixelRowVals[pPix], tColumn = pixelColumnVals[pPix];
 
-                int[] limitArray = new int[tC];
-                for (int i = 0; i < tC; i++)
-                    limitArray[i] = recursiveLimits[i];
+                int tLowestX = tColumn, tHighestX = tColumn, tLowestY = tRow, tHighestY = tRow;
 
                 recursiveLimits.Clear();
 
-                for (int i = 0; i < tC; i++)
+                RecursiveFillFunction(ref tL, ref tLowestX, ref tHighestX, ref tLowestY, ref tHighestY, pPix, 0);
+                do
                 {
-                    RecursiveFillFunction(ref tL, ref tLowestX, ref tHighestX, ref tLowestY, ref tHighestY, limitArray[i], 0);
+                    int tC = recursiveLimits.Count;
+
+                    int[] limitArray = new int[tC];
+                    for (int i = 0; i < tC; i++)
+                        limitArray[i] = recursiveLimits[i];
+
+                    recursiveLimits.Clear();
+
+                    for (int i = 0; i < tC; i++)
+                    {
+                        RecursiveFillFunction(ref tL, ref tLowestX, ref tHighestX, ref tLowestY, ref tHighestY, limitArray[i], 0);
+                    }
+
+                } while (recursiveLimits.Count != 0);
+
+                int xAsp = tHighestX - tLowestX, yAsp = tHighestY - tLowestY;
+                int tSize = xAsp * yAsp;
+
+                if (xAsp == 0 || yAsp == 0) return true;
+
+                double aspectRatio = (double)yAsp / xAsp;
+
+
+                int edgeTileCount = 0;
+                double sumX = 0, sumY = 0;
+                for (int i = 0; i < tL.Count; i++)
+                {
+                    int tX = pixelColumnVals[tL[i]], tY = pixelRowVals[tL[i]];
+                    if (tX == 0 || tY == 0) edgeTileCount++;
+                    if (tX + 1 == width || tY + 1 == height) edgeTileCount++;
+                    sumX += tX;
+                    sumY += tY;
+                }
+                sumX /= tL.Count;
+                sumY /= tL.Count;
+                if (edgeTileCount > CAM_SETTINGS.SQUARE_MAX_EDGE_PIXEL) return true;
+
+                double[] distsToMidOfBigSquare = new double[4];
+                (int, int)[] tpoints = new (int, int)[4];
+
+                for (int i = 0; i < tL.Count; i++)
+                {
+                    int tX = pixelColumnVals[tL[i]], tY = pixelRowVals[tL[i]];
+                    int tV;
+
+                    if (tX > sumX)
+                    {
+                        if (tY > sumY) tV = 0;
+                        else tV = 1;
+                    }
+                    else
+                    {
+                        if (tY > sumY) tV = 3;
+                        else tV = 2;
+                    }
+
+                    double d;
+                    if ((d = Vec2IntTupleDistance(((int)sumX, (int)sumY), (tX, tY))) > distsToMidOfBigSquare[tV])
+                    {
+                        distsToMidOfBigSquare[tV] = d;
+                        tpoints[tV] = (tX, tY);
+                    }
                 }
 
-            } while (recursiveLimits.Count != 0);
+                (double, double) tRightNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[0], tpoints[1]));
+                (double, double) tLeftNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[2], tpoints[3]));
+                (double, double) tUpNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[2], tpoints[1]));
+                (double, double) tBottomNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[3], tpoints[0]));
 
-            int xAsp = tHighestX - tLowestX, yAsp = tHighestY - tLowestY;
-            int tSize = xAsp * yAsp;
+                double orthogonality = ScalarProduct(tRightNVec, tUpNVec) + ScalarProduct(tRightNVec, tBottomNVec) +
+                ScalarProduct(tLeftNVec, tUpNVec) + ScalarProduct(tLeftNVec, tBottomNVec);
 
-            if (xAsp == 0 || yAsp == 0) return true;
+                if (
+                    ScalarProduct(tRightNVec, tUpNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
+                    ScalarProduct(tRightNVec, tBottomNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
+                    ScalarProduct(tLeftNVec, tUpNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
+                    ScalarProduct(tLeftNVec, tBottomNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT)
+                    return true;
 
-            double aspectRatio = (double)yAsp / xAsp;
+            //Console.WriteLine(
+            //
+            //    ((double)tL.Count / tSize) + "\n" +
+            //    tL.Count + "\n" +
+            //    aspectRatio + "\n" +
+            //    aspectRatio + "\n" +
+            //    orthogonality + "\n"
+            //    
+            //    );
 
-
-            int edgeTileCount = 0;
-            double sumX = 0, sumY = 0;
-            for (int i = 0; i < tL.Count; i++)
-            {
-                int tX = pixelColumnVals[tL[i]], tY = pixelRowVals[tL[i]];
-                if (tX == 0 || tY == 0) edgeTileCount++;
-                if (tX + 1 == width || tY + 1 == height) edgeTileCount++;
-                sumX += tX;
-                sumY += tY;
-            }
-            sumX /= tL.Count;
-            sumY /= tL.Count;
-            if (edgeTileCount > CAM_SETTINGS.SQUARE_MAX_EDGE_PIXEL) return true;
-
-            double[] distsToMidOfBigSquare = new double[4];
-            (int, int)[] tpoints = new (int, int)[4];
-
-            for (int i = 0; i < tL.Count; i++)
-            {
-                int tX = pixelColumnVals[tL[i]], tY = pixelRowVals[tL[i]];
-                int tV;
-
-                if (tX > sumX)
-                {
-                    if (tY > sumY) tV = 0;
-                    else tV = 1;
-                }
-                else
-                {
-                    if (tY > sumY) tV = 3;
-                    else tV = 2;
-                }
-
-                double d;
-                if ((d = Vec2IntTupleDistance(((int)sumX, (int)sumY), (tX, tY))) > distsToMidOfBigSquare[tV])
-                {
-                    distsToMidOfBigSquare[tV] = d;
-                    tpoints[tV] = (tX, tY);
-                }
-            }
-
-            (double, double) tRightNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[0], tpoints[1]));
-            (double, double) tLeftNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[2], tpoints[3]));
-            (double, double) tUpNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[2], tpoints[1]));
-            (double, double) tBottomNVec = Normalize2IntTuple(GetVecBetweenPoints(tpoints[3], tpoints[0]));
-
-            double orthogonality = ScalarProduct(tRightNVec, tUpNVec) + ScalarProduct(tRightNVec, tBottomNVec) +
-            ScalarProduct(tLeftNVec, tUpNVec) + ScalarProduct(tLeftNVec, tBottomNVec);
-
-            if (
-                ScalarProduct(tRightNVec, tUpNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
-                ScalarProduct(tRightNVec, tBottomNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
-                ScalarProduct(tLeftNVec, tUpNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT ||
-                ScalarProduct(tLeftNVec, tBottomNVec) > CAM_SETTINGS.SQUARE_MAX_INDIVIDUAL_SCALARPRODUCT)
-                return true;
-
-            return ((double)tL.Count / tSize) < CAM_SETTINGS.SQUARYNESS_DETERMINANT
-                || tL.Count < CAM_SETTINGS.MIN_FILL_OBJECT_SIZE
-                || aspectRatio > CAM_SETTINGS.SQUARE_MAX_ASPECT_RATIO_DISTORTION
-                || aspectRatio < CAM_SETTINGS.SQUARE_MIN_ASPECT_RATIO_DISTORTION
-                || orthogonality > CAM_SETTINGS.SQUARE_MAX_SUM_OF_SCALARPRODUCT;
+                return ((double)tL.Count / tSize) < CAM_SETTINGS.SQUARYNESS_DETERMINANT
+                    || tL.Count < CAM_SETTINGS.MIN_FILL_OBJECT_SIZE
+                    || aspectRatio > CAM_SETTINGS.SQUARE_MAX_ASPECT_RATIO_DISTORTION
+                    || aspectRatio < CAM_SETTINGS.SQUARE_MIN_ASPECT_RATIO_DISTORTION
+                    || orthogonality > CAM_SETTINGS.SQUARE_MAX_SUM_OF_SCALARPRODUCT;
         }
 
         private void RecursiveFillFunction(ref List<int> tL, ref int tempLowestX, ref int tempHighestX, ref int tempLowestY, ref int tempHighestY, int pPix, int pDepth)
@@ -2095,7 +2312,7 @@ namespace Miluva
             double yProgr = 0d;
             List<int> ids = new List<int>();
 
-            if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
+            //if (horsqstartpos[startYPos]) pLineXe1VecY = horsqstartposd[startYPos];
 
             for (int i = 0; i < width; i++)
             {
@@ -2128,7 +2345,7 @@ namespace Miluva
 
             double tval = tC / (double)tC2;
 
-            if (horsqstartpos[startYPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL;
+            //if (horsqstartpos[startYPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST_ONLY_HORIZONTAL;
 
             //bool bbbb = false;
             //for (int j = -15; j < 16; j++)
@@ -2141,11 +2358,11 @@ namespace Miluva
             //    }
             //}
 
-            if (tval > 0.02)
+            if (tval > 0.01)
             {
                 horhorhor[startYPos] = true;
                 horlineids.AddRange(ids);
-                byte tbrightness = (byte)(Math.Clamp(255 * tval + 50, 0, 255));
+                byte tbrightness = (byte)(Math.Clamp(500 * tval, 0, 255));
                 for (int i = 0; i < ids.Count; i++)
                 {
                     horlineidstrengths.Add(tbrightness);
@@ -2192,12 +2409,12 @@ namespace Miluva
 
             double tval = tC / (double)tC2;
 
-            if (versqstartpos[startXPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST;
+            //if (versqstartpos[startXPos]) tval += CAM_SETTINGS.SECURE_SQUARE_LINE_DETERMINATION_BOOST;
 
-            if (tval > 0.02)
+            if (tval > 0.01)
             {
                 verlineids.AddRange(ids);
-                byte tbrightness = (byte)(Math.Clamp(255 * tval + 50, 0, 255));
+                byte tbrightness = (byte)(Math.Clamp(500 * tval, 0, 255));
                 for (int i = 0; i < ids.Count; i++)
                 {
                     verlineidstrengths.Add(tbrightness);

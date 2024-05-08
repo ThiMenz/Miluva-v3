@@ -73,14 +73,15 @@ namespace Miluva
             bool startFENstartswithwhite = ARDUINO_GAME_SETTINGS.START_FEN.Split('/')[7].Split(' ')[1] == "w";
 
             ChangePanel(1, 0, false, startFENstartswithwhite);
-            if ( (ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE && startFENstartswithwhite)
-             ||  (ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE && !startFENstartswithwhite) ) WaitUntilPinIsOne(3);
+            if ( (ARDUINO_GAME_SETTINGS.WHITE_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && startFENstartswithwhite)
+             ||  (ARDUINO_GAME_SETTINGS.BLACK_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && !startFENstartswithwhite) ) WaitUntilPinIsOne(3);
+
 
             while (true)
             {
                 if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
                 if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite) != 3) return;
-                switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
+                switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.WHITE_ENTITY : ARDUINO_GAME_SETTINGS.BLACK_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
                         tM = RealLifePlayerTurn(NonPlayingBoardManager);
@@ -96,7 +97,7 @@ namespace Miluva
                 }
                 if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
                 if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite) != 3) return;
-                switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
+                switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.BLACK_ENTITY : ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
                         tM = RealLifePlayerTurn(NonPlayingBoardManager);

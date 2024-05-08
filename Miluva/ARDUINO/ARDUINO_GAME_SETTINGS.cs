@@ -22,10 +22,10 @@
         public enum ENTITY_TYPE { PLAYER, ENGINE, DISCORD };
 
         // [CLASSIC]
-        public static readonly string START_FEN = ENGINE_VALS.DEFAULT_FEN;
+        public static readonly string START_FEN = @"8/8/8/4K3/8/k7/q7/8 w HA - 0 1";
 
         // [CLASSIC]
-        public static readonly CAMERA_BOTTOM_LINE CAM_LINE = CAMERA_BOTTOM_LINE.h8_a8;
+        public static readonly CAMERA_BOTTOM_LINE CAM_LINE = CAMERA_BOTTOM_LINE.a1_h1;
         public enum CAMERA_BOTTOM_LINE { h1_h8, a1_h1, a8_a1, h8_a8 };
 
 

@@ -2240,7 +2240,7 @@ namespace Miluva
                 tID--;
                 xProgr -= pLineXe1VecY;
             }
-            return pixelRowVals[tID < 0 ? 0 : tID];
+            return pixelRowVals[tID < 0 || tID >= pixelCount ? 0 : tID];
         }
 
         private int GetStartXPosOfVerticalLine(double pLineYe1VecX, (int, int) pPos)

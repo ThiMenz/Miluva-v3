@@ -41,32 +41,68 @@ namespace Miluva
             }
         }
 
-        private static ChessClock? HUMAN_CHESS_CLOCK, BOT_CHESS_CLOCK;
+        private static ChessClock WHITE_CHESS_CLOCK, BLACK_CHESS_CLOCK;
         private static int[] promTypeConversionArray = new int[7] { 0, 0, 3, 2, 1, 0, 0 };
         private static int[] promTypeConversionArrayBack = new int[4] { 5, 4, 3, 2 };
         private static bool CURRENTLY_WHITES_TURN = true;
+        private static bool CURRENTLY_FIRST_TURN = true;
 
         private static void Classic_Arduino_Game()
         {
-            TimeFormat tfHUMAN = new TimeFormat(ARDUINO_GAME_SETTINGS.HUMAN_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.HUMAN_INCREMENT_IN_SEC * 10_000_000d));
-            TimeFormat tfBOT = new TimeFormat(ARDUINO_GAME_SETTINGS.BOT_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.BOT_INCREMENT_IN_SEC * 10_000_000d));
-
-            ChessClock humanChessClock = new ChessClock(); //, botChessClock = new ChessClock();
-            humanChessClock.Set(tfHUMAN);
-            HUMAN_CHESS_CLOCK = humanChessClock;
+            TimeFormat tfWHITE = new TimeFormat(ARDUINO_GAME_SETTINGS.WHITE_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.WHITE_INCREMENT_IN_SEC * 10_000_000d));
+            TimeFormat tfBLACK = new TimeFormat(ARDUINO_GAME_SETTINGS.BLACK_TIME_IN_SEC * 10_000_000L, (long)(ARDUINO_GAME_SETTINGS.BLACK_INCREMENT_IN_SEC * 10_000_000d));
 
             Move? tM = null;
             BOT_MAIN.SetupParallelBoards();
-            IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0], AlternativeBoardManager = BOT_MAIN.boardManagers[0];
+            IBoardManager MainBoardManager = BOT_MAIN.boardManagers[0], AlternativeBoardManager = BOT_MAIN.boardManagers[1];
             BoardManager NonPlayingBoardManager = new BoardManager(ENGINE_VALS.DEFAULT_FEN);
 
-            if (!(ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.WHITE_ENTITY && ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE)) AlternativeBoardManager = MainBoardManager;
+            bool twoengines;
+
+            if (!(twoengines = (ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.WHITE_ENTITY && ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE))) AlternativeBoardManager = MainBoardManager;
             else AlternativeBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
             MainBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
             NonPlayingBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
 
-            BOT_CHESS_CLOCK = MainBoardManager.chessClock;
-            BOT_CHESS_CLOCK.Set(tfBOT);
+            Console.WriteLine(!(ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.WHITE_ENTITY && ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE));
+            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(AlternativeBoardManager.allPieceBitboard));
+
+
+            switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
+            {
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
+                    ChessClock humanChessClock = new ChessClock();
+                    WHITE_CHESS_CLOCK = humanChessClock;
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
+                    WHITE_CHESS_CLOCK = MainBoardManager.chessClock;
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
+                    ChessClock dcChessClock = new ChessClock();
+                    WHITE_CHESS_CLOCK = dcChessClock;
+                    break;
+            }
+            switch (ARDUINO_GAME_SETTINGS.BLACK_ENTITY)
+            {
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
+                    ChessClock humanChessClock = new ChessClock();
+                    BLACK_CHESS_CLOCK = humanChessClock;
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
+                    BLACK_CHESS_CLOCK = AlternativeBoardManager.chessClock;
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
+                    ChessClock dcChessClock = new ChessClock();
+                    BLACK_CHESS_CLOCK = dcChessClock;
+                    break;
+            }
+
+            WHITE_CHESS_CLOCK.Set(tfWHITE);
+            BLACK_CHESS_CLOCK.Set(tfBLACK);
 
             STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
@@ -76,11 +112,16 @@ namespace Miluva
             if ( (ARDUINO_GAME_SETTINGS.WHITE_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && startFENstartswithwhite)
              ||  (ARDUINO_GAME_SETTINGS.BLACK_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && !startFENstartswithwhite) ) WaitUntilPinIsOne(3);
 
+            int tEndGameState;
 
             while (true)
             {
-                if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
-                if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite) != 3) return;
+                if (tM != null)
+                {
+                    NonPlayingBoardManager.PlainMakeMove(tM);
+                    if (twoengines) (startFENstartswithwhite ? MainBoardManager : AlternativeBoardManager).PlainMakeMove(tM);
+                }
+                if ((tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite)) != 3) goto EndOfMatchup;
                 switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.WHITE_ENTITY : ARDUINO_GAME_SETTINGS.BLACK_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
@@ -88,15 +129,20 @@ namespace Miluva
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
-                        tM = EngineTurn(MainBoardManager, tM);
+                        tM = EngineTurn(startFENstartswithwhite ? MainBoardManager : AlternativeBoardManager, tM);
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
                         tM = DiscordTurn(NonPlayingBoardManager);
                         break;
                 }
-                if (tM != null) NonPlayingBoardManager.PlainMakeMove(tM);
-                if (NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite) != 3) return;
+                CURRENTLY_FIRST_TURN = false;
+                if (tM != null)
+                {
+                    NonPlayingBoardManager.PlainMakeMove(tM);
+                    if (twoengines) (startFENstartswithwhite ? AlternativeBoardManager : MainBoardManager).PlainMakeMove(tM);
+                }
+                if ((tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite)) != 3) goto EndOfMatchup;
                 switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.BLACK_ENTITY : ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
@@ -104,7 +150,7 @@ namespace Miluva
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE:
-                        tM = EngineTurn(MainBoardManager, tM);
+                        tM = EngineTurn(startFENstartswithwhite ? AlternativeBoardManager : MainBoardManager, tM);
                         break;
 
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.DISCORD:
@@ -112,6 +158,14 @@ namespace Miluva
                         break;
                 }
             }
+
+        EndOfMatchup:
+
+            int tEndVal = 0;
+            if (tEndGameState == -1) tEndVal = 2;
+            else if (tEndGameState == 0) tEndVal = 1;
+
+            ChangePanel(6, tEndVal, false, false);
         }
 
         //private static string[] on_words = new string[4] { "von", "on", "auf", "from" };
@@ -207,19 +261,26 @@ namespace Miluva
 
         private static Move? EngineTurn(IBoardManager pBoardManager, Move? pMove)
         {
-            if (pMove == null) return null; // Pretty much irrelevant, just to not get the warning
+            //if (pMove == null) return null; // Pretty much irrelevant, just to not get the warning
 
+            Console.WriteLine("???");
+
+            if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
+
+            ulong tBB = pBoardManager.allPieceBitboard;
             Move? tbM = pBoardManager.ReturnNextMove(pMove, 100_000_000L);
+
+            Console.WriteLine(tbM);
 
             if (tbM == null) // Bot has lost
             {
-                ChangePanel(6, 0, false, true);
+                //ChangePanel(6, 0, false, true);
                 return null;
             }
-            else if (pBoardManager.GameState(!CURRENTLY_WHITES_TURN) != 3) return null;
+            //else if (pBoardManager.GameState(!CURRENTLY_WHITES_TURN) != 3) return null;
             else ChangePanel(7, 0, false, false);
 
-            CalculateAndExecutePath(pBoardManager.allPieceBitboard, tbM);
+            CalculateAndExecutePath(tBB, tbM);
 
             WaitUntilPinIsOne(4); // Wait until move has been done
 
@@ -228,13 +289,13 @@ namespace Miluva
                 ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
             }
 
-            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
-
             return tbM;
         }
 
         public static Move? DiscordTurn(IBoardManager pBoardManager)
         {
+            if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
+
             Move? tM = null;
             while (tM == null) {
                 string tStr = "";
@@ -266,21 +327,22 @@ namespace Miluva
             CalculateAndExecutePath(pBoardManager.allPieceBitboard, tM);
             WaitUntilPinIsOne(4); // Wait until move has been done
 
-            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
-
             return tM;
         }
 
         private static Move? RealLifePlayerTurn(IBoardManager pMainBoardManager)
         {
-            int ttimeC = WaitUntilPinIsOne(9);
-            HUMAN_CHESS_CLOCK.MoveFinished(ttimeC * 5_000_000L);
+            if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
 
-        ReAnalysis:
-            List<ulong> camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
+            int ttimeC = WaitUntilPinIsOne(9);
+            (CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).MoveFinished(ttimeC * 5_000_000L);
+
             List<Move> tLegalMoves = new List<Move>();
             pMainBoardManager.GetLegalMoves(ref tLegalMoves);
             pMainBoardManager.SetJumpState();
+
+        ReAnalysis:
+            List<ulong> camAnlysisResult = STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
             Move? tM = null;
             int tC = tLegalMoves.Count;
             bool legalMoveFound = false;
@@ -328,24 +390,24 @@ namespace Miluva
             {
                 ChangePanel(3, 0, false, !CURRENTLY_WHITES_TURN);
                 WaitForTickCount(10_000_000L);
+                Console.WriteLine("!!!");
                 WaitUntilPinIsOne(9);
+                Console.WriteLine("!!!!");
                 goto ReAnalysis;
             }
 
             Console.WriteLine("MOVE FOUND: " + tM);
-
-            ChangePanel(2, 0, false, !CURRENTLY_WHITES_TURN);
 
             return tM;
         }
 
         private static void ChangePanel(int pPanelID, int pUniVal, bool pUniBool, bool pNextsWhiteTurn)
         {
-            if (HUMAN_CHESS_CLOCK == null || BOT_CHESS_CLOCK == null) return;
+            if (WHITE_CHESS_CLOCK == null || BLACK_CHESS_CLOCK == null) return;
 
             bool tHT = CURRENTLY_WHITES_TURN; //!(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
             ARDUINO_ACTION PANEL_CHANGE = new PANEL_CHANGE(pPanelID, pUniVal, pUniBool,
-            (tHT, pNextsWhiteTurn, (int)((tHT ? HUMAN_CHESS_CLOCK : BOT_CHESS_CLOCK).curRemainingTime / 1000000)));
+            (tHT, pNextsWhiteTurn, (int)((tHT ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).curRemainingTime / 1000000))); // Auf Zehntel Sekunde genau
             ExecuteActions(PANEL_CHANGE);
         }
 

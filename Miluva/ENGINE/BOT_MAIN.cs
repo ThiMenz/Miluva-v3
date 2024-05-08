@@ -12,6 +12,7 @@ namespace Miluva
     // [100%] -> En-Passant Pathfinder
     // [100%?] -> Image Directions
     // [100%] -> Fixing 1024+ Motor Steps Bug
+    // [100%?] -> Better Line Camera Detection
     // - - - - - - - -
     // Software (Wäre cool)
     // [85%?] [Das ist n' sehr großes Fragezeichen xD; noch nicht getestet] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
@@ -74,7 +75,7 @@ namespace Miluva
 
             //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(PNG_EXTRACTOR.TurnPerspective(ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 1, 2, 3, 32))));
 
-            //FirmataArdControl.ARDUINO_GAME();
+            FirmataArdControl.ARDUINO_GAME();
             //FirmataArdControl.SetupArduinoConnection();
             //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(8, 9, 10, 11, 12, 13, 14, 15), new Move(4, 6, 7, 5));
 
@@ -138,8 +139,8 @@ namespace Miluva
 
             //Console.WriteLine(CGFF.GetGame(";-8,U:,gF,üK,fY,Q;,BW,ÁL,Ç¤,^^,&b,´9,yU,ÿ²,Í5,K9,g9,II,6J,KJ,%j,õ;,D7,k[,Eb,lx,Ñ6,Gv,#V,ýX,Cu,Yp,AC,]l,0"));
 
-            STATIC_MAIN_CAMERA_ANALYSER.SETUP();
-            STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
+            //STATIC_MAIN_CAMERA_ANALYSER.SETUP();
+            //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
 
             //FirmataArdControl.TEST() ;
             //FirmataArdControl.CalculateAndExecuteCapturePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), 2, 26);

@@ -56,8 +56,8 @@ bool TIMER_SIDE = false, IS_HUMANS_TURN = false;
 
 const int MAX_RPM = 200; // Für die 12V Stepper
 
-#define MOTOR_RPM_5V 12
-#define QUATERROT_STEPS_5V 510 //509.5; 2038 für eine volle Umdrehung
+#define MOTOR_RPM_5V 15
+#define QUATERROT_STEPS_5V 1019 //509.5; 2038 für eine volle Umdrehung
 Stepper stepper(2038, 10, 12, 11, 13); // 5V Stepper
 
 /* analog inputs */
@@ -656,14 +656,15 @@ const char* waitingAnim[] = {
 void DisplayTimer() {
   myDisplay.setTextAlignment(TIMER_SIDE ? PA_LEFT : PA_RIGHT);
 
-  long tVal = remainingMillis - millis() + timeStamp;
+  long ttVal = remainingMillis + timeStamp;
+  long tVal = ttVal - millis();
 
   if (remainingMillis == 6400000) tVal = millis() - timeStamp;
 
   if (anyinputthispanel && IS_HUMANS_TURN) tVal = lastTimeStamp;
   else lastTimeStamp = tVal;
 
-  if (tVal > 1000000000) {
+  if (millis() > ttVal) {
     myDisplay.print("00:00");
     return;
   }
@@ -767,7 +768,7 @@ void loop()
         break;
         case 2:
           millisA2Press = 0;
-          if (--hIdx < 0) hIdx = 3;
+          if (--hIdx > 3) hIdx = 3; // Da es ein Byte ist
         break;
         case 3:
           newPanel = 7;
@@ -785,12 +786,15 @@ void loop()
       if (SETUP_CUR_PANEL != CUR_PANEL) {
         myDisplay.displayClear();
         myDisplay.setTextAlignment(PA_CENTER);
+        Firmata.setPinState(11, LOW);
       }
 
       myDisplay.print(promTypeArr[SmallUniversalVal]);
 
-      if (tinput > 0) newPanel = 2;
-
+      if (tinput > 0) {
+        newPanel = 2;
+        Firmata.setPinState(11, HIGH);
+      }
     break;
 
     case 6:

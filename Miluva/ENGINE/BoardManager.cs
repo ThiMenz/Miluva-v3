@@ -1617,7 +1617,7 @@ namespace Miluva
             if (isWhiteToMove) WhiteMakeMove(pMove);
             else BlackMakeMove(pMove);
             happenedHalfMoves++;
-            debugFEN = CreateFenString();
+            //debugFEN = CreateFenString();
         }
 
         public void WhiteMakeMove(Move pMove)

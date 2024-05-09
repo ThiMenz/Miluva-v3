@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using MathNet.Numerics.Statistics.Mcmc;
+using System.Transactions;
 
 namespace Miluva
 {
@@ -112,16 +113,16 @@ namespace Miluva
             if ( (ARDUINO_GAME_SETTINGS.WHITE_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && startFENstartswithwhite)
              ||  (ARDUINO_GAME_SETTINGS.BLACK_ENTITY != ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER && !startFENstartswithwhite) ) WaitUntilPinIsOne(3);
 
-            int tEndGameState;
+            int tEndGameState = 3;
 
             while (true)
             {
                 if (tM != null)
                 {
                     NonPlayingBoardManager.PlainMakeMove(tM);
-                    if (twoengines) (startFENstartswithwhite ? MainBoardManager : AlternativeBoardManager).PlainMakeMove(tM);
+                    //if (twoengines) (startFENstartswithwhite ? MainBoardManager : AlternativeBoardManager).PlainMakeMove(tM);
                 }
-                if ((tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite)) != 3) goto EndOfMatchup;
+                if (!(CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).HasTimeLeft() || (tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = startFENstartswithwhite)) != 3) goto EndOfMatchup;
                 switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.WHITE_ENTITY : ARDUINO_GAME_SETTINGS.BLACK_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
@@ -140,9 +141,9 @@ namespace Miluva
                 if (tM != null)
                 {
                     NonPlayingBoardManager.PlainMakeMove(tM);
-                    if (twoengines) (startFENstartswithwhite ? AlternativeBoardManager : MainBoardManager).PlainMakeMove(tM);
+                    //if (twoengines) (startFENstartswithwhite ? AlternativeBoardManager : MainBoardManager).PlainMakeMove(tM);
                 }
-                if ((tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite)) != 3) goto EndOfMatchup;
+                if (!(CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).HasTimeLeft() || (tEndGameState = NonPlayingBoardManager.GameState(CURRENTLY_WHITES_TURN = !startFENstartswithwhite)) != 3) goto EndOfMatchup;
                 switch (startFENstartswithwhite ? ARDUINO_GAME_SETTINGS.BLACK_ENTITY : ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
                 {
                     case ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER:
@@ -164,12 +165,13 @@ namespace Miluva
             int tEndVal = 0;
             if (tEndGameState == -1) tEndVal = 2;
             else if (tEndGameState == 0) tEndVal = 1;
+            else if (tEndGameState == 3) tEndVal = WHITE_CHESS_CLOCK.HasTimeLeft() ? 0 : 2;
 
             ChangePanel(6, tEndVal, false, false);
         }
 
         //private static string[] on_words = new string[4] { "von", "on", "auf", "from" };
-        private static string[] to_words = new string[4] { "to", "nach", "zu", "auf" };
+        private static string[] to_words = new string[5] { "to", "nach", "zu", "auf", "von" };
 
         private static string[,] piece_words = new string[6, 2]
         {
@@ -204,14 +206,14 @@ namespace Miluva
             List<Move> tMoves = new List<Move>();
             pB.GetLegalMoves(ref tMoves);
 
-            pStr = pStr.ToLower();
-            bool spokenVersion = false;
+            pStr = pStr.ToLower().Replace(",", "").Replace(".", "");
+            bool spokenVersion = false; //isAPromotion = pStr.Contains("verwand") || pStr.Contains("promot")
 
             for (int i = 0; i < to_words.Length; i++)
                 if (pStr.Contains(" " + to_words[i] + " "))
                     spokenVersion = true;
 
-            int pieceStartPos = -1, pieceType = -1, pieceEndpos = -1;
+            int pieceStartPos = -1, pieceType = -1, pieceEndpos = -1, piecePromType = -1;
 
             if (spokenVersion)
             {
@@ -221,20 +223,34 @@ namespace Miluva
                 {
                     int tPT = PieceTypeFromString(pStrSpl[p]);
 
-                    if (tPT != 0) pieceType = tPT;
+                    if (tPT != 0 && pieceType != -1) piecePromType = tPT;
 
                     if (to_words.Contains(pStrSpl[p]))
                     {
                         string pPSq = pStrSpl[--p];
 
-                        if (pPSq.Length != 2) { p++; continue; } 
+                        //if (pPSq.Length != 2) { p++; continue; }
 
-                        pieceStartPos = GetSquareFromChars(pPSq[0], pPSq[1]);
+                        int ttiPT = PieceTypeFromString(pStrSpl[p]), tPSP = -1, tTPT = -1;
+
+                        if (pPSq.Length == 2 && Char.IsNumber(pPSq[1])) tPSP = GetSquareFromChars(pPSq[0], pPSq[1]);
+                        else if (ttiPT != 0) tTPT = ttiPT;
+                        //else if (pPSq.StartsWith("verwandl"))
+                        //{
+                        //    p++;
+                        //    continue;
+                        //}
+
                         p += 2;
                         pPSq = pStrSpl[p];
-                        pieceEndpos = GetSquareFromChars(pPSq[0], pPSq[1]);
+                        if (pPSq.Length == 2 && Char.IsNumber(pPSq[1]))
+                        {
+                            if (tPSP != -1) pieceStartPos = tPSP;
+                            if (tTPT != -1) pieceType = tTPT;
+                            pieceEndpos = GetSquareFromChars(pPSq[0], pPSq[1]);
+                        }
 
-                        break;
+                        //break;
                     }
                 }
             }
@@ -242,10 +258,37 @@ namespace Miluva
             {
                 pStr = pStr.Replace(" ", "");
 
-                if (pStr.Length != 4) return null;
+                if (pStr.Length != 4 && pStr.Length != 6) return null;
 
                 pieceStartPos = GetSquareFromChars(pStr[0], pStr[1]);
                 pieceEndpos = GetSquareFromChars(pStr[2], pStr[3]);
+
+
+                if (pStr.Length == 6)
+                {
+                    switch (pStr[5])
+                    {
+                        case 'q':
+                            piecePromType = 5; break;
+                        case 'd':
+                            piecePromType = 5; break;
+
+                        case 'r':
+                            piecePromType = 4; break;
+                        case 't':
+                            piecePromType = 4; break;
+
+                        case 'b':
+                            piecePromType = 3; break;
+                        case 'l':
+                            piecePromType = 3; break;
+
+                        case 'k':
+                            piecePromType = 2; break;
+                        case 'n':
+                            piecePromType = 2; break;
+                    }
+                }
             }
 
             for (int i = 0; i < tMoves.Count; i++)
@@ -253,7 +296,8 @@ namespace Miluva
                 Move tM = tMoves[i];
                 if ((pieceStartPos == -1 || pieceStartPos == tM.startPos) &&
                     (pieceEndpos == -1 || pieceEndpos == tM.endPos) &&
-                    (pieceType == -1 || pieceType == tM.pieceType)) return tM;
+                    (pieceType == -1 || pieceType == tM.pieceType) &&
+                    (piecePromType == -1 || piecePromType == tM.promotionType)) return tM;
             }
 
             return null;
@@ -263,14 +307,10 @@ namespace Miluva
         {
             //if (pMove == null) return null; // Pretty much irrelevant, just to not get the warning
 
-            Console.WriteLine("???");
-
             if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
 
             ulong tBB = pBoardManager.allPieceBitboard;
             Move? tbM = pBoardManager.ReturnNextMove(pMove, 100_000_000L);
-
-            Console.WriteLine(tbM);
 
             if (tbM == null) // Bot has lost
             {
@@ -287,6 +327,7 @@ namespace Miluva
             if (tbM.isPromotion)
             {
                 ChangePanel(5, promTypeConversionArray[tbM.promotionType], false, false);
+                WaitUntilPinIsOne(11);
             }
 
             return tbM;
@@ -296,16 +337,32 @@ namespace Miluva
         {
             if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
 
+            try { 
+                File.WriteAllText(PathManager.GetTXTPath("OTHER/DiscordMessages"), "");
+            } catch (Exception) { }
+
+            long tTimestamp = sw.ElapsedTicks;
+
             Move? tM = null;
+            string tStr = "", tempSaveTStr = "";
             while (tM == null) {
-                string tStr = "";
-                while (tStr == "")
+                while (tStr == tempSaveTStr)
                 {
                     WaitForTickCount(1_000_000L);
-                    tStr = File.ReadAllText(PathManager.GetTXTPath("OTHER/DiscordMessages"));
+                    try
+                    {
+                        if ((CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).curRemainingTime < sw.ElapsedTicks - tTimestamp)
+                        {
+                            (CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).curRemainingTime = -1L;
+                            return null;
+                        }
+                        tStr = File.ReadAllText(PathManager.GetTXTPath("OTHER/DiscordMessages"));
+                    }
+                    catch (Exception) { }
                 }
                 //for (int i = 0; i < tStr.Length; i++) // Eig nicht notwendig, da der DC-Bot sowieso immer nur die aktuelle Zeile beibehält
                 //{
+                tempSaveTStr = tStr;
                 int tL = tStr.Length;
                 Console.WriteLine(tStr);
                 if (!(CURRENTLY_WHITES_TURN ? ARDUINO_GAME_SETTINGS.WHITE_DISCORD_IDS : ARDUINO_GAME_SETTINGS.BLACK_DISCORD_IDS).Contains(tStr.Split(':')[0]))
@@ -318,14 +375,23 @@ namespace Miluva
                     {
                         string tMessage = tStr.Substring(j + 1);
                         tM = GetMoveFromDCMessage(tMessage, pBoardManager); // Überprüft auch direkt die Legimität des Zuges
+                        Console.WriteLine(tM);
                         if (tM != null) break;
                     }
                 }
             }
 
+            (CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).MoveFinished(sw.ElapsedTicks - tTimestamp);
+
             ChangePanel(7, 0, false, false);
             CalculateAndExecutePath(pBoardManager.allPieceBitboard, tM);
             WaitUntilPinIsOne(4); // Wait until move has been done
+
+            if (tM.isPromotion)
+            {
+                ChangePanel(5, promTypeConversionArray[tM.promotionType], false, false);
+                WaitUntilPinIsOne(11);
+            }
 
             return tM;
         }
@@ -336,6 +402,7 @@ namespace Miluva
 
             int ttimeC = WaitUntilPinIsOne(9);
             (CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).MoveFinished(ttimeC * 5_000_000L);
+            if (!(CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).HasTimeLeft()) return null;
 
             List<Move> tLegalMoves = new List<Move>();
             pMainBoardManager.GetLegalMoves(ref tLegalMoves);
@@ -363,17 +430,17 @@ namespace Miluva
                         WaitUntilPinIsOne(10);
 
                         long ps7 = SESSION.GetPinState(7).Value, ps8 = SESSION.GetPinState(8).Value;
-                        int tpromType = (int)(ps7 | (ps8 << 1));
-                        pMainBoardManager.LoadJumpState();
+                        int tpromType = 5 - (int)(ps7 | (ps8 << 1));
 
                         for (int j = 0; j < tC; j++)
                         {
+                            pMainBoardManager.LoadJumpState();
                             tM = tLegalMoves[j];
                             pMainBoardManager.PlainMakeMove(tM);
                             if (camAnlysisResult.Contains(pMainBoardManager.allPieceBitboard) && tpromType == tM.promotionType)
                             {
                                 legalMoveFound = true;
-                                break;
+                                goto PromotionSkip;
                             }
                         }
 
@@ -384,6 +451,7 @@ namespace Miluva
                 }
             }
 
+        PromotionSkip:
             pMainBoardManager.LoadJumpState();
 
             if (!legalMoveFound)
@@ -405,9 +473,9 @@ namespace Miluva
         {
             if (WHITE_CHESS_CLOCK == null || BLACK_CHESS_CLOCK == null) return;
 
-            bool tHT = CURRENTLY_WHITES_TURN; //!(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
+            bool tHT = (CURRENTLY_WHITES_TURN ? ARDUINO_GAME_SETTINGS.WHITE_ENTITY : ARDUINO_GAME_SETTINGS.BLACK_ENTITY) == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.PLAYER; //!(ARDUINO_GAME_SETTINGS.HUMAN_PLAYS_WHITE ^ pNextsWhiteTurn);
             ARDUINO_ACTION PANEL_CHANGE = new PANEL_CHANGE(pPanelID, pUniVal, pUniBool,
-            (tHT, pNextsWhiteTurn, (int)((tHT ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).curRemainingTime / 1000000))); // Auf Zehntel Sekunde genau
+            (tHT, CURRENTLY_WHITES_TURN ^ ARDUINO_GAME_SETTINGS.WHITE_TIMER_TO_THE_RIGHT, (int)((CURRENTLY_WHITES_TURN ? WHITE_CHESS_CLOCK : BLACK_CHESS_CLOCK).curRemainingTime / 1000000))); // Auf Zehntel Sekunde genau
             ExecuteActions(PANEL_CHANGE);
         }
 
@@ -627,7 +695,7 @@ namespace Miluva
 
             if (pMagnetState != pAction.Item2)
             {
-                Console.WriteLine("=> " + pList.Count);
+                //Console.WriteLine("=> " + pList.Count);
 
                 pMagnetState = pAction.Item2;
                 ARDUINO_ACTION MAGNET = new MAGNET_STATE_SET(pMagnetState);
@@ -637,19 +705,19 @@ namespace Miluva
             switch (pAction.Item1)
             {
                 case 0: // Oben
-                    ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * pCount, tRPM, UP);
+                    ARDUINO_ACTION Y_UP = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * pCount, tRPM, UP);
                     pList.Add((Y_UP, tDelay));
                     break;
                 case 1: // Unten
-                    ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 175 * pCount, tRPM, DOWN);
+                    ARDUINO_ACTION Y_DOWN = new STEPPER_MOTOR_TURN(Y_MOTOR, 177 * pCount, tRPM, DOWN);
                     pList.Add((Y_DOWN, tDelay));
                     break;
                 case 2: // Links
-                    ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * pCount, tRPM, LEFT);
+                    ARDUINO_ACTION X_LEFT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * pCount, tRPM, LEFT);
                     pList.Add((X_LEFT, tDelay));
                     break;
                 case 3: // Rechts
-                    ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 176 * pCount, tRPM, RIGHT);
+                    ARDUINO_ACTION X_RIGHT = new STEPPER_MOTOR_TURN(X_MOTOR, 180 * pCount, tRPM, RIGHT);
                     pList.Add((X_RIGHT, tDelay));
                     break;
                 //case 4: // Magnet

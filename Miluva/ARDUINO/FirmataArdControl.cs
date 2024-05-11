@@ -32,7 +32,11 @@ namespace Miluva
         {
             SetupArduinoConnection();
 
-            if (SESSION == null) return;
+            if (SESSION == null)
+            {
+                Console.ReadKey();
+                return;
+            }
 
             switch (ARDUINO_GAME_SETTINGS.GAME_MODE.ToLower())
             {
@@ -40,6 +44,8 @@ namespace Miluva
                     Classic_Arduino_Game();
                     break;
             }
+
+            Console.ReadKey();
         }
 
         private static ChessClock WHITE_CHESS_CLOCK, BLACK_CHESS_CLOCK;

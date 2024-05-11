@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 #pragma warning disable CS8618
 #pragma warning disable CS8622
@@ -10,18 +11,15 @@ namespace Miluva
     // - - - - - - - -
     // Software (Zwangsweise notwendig)
     // [100%] -> En-Passant Pathfinder
-    // [100%?] -> Image Directions
+    // [100%] -> Image Directions
     // [100%] -> Fixing 1024+ Motor Steps Bug
-    // [100%?] -> Better Line Camera Detection
+    // [100%] -> Better Line Camera Detection
+    // [0%] -> Playing Directions
     // - - - - - - - -
     // Software (Wäre cool)
-    // [85%?] [Das ist n' sehr großes Fragezeichen xD; noch nicht getestet] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
+    // [100%] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
     // -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
-    
-    
-    //Arduino Cam Analysis Error Panel (glaub tatsächlich nicht das wir es brauchen)
-
-
+    // [100%] -> Arduino Cam Analysis Error Panel
 
     // - - - - - - - -
     // Hardware (Zwangsweise notwendig)
@@ -31,7 +29,7 @@ namespace Miluva
     // -> Figuren CAD & Druck (in richtiger / stabiler Form + weiß)
     // - - - - - - - -
 
-    // -> Portfolio
+    // [85%] -> Portfolio
     // -> Video & (Vortragskrempel)
 
     public static class BOT_MAIN
@@ -64,6 +62,7 @@ namespace Miluva
 
         public static void Main(string[] args)
         {
+            ARDUINO_GAME_SETTINGS.LoadIn();
             SQUARES.Init();
             FEN_MANAGER.Init();
             NuCRe.Init();
@@ -71,135 +70,7 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
-            //Console.WriteLine(FirmataArdControl.DiscordTurn(new BoardManager(ENGINE_VALS.DEFAULT_FEN)));
-
-            //Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(PNG_EXTRACTOR.TurnPerspective(ULONG_OPERATIONS.SetBitsToOne(0ul, 0, 1, 2, 3, 32))));
-
             FirmataArdControl.ARDUINO_GAME();
-            //FirmataArdControl.SetupArduinoConnection();
-            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(8, 9, 10, 11, 12, 13, 14, 15), new Move(4, 6, 7, 5));
-
-            //double d = -2;
-            //Stopwatch sw = new Stopwatch();
-            //sw.Start();
-            //for (int i = 0; i < 10_000_000; i++)
-            //    Math.Sign(d);
-            //sw.Stop();
-
-
-            //Console.WriteLine((ulong)d << 63);
-
-
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-            //Console.WriteLine(TLMDatabase.SearchForNextBookMove(";-8,U:,gF,üK,fY,Q;"));
-
-            //BoardManager bm = new BoardManager(@"8/3pp3/7p/6p1/p1PPPk2/3K2P1/7P/8 b - - 0 63");
-            //bm.PlayGameOnConsoleAgainstHuman(@"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false, 50_000_000L);
-
-            //TLMDatabase.GetNNParamsFromFEN("2r4k/p4bp1/4pq2/1p1p4/2n2P2/P2B4/1P5P/1K1RR3 w - - 8 28");
-            //
-            //TLMDatabase.LoadNN2();
-
-            //TLMDatabase.TrainNN2();
-            //Console.WriteLine(TLMDatabase.EfficientProcessOfNN2());
-            //Stopwatch sw = new Stopwatch();
-            //sw.Start();
-            //for (int i = 0; i < 10_000_000; i++)
-            //    TLMDatabase.EfficientProcessOfNN2();
-            //sw.Stop();
-
-            //Console.WriteLine(sw.ElapsedTicks + " (" + sw.ElapsedMilliseconds + "ms)");
-
-            //FirmataArdControl.TEST();
-
-            //FirmataArdControl.TEST();
-
-            //TLMDatabase.GetNNParamsFromFEN("8/p7/8/3p4/P1pP1k1p/2P5/6K1/8 w - - 2 48|-666");
-            //Console.WriteLine(TLMDatabase.ConvertCPValsToNNSigmoid(TLMDatabase.GetCPValFromTXTLine("8/p7/8/3p4/P1pP1k1p/2P5/6K1/8 w - - 2 48|-666")));
-
-            //TLMDatabase.PlayThroughDatabase2(new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
-
-
-
-            //TLMDatabase.PlayThroughDatabase(new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
-
-
-            //MEM_TempStuff();
-
-            //for (int i = 0; i < 100; i++)
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(TLMDatabase.SearchForNextBookMoveV2(new List<int>()).Item1));
-
-            //MEM_TempStuff();
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("K9"));
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("g9"));
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get("II"));
-
-            //Console.WriteLine(CGFF.GetGame(";-8,U:,gF,üK,fY,Q;,BW,ÁL,Ç¤,^^,&b,´9,yU,ÿ²,Í5,K9,g9,II,6J,KJ,%j,õ;,D7,k[,Eb,lx,Ñ6,Gv,#V,ýX,Cu,Yp,AC,]l,0"));
-
-            //STATIC_MAIN_CAMERA_ANALYSER.SETUP();
-            //STATIC_MAIN_CAMERA_ANALYSER.ANALYSE();
-
-            //FirmataArdControl.TEST() ;
-            //FirmataArdControl.CalculateAndExecuteCapturePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), 2, 26);
-            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15), 4, 6);
-            //FirmataArdControl.CalculateAndExecuteRochadePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8, 17, 26, 19, 12, 13, 14, 15), new Move(4, 6, 7, 5)); //ULONG_OPERATIONS.SetBitsToOne(0ul, 8,17,26,19,12,13,14,15)
-            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 8, 17, 26, 19, 12, 13, 14, 15), 4, 6);
-
-            /*MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(
-                
-                ULONG_OPERATIONS.FlipBoard90Degress( 
-                    ULONG_OPERATIONS.SetBitsToOne(0ul, 9, 24,25,26,27,28,29,30,31)
-                    )
-                , 9, 63);
-
-
-            Console.WriteLine(mms.GetDirectionMoveString());
-
-            string outp = "";
-            string[] DEUTSCHE_ANWEISUNGEN = new string[5] { "Oben", "Unten", "Links", "Rechts", "MAGNET" };
-            int tC = 1, ll = -1, fC = 1;
-            for (int i = 0; i < MagnetMovePathfinder.FINAL_ACTIONS.Count; i++)
-            {
-                int tAct = MagnetMovePathfinder.FINAL_ACTIONS[i];
-                if (tAct == ll)
-                {
-                    tC++;
-                }
-                else if (i != 0) {
-                    outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll] + ", ";
-                    fC++;
-                    tC = 1;
-                }
-                ll = tAct;
-            }
-            outp += tC + "x " + DEUTSCHE_ANWEISUNGEN[ll];
-
-            Console.WriteLine(outp);
-            Console.WriteLine(fC);*/
-
-            //FirmataArdControl.ARDUINO_GAME();
-
-            //MEM_CreateSnapshot("SNAPSHOT_V02_06_007"); 
-
-            //_ = new ReLe_AIHandler();
-
-            //SNAPSHOT_V01_00_018 sn = new SNAPSHOT_V01_00_018(ENGINE_VALS.DEFAULT_FEN);
-            //sn.LoadFenString("8/6p1/p2p2k1/1p1N2b1/4P1n1/R6B/PPr5/K7 w - - 0 2");
-            //Move? tm;
-            //Console.WriteLine(sn.ReturnNextMove(null, 1_000_000L));
-
-            //MEM_TempStuff();
-            //
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(6947)));
-            //Console.WriteLine(MOVE_HASH_EXTRACTOR.Get(NuCRe.GetNuCRe(10419)));
-
-            //MEM_SnapshotClash();
-            //MEM_UpdateSnapshotCS();
-
-            //MEM_SnapshotClash();
         }
 
         #region | MAIN METHODS |
@@ -333,7 +204,7 @@ namespace Miluva
             for (int i = 0; i < ENGINE_VALS.PARALLEL_BOARDS; i++)
             {
                 curBoardManagerID++;
-                boardManagers[i] = new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+                boardManagers[i] = (IBoardManager)Activator.CreateInstance(ARDUINO_GAME_SETTINGS.ENGINE_TYPE, ENGINE_VALS.DEFAULT_FEN); //new BoardManager("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
                 Console.Write((i + 1) + ", ");
                 isFirstBoardManagerInitialized = true;
             }

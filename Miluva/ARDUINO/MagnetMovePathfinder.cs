@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using MathNet.Numerics.Financial;
+using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.Numerics;
 
 #pragma warning disable
@@ -28,6 +30,7 @@ namespace Miluva
         {
             public Direction dir;
             public bool magnet;
+            public bool captureAddOn;
             public enum Direction { Up, Down, Left, Right };
 
             public override string ToString()
@@ -38,8 +41,8 @@ namespace Miluva
                 else if (dir == Direction.Down) c = "U";
                 //if (magnet) MagnetMovePathfinder.FINAL_ACTIONS.Add(4);
                 //MagnetMovePathfinder.FINAL_ACTIONS.Add((int)dir);
-                MagnetMovePathfinder.FINAL_ACTIONS.Add(((int)dir, magnet));
-                return (magnet ? " M " : " ") + c;
+                //MagnetMovePathfinder.FINAL_ACTIONS.Add(((int)dir, magnet));
+                return (magnet ? c : c.ToLower());
             }
         }
         public struct RMove // "Raw Move"
@@ -63,10 +66,145 @@ namespace Miluva
 
         #region | MOVE MANAGEMENT |
 
+        private DMove.Direction ChangeDMovesPerspective(DMove dM)
+        {
+            if (dM.captureAddOn) return dM.dir;
+
+            switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
+            {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a1_h1:
+                    return dM.dir;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+
+                    switch (dM.dir)
+                    {
+                        case DMove.Direction.Left:
+                            return DMove.Direction.Right;
+                        case DMove.Direction.Right:
+                            return DMove.Direction.Left;
+                        case DMove.Direction.Up:
+                            return DMove.Direction.Down;
+                        case DMove.Direction.Down:
+                            return DMove.Direction.Up;
+                    }
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
+
+                    switch (dM.dir)
+                    {
+                        case DMove.Direction.Left:
+                            return DMove.Direction.Down;
+                        case DMove.Direction.Right:
+                            return DMove.Direction.Up;
+                        case DMove.Direction.Up:
+                            return DMove.Direction.Left;
+                        case DMove.Direction.Down:
+                            return DMove.Direction.Right;
+                    }
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+
+                    switch (dM.dir)
+                    {
+                        case DMove.Direction.Left:
+                            return DMove.Direction.Up;
+                        case DMove.Direction.Right:
+                            return DMove.Direction.Down;
+                        case DMove.Direction.Up:
+                            return DMove.Direction.Right;
+                        case DMove.Direction.Down:
+                            return DMove.Direction.Left;
+                    }
+
+                    break;
+            }
+
+            throw new Exception("§§§");
+        }
+
+        public void ChangePerspective()
+        {
+            List<DMove> newL = new List<DMove>();
+            foreach (DMove move in dirMoves)
+                newL.Add(new DMove() { dir = ChangeDMovesPerspective(move), magnet = move.magnet });
+
+            dirMoves = newL;
+
+            List<DMove> tdMoves = new List<DMove>();
+            switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
+            {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+
+                    for (int i = 0; i < 7; i++) tdMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
+                    for (int i = 0; i < 7; i++) tdMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+
+                    for (int i = 0; i < 7; i++) tdMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
+
+                    for (int i = 0; i < 7; i++) tdMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
+
+                    break;
+            }
+            dirMoves.InsertRange(0, tdMoves);
+
+            CleanUpDirectionMoves();
+
+            foreach (DMove move in dirMoves)
+                MagnetMovePathfinder.FINAL_ACTIONS.Add(((int)move.dir, move.magnet));
+        }
+
+        public int GetDirMoveCountWithMagnet()
+        {
+            int ccount = 0;
+            foreach (DMove dmove in dirMoves)
+            {
+                if (dmove.magnet) ccount++; 
+            }
+            return ccount;
+        }
+
         public string GetDirectionMoveString(bool pCapture)
         {
             string s = "";
             int f = 0;
+
+            /* switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
+            {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
+
+                    break;
+            } */
 
             // Konvertieren der rohen Felder in Bewegungsrichtungen
             for (int i = 0; i < individualFields.Count; i++)
@@ -82,6 +220,7 @@ namespace Miluva
                 if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Up; //Up
                 else if (dif == -1 || f == 64) tdir = DMove.Direction.Down; //Down
                 else if (dif > 1) tdir = DMove.Direction.Right; //Right
+                //DMove.Direction tdir = GetDirectionBasedOnMainAxisAlignment(dif, f, i);
                 //dirMoves.Add(new DMove() { dir = tdir, magnet = individualFields[i].magnet });
                 dirMoves.Add(new DMove()
                 {
@@ -92,6 +231,28 @@ namespace Miluva
             }
 
             if (pCapture) AppendCaptureAddition();
+
+            /*switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
+            {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
+
+                    break;
+
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
+
+                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
+
+                    break;
+            }*/
 
             CleanUpDirectionMoves();
 
@@ -113,23 +274,55 @@ namespace Miluva
             return s;
         }
 
+        public DMove.Direction GetDirectionBasedOnMainAxisAlignment(int dif, int f, int i)
+        {
+            DMove.Direction tdir;
+            switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE) {
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a1_h1:
+                    tdir = DMove.Direction.Left;
+                    if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Up;
+                    else if (dif == -1 || f == 64) tdir = DMove.Direction.Down;
+                    else if (dif > 1) tdir = DMove.Direction.Right;
+                    return tdir;
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
+                    tdir = DMove.Direction.Right;
+                    if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Down;
+                    else if (dif == -1 || f == 64) tdir = DMove.Direction.Up;
+                    else if (dif > 1) tdir = DMove.Direction.Left;
+                    return tdir;
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
+                    tdir = DMove.Direction.Up;
+                    if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Right;
+                    else if (dif == -1 || f == 64) tdir = DMove.Direction.Left;
+                    else if (dif > 1) tdir = DMove.Direction.Down;
+                    return tdir;
+                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
+                    tdir = DMove.Direction.Down;
+                    if (dif == 1 || individualFields[i].pos == 64) tdir = DMove.Direction.Left;
+                    else if (dif == -1 || f == 64) tdir = DMove.Direction.Right;
+                    else if (dif > 1) tdir = DMove.Direction.Up;
+                    return tdir;
+            }
+            throw new Exception("Main Axis Aligment caused an error :( [GetDirectionBasedOnMainAxisAlignment]");
+        }
+
         public void CleanUpDirectionMoves()
         {
             bool b = true;
-            while (b)
-            {
-                b = false;
-                for (int i = 1; i < dirMoves.Count; i++)
-                {
-                    // Sobald ein Magnet sich hin & her mit dem gleichen Magnet-Status bewegt, wird diese Sequenz als unnötig angesehen und gelöscht
-                    if (IsContradictingDirection(dirMoves[i].dir, dirMoves[i - 1].dir) && dirMoves[i].magnet == dirMoves[i - 1].magnet)
-                    {
-                        dirMoves.RemoveAt(i - 1);
-                        dirMoves.RemoveAt(i - 1);
-                        b = true;
-                    }
-                }
-            }
+            //while (b)
+            //{
+            //    b = false;
+            //    for (int i = 1; i < dirMoves.Count; i++)
+            //    {
+            //        // Sobald ein Magnet sich hin & her mit dem gleichen Magnet-Status bewegt, wird diese Sequenz als unnötig angesehen und gelöscht
+            //        if (IsContradictingDirection(dirMoves[i].dir, dirMoves[i - 1].dir) && dirMoves[i].magnet == dirMoves[i - 1].magnet)
+            //        {
+            //            dirMoves.RemoveAt(i - 1);
+            //            dirMoves.RemoveAt(i - 1);
+            //            b = true;
+            //        }
+            //    }
+            //}
 
             List<DMove> tdmoves = new List<DMove>();
 
@@ -137,7 +330,7 @@ namespace Miluva
             for (int i = 0; i < dirMoves.Count; i++)
             {
                 DMove.Direction dir = dirMoves[i].dir;
-                if (dirMoves[i].magnet)
+                if (dirMoves[i].magnet || dirMoves[i].captureAddOn)
                 {
                     if (tX != 0 || tY != 0)
                     {
@@ -262,6 +455,29 @@ namespace Miluva
             AddIndividualMoves(tempPath.ToArray());
         }
 
+        private void InsertInTheBeginningToFieldWithoutMagnet(int field)
+        {
+            curField = 0;
+            int pathModolu = field % 8, sign = Math.Sign(pathModolu - curField % 8), sign2 = Math.Sign(field - curField) * 8;
+            List<RMove> tempPath = new List<RMove>() { };
+
+            // X-Bewegung
+            while (curField % 8 != pathModolu)
+            {
+                curField += sign;
+                tempPath.Add(new RMove() { pos = curField, magnet = false });
+            }
+
+            // Y-Bewegung
+            while (curField != field)
+            {
+                curField += sign2;
+                tempPath.Add(new RMove() { pos = curField, magnet = false });
+            }
+
+            individualFields.InsertRange(0, tempPath);
+        }
+
         private void AddIndividualMoves(int[] path)
         {
             // Fügt alle Felder außer das Erste hinzu, da dieses immer durch den vorherigen Path hinzugefügt wird
@@ -310,8 +526,12 @@ namespace Miluva
 
         public void AppendCaptureAddition()
         {
-            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = DMove.Direction.Down, magnet = false });
-            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = DMove.Direction.Up, magnet = true });
+            bool isUpwardsMovement = individualFields[backwardsMark].pos == MagnetMovePathfinder.captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 0];
+
+            //Console.WriteLine(individualFields[backwardsMark].pos + " | " + MagnetMovePathfinder.captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 0]);
+
+            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = isUpwardsMovement ? DMove.Direction.Down : DMove.Direction.Left, magnet = false, captureAddOn = true });
+            dirMoves.Insert(backwardsMark + 1, new DMove() { dir = isUpwardsMovement ? DMove.Direction.Up : DMove.Direction.Right, magnet = true, captureAddOn = true });
         }
 
         #endregion
@@ -387,15 +607,28 @@ namespace Miluva
             return combinedMMS;
         }
 
+        public static int[,] captureSquaresByMainAxisAlignment = new int[4, 2] {
+            { 60, 32 },
+            { 32, 3 },
+            { 3, 31 },
+            { 31, 60 }
+        };
+
         public static MagnetMoveSequence CalculateCapturePath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex)
         {
-            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, endSquareIndex, 31, true);
+            // { a8_a1, h8_a8, h1_h8, a1_h1 };
+            // 3; 31; 32; 60
+
+            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, endSquareIndex, captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 0], true);
+            MagnetMoveSequence mms3 = CalculatePath(pblockedSquares, endSquareIndex, captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 1], true);
+            int mms1C = mms1.GetDirMoveCountWithMagnet(), mms3C = mms3.GetDirMoveCountWithMagnet();
+
             pblockedSquares = ULONG_OPERATIONS.SetBitToZero(pblockedSquares, endSquareIndex);
             MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
 
             FINAL_ACTIONS.Clear();
             MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
-            combinedMMS.dirMoves.AddRange(mms1.dirMoves);
+            combinedMMS.dirMoves.AddRange(mms1C < mms3C ? mms1.dirMoves : mms3.dirMoves);
             combinedMMS.dirMoves.AddRange(mms2.dirMoves);
             combinedMMS.GetDirectionMoveString(false);
 
@@ -404,13 +637,16 @@ namespace Miluva
 
         public static MagnetMoveSequence CalculateEnPassantPath(ulong pblockedSquares, int startSquareIndex, int endSquareIndex, int enPassantSquareIndex)
         {
-            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, enPassantSquareIndex, 31, true);
+            MagnetMoveSequence mms1 = CalculatePath(pblockedSquares, enPassantSquareIndex, captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 0], true);
+            MagnetMoveSequence mms3 = CalculatePath(pblockedSquares, enPassantSquareIndex, captureSquaresByMainAxisAlignment[(int)ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE, 1], true);
+            int mms1C = mms1.GetDirMoveCountWithMagnet(), mms3C = mms3.GetDirMoveCountWithMagnet();
+
             pblockedSquares = ULONG_OPERATIONS.SetBitToZero(pblockedSquares, enPassantSquareIndex);
             MagnetMoveSequence mms2 = CalculatePath(pblockedSquares, startSquareIndex, endSquareIndex, false);
 
             FINAL_ACTIONS.Clear();
             MagnetMoveSequence combinedMMS = new MagnetMoveSequence();
-            combinedMMS.dirMoves.AddRange(mms1.dirMoves);
+            combinedMMS.dirMoves.AddRange(mms1C < mms3C ? mms1.dirMoves : mms3.dirMoves);
             combinedMMS.dirMoves.AddRange(mms2.dirMoves);
             combinedMMS.GetDirectionMoveString(false);
 

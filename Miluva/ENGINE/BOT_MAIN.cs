@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 #pragma warning disable CS8618
 #pragma warning disable CS8622
@@ -14,11 +13,12 @@ namespace Miluva
     // [100%] -> Image Directions
     // [100%] -> Fixing 1024+ Motor Steps Bug
     // [100%] -> Better Line Camera Detection
-    // [0%] -> Playing Directions
+    // [100%] -> Playing Directions
     // - - - - - - - -
     // Software (Wäre cool)
     // [100%] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
-    // -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
+    // [99%] -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
+    // [100%] -> GUI Linking AddOn -> Camo & Lichess Analysis Board
     // [100%] -> Arduino Cam Analysis Error Panel
 
     // - - - - - - - -
@@ -650,7 +650,7 @@ namespace Miluva
         public long Increment, FullTime;
         public long curRemainingTime;
 
-        public bool disabled;
+        public bool disabled, unlimitedTime;
 
         public void Set(long pTime, long pIncr)
         {
@@ -686,6 +686,8 @@ namespace Miluva
 
         public void MoveFinished(long tTimeTaken)
         {
+            if (unlimitedTime) return;
+
             curRemainingTime -= tTimeTaken;
             if (HasTimeLeft()) curRemainingTime += Increment;
         }

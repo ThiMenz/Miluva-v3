@@ -111,6 +111,9 @@ namespace Miluva
             WHITE_CHESS_CLOCK.Set(tfWHITE);
             BLACK_CHESS_CLOCK.Set(tfBLACK);
 
+            if (tfWHITE.Time >= 10000) { WHITE_CHESS_CLOCK.unlimitedTime = true; tfWHITE.Time = 10000; }
+            if (tfBLACK.Time >= 10000) { BLACK_CHESS_CLOCK.unlimitedTime = true; tfWHITE.Time = 10000; }
+
             STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
             bool startFENstartswithwhite = ARDUINO_GAME_SETTINGS.START_FEN.Split('/')[7].Split(' ')[1] == "w";
@@ -598,6 +601,7 @@ namespace Miluva
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculatePath(pBlockedSquares, pFrom, pTo, false);
+            mms.ChangePerspective();
 
             FinalPathCalcsAndExecutions();
         }
@@ -651,6 +655,7 @@ namespace Miluva
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculateCapturePath(pBlockedSquares, pFrom, pTo); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
+            mms.ChangePerspective();
 
             FinalPathCalcsAndExecutions();
         }
@@ -663,6 +668,7 @@ namespace Miluva
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculateEnPassantPath(pBlockedSquares, pFrom, pTo, pEPSq);
+            mms.ChangePerspective();
 
             FinalPathCalcsAndExecutions();
 
@@ -680,6 +686,7 @@ namespace Miluva
             pBlockedSquares = ULONG_OPERATIONS.FlipBoard90Degress(pBlockedSquares);
 
             MagnetMoveSequence mms = MagnetMovePathfinder.CalculateRochadePath(pBlockedSquares, pFromKING, pToKING, pFromROOK, pToROOK); // Feld 60 oder 59(60 ist das Höhere aus weißer Perspektive)
+            mms.ChangePerspective();
 
             FinalPathCalcsAndExecutions();
 
@@ -734,7 +741,6 @@ namespace Miluva
                 //    break;
             }
         }
-
 
         private static void SendNumberToArduino(ulong pNum)
         {

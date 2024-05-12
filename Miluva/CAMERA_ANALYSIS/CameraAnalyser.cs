@@ -1829,7 +1829,7 @@ namespace Miluva
             }catch(Exception e)
             {
                 Console.WriteLine(e.ToString());
-                throw new Exception("!");
+                //throw new Exception("!");
             }
         }
 

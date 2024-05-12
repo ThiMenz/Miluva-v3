@@ -659,7 +659,7 @@ void DisplayTimer() {
   long ttVal = remainingMillis + timeStamp;
   long tVal = ttVal - millis();
 
-  if (remainingMillis == 6400000) tVal = millis() - timeStamp;
+  if (remainingMillis == 10000000) tVal = millis() - timeStamp;
 
   if (anyinputthispanel && IS_HUMANS_TURN) tVal = lastTimeStamp;
   else lastTimeStamp = tVal;

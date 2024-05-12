@@ -23,11 +23,12 @@
         public static string START_FEN = @"8/6PP/6K1/8/2k5/8/8/8 w HA - 0 1";
 
         public static CAMERA_BOTTOM_LINE CAM_LINE = CAMERA_BOTTOM_LINE.a8_a1;
+        public static CAMERA_BOTTOM_LINE MAIN_AXIS_LINE = CAMERA_BOTTOM_LINE.a8_a1;
         public static bool WHITE_TIMER_TO_THE_RIGHT = true;
 
 
         public enum ENTITY_TYPE { PLAYER, ENGINE, DISCORD };
-        public enum CAMERA_BOTTOM_LINE { h1_h8, a1_h1, a8_a1, h8_a8 };
+        public enum CAMERA_BOTTOM_LINE { a8_a1, h8_a8, h1_h8, a1_h1 };
 
         public static void LoadIn()
         {
@@ -75,6 +76,9 @@
                         break;
                     case "CAM_LINE":
                         CAM_LINE = (CAMERA_BOTTOM_LINE)Convert.ToInt32(tStr2);
+                        break;
+                    case "MAIN_AXIS_LINE":
+                        MAIN_AXIS_LINE = (CAMERA_BOTTOM_LINE)Convert.ToInt32(tStr2);
                         break;
                     case "WHITE_TIMER_RIGHT":
                         WHITE_TIMER_TO_THE_RIGHT = Convert.ToBoolean(tStr2);

@@ -184,28 +184,6 @@ namespace Miluva
             string s = "";
             int f = 0;
 
-            /* switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
-            {
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
-
-                    break;
-
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Up, magnet = false });
-
-                    break;
-
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Right, magnet = false });
-
-                    break;
-            } */
-
             // Konvertieren der rohen Felder in Bewegungsrichtungen
             for (int i = 0; i < individualFields.Count; i++)
             {
@@ -231,28 +209,6 @@ namespace Miluva
             }
 
             if (pCapture) AppendCaptureAddition();
-
-            /*switch (ARDUINO_GAME_SETTINGS.MAIN_AXIS_LINE)
-            {
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h8_a8:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
-
-                    break;
-
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.h1_h8:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Down, magnet = false });
-
-                    break;
-
-                case ARDUINO_GAME_SETTINGS.CAMERA_BOTTOM_LINE.a8_a1:
-
-                    for (int i = 0; i < 7; i++) dirMoves.Add(new DMove() { dir = DMove.Direction.Left, magnet = false });
-
-                    break;
-            }*/
 
             CleanUpDirectionMoves();
 
@@ -383,6 +339,12 @@ namespace Miluva
         // Finalisiert die rohe Move Sequenz, indem es alle "Blocker", also die Figuren die zur Seite gemoved wurde, wieder an ihre Position zurückstellt
         public void FinishMoveSequence()
         {
+            if (individualFields.Count == 1)
+            {
+                GetToFieldWithoutMagnet(0);
+                return;
+            }
+
             //individualFields.Add(new RMove() { pos = curField, magnet = true });
 
             backwardsMark = individualFields.Count - 1;

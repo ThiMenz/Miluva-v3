@@ -17,7 +17,7 @@ namespace Miluva
     // - - - - - - - -
     // Software (Wäre cool)
     // [100%] -> Discord-Input Option (dann wäre Voice Recog auch möglich); ALLERDINGS aufwendig
-    // [99%] -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
+    // [100%] -> GUI für Einstellungen (aktuell in einer seperaten Code-File)
     // [100%] -> GUI Linking AddOn -> Camo & Lichess Analysis Board
     // [100%] -> Arduino Cam Analysis Error Panel
 
@@ -70,6 +70,7 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
+            //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 0), 0, 1);
             FirmataArdControl.ARDUINO_GAME();
         }
 
@@ -650,7 +651,7 @@ namespace Miluva
         public long Increment, FullTime;
         public long curRemainingTime;
 
-        public bool disabled, unlimitedTime;
+        public bool disabled, unlimitedTime = false;
 
         public void Set(long pTime, long pIncr)
         {

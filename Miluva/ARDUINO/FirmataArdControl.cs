@@ -72,7 +72,6 @@ namespace Miluva
             NonPlayingBoardManager.LoadFenString(ARDUINO_GAME_SETTINGS.START_FEN);
 
             Console.WriteLine(!(ARDUINO_GAME_SETTINGS.BLACK_ENTITY == ARDUINO_GAME_SETTINGS.WHITE_ENTITY && ARDUINO_GAME_SETTINGS.WHITE_ENTITY == ARDUINO_GAME_SETTINGS.ENTITY_TYPE.ENGINE));
-            Console.WriteLine(ULONG_OPERATIONS.GetStringBoardVisualization(AlternativeBoardManager.allPieceBitboard));
 
 
             switch (ARDUINO_GAME_SETTINGS.WHITE_ENTITY)
@@ -111,8 +110,8 @@ namespace Miluva
             WHITE_CHESS_CLOCK.Set(tfWHITE);
             BLACK_CHESS_CLOCK.Set(tfBLACK);
 
-            if (tfWHITE.Time >= 10000) { WHITE_CHESS_CLOCK.unlimitedTime = true; tfWHITE.Time = 10000; }
-            if (tfBLACK.Time >= 10000) { BLACK_CHESS_CLOCK.unlimitedTime = true; tfWHITE.Time = 10000; }
+            if (ARDUINO_GAME_SETTINGS.WHITE_TIME_IN_SEC >= 10000) { WHITE_CHESS_CLOCK.unlimitedTime = true; tfWHITE.Time = 10000; }
+            if (ARDUINO_GAME_SETTINGS.BLACK_TIME_IN_SEC >= 10000) { BLACK_CHESS_CLOCK.unlimitedTime = true; tfBLACK.Time = 10000; }
 
             STATIC_MAIN_CAMERA_ANALYSER.SETUP();
 
@@ -318,8 +317,11 @@ namespace Miluva
 
             if (!CURRENTLY_FIRST_TURN) ChangePanel(2, 0, false, CURRENTLY_WHITES_TURN);
 
+            if (pMove != null) pBoardManager.PlainMakeMove(pMove);
             ulong tBB = pBoardManager.allPieceBitboard;
-            Move? tbM = pBoardManager.ReturnNextMove(pMove, 100_000_000L);
+            Move? tbM = pBoardManager.ReturnNextMove(null, 100_000_000L);
+
+            Console.WriteLine("=> " + pBoardManager.CreateFenString());
 
             if (tbM == null) // Bot has lost
             {

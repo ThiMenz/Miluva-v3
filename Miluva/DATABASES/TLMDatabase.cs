@@ -63,11 +63,12 @@ namespace Miluva
         public static void InitDatabase()
         {
             string tPath2 = PathManager.GetTXTPath("DATABASES/TLM_DB1");
-            DATABASE = File.ReadAllLines(tPath2);
+            if (File.Exists(tPath2)) DATABASE = File.ReadAllLines(tPath2);
             DATABASE_SIZE = DATABASE.Length;
             DATABASEV2 = File.ReadAllLines(PathManager.GetTXTPath("DATABASES/TLM_DB2"));
             DATABASEV2_SIZE = DATABASEV2.Length;
             bM = BOT_MAIN.boardManagers[ENGINE_VALS.PARALLEL_BOARDS - 1];
+            CreateTLMPSConversionArrays();
 
             Console.WriteLine("[TLM_DB] LOADED IN");
         }
@@ -650,6 +651,166 @@ namespace Miluva
             }
 
             return uls;
+        }
+
+        private static int[] pieceCharToNumber = new int[256];
+        private static int[] fenSquareSwap = new int[64]
+        {
+            56, 57, 58, 59,  60, 61, 62, 63,
+            48, 00, 00, 00,  00, 00, 00, 00,
+            00, 00, 00, 00,  00, 00, 00, 00,
+            00, 00, 00, 00,  00, 00, 00, 00,
+
+            00, 00, 00, 00,  00, 00, 00, 00,
+            00, 00, 00, 00,  00, 00, 00, 00,
+            00, 00, 00, 00,  00, 00, 00, 00,
+            00, 00, 00, 00,  00, 00, 00, 00
+        };
+
+
+        private static void CreateTLMPSConversionArrays()
+        {
+            pieceCharToNumber[80] = 1; pieceCharToNumber[112] = 7;
+            pieceCharToNumber[78] = 2; pieceCharToNumber[110] = 8;
+            pieceCharToNumber[66] = 3; pieceCharToNumber[98] = 9;
+            pieceCharToNumber[82] = 4; pieceCharToNumber[114] = 10;
+            pieceCharToNumber[81] = 5; pieceCharToNumber[113] = 11;
+            pieceCharToNumber[75] = 6; pieceCharToNumber[107] = 12;
+
+            //00: Nichts & (Weiß)    & (X - X)
+            //13: Nichts & (Schwarz) & (O - X)
+            //14: Nichts & (-)       & (X - O)
+            //15: Nichts & (-)       & (O - O)
+
+            // 32 Bytes:
+            // 64 * 4 Bits = 64 Field Descriptions
+            // Davon leere Half Bytes (es müssen ja immer mindestens 32 existieren):
+            // [1] 1. Farbe
+            // [1] 2. Rochade Weiß
+            // [1] 3. Rochade Schwarz
+            // [6] 4. - 9. En-Passant Square 
+            // [7] 10. - 16. Fifty Move Rule
+            // [16] 17. - 32. Moves Played (Müsste theoretisch maximal 8192 bzw 16384 haben, also 13 oder 14 bits)
+        }
+
+        public static void GetTLMPSFromFEN(string pFEN)
+        {
+            int tCharCount = pFEN.Length, tPos = 0, curReadingState = 0;
+
+            int enPassantSquare = -1, fiftyMoveRuleCounter = 0, happenedHalfMoveCounter = 0;
+            bool isWhite = false;
+            bool[] castleRights = new bool[4];
+            string tStr = "";
+
+            for (int i = 0; i < tCharCount; i++)
+            {
+                int tChar = pFEN[i];
+
+                switch (curReadingState) {
+
+                    case 0: // Pieces & Side to move
+                        if (tChar > 48 && tChar < 58)
+                        {
+                            tPos += tChar - 48; // 49 ist die 1; 57 die 9
+                            continue;
+                        }
+
+                        if (tChar == 32) // End of pure position Info
+                        {
+                            isWhite = ((ulong)pFEN[++i] & 1) == 1; // Either white or black
+                            curReadingState = 1;
+                            i++;
+                            //break;
+                        }
+
+                        Console.WriteLine(pieceCharToNumber[tChar]);
+
+                        tPos++;
+
+                        break;
+
+
+                    case 1: // Castle Rights
+
+
+                        switch (tChar)
+                        {
+                            case 32:
+                                curReadingState = 2;
+
+                                if (pFEN[i + 2] != 32) // As long as an EP-Square is given, extract it
+                                {
+                                    enPassantSquare = (pFEN[++i] - 97) + 8 * (pFEN[++i] - 49);
+                                    i++;
+                                }
+                                else i += 2;
+
+                                break;
+                            case 75: //K -> Kingside White
+                                castleRights[0] = true;
+                                break;
+                            case 107: //k -> Kingside Black
+                                castleRights[2] = true;
+                                break;
+                            case 81: //Q -> Queenside White
+                                castleRights[1] = true;
+                                break;
+                            case 113: //q -> Queenside Black
+                                castleRights[3] = true;
+                                break;
+                        }
+
+                        break;
+
+
+                    case 2: // Fifty Move Rule
+
+                        if (tChar == 32)
+                        {
+                            fiftyMoveRuleCounter = STRING_TO_INT(tStr);
+                            curReadingState = 3;
+                            tStr = "";
+                            continue;
+                        }
+
+                        tStr += pFEN[i];
+
+                        break;
+
+
+                    case 3: // Happened Half Moves
+
+                        if (tChar == 32) continue;
+
+                        tStr += pFEN[i];
+
+                        break;
+
+
+                }
+            }
+
+            happenedHalfMoveCounter = STRING_TO_INT(tStr);
+
+            Console.WriteLine("En Passant Square: " + enPassantSquare);
+            Console.WriteLine("Fifty Move Rule Counter: " + fiftyMoveRuleCounter);
+            Console.WriteLine("Half Move Counter: " + happenedHalfMoveCounter);
+            Console.WriteLine("Side is White: " + isWhite);
+            Console.WriteLine("Castle Rights White: " + castleRights[0] + " | " + castleRights[1]);
+            Console.WriteLine("Castle Rights Black: " + castleRights[2] + " | " + castleRights[3]);
+        }
+
+        private static int STRING_TO_INT(string s)
+        {
+            int total = 0, y = 1;
+            for (int x = s.Length - 1; x > 0; x--)
+            {
+                total += (y * (s[x] - '0'));
+                y *= 10;
+            }
+            if (s[0] == '-') total *= -1;
+            else total += (y * (s[0] - '0'));
+            return total;
         }
 
         public static double ConvertCPValsToNNSigmoid(int pInt)

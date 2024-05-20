@@ -2275,7 +2275,7 @@ namespace Miluva
             {
                 (string, int) bookMoveTuple = TLMDatabase.SearchForNextBookMoveV2(moveHashList);
 
-                if (bookMoveTuple.Item2 > 1)
+                if (bookMoveTuple.Item2 > 0)
                 {
                     int actualMoveHash = NuCRe.GetNumber(bookMoveTuple.Item1);
                     List<Move> tMoves = new List<Move>();

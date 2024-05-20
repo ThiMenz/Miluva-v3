@@ -70,8 +70,9 @@ namespace Miluva
             LegacyEngineManager.InitSnapshots();
             TLMDatabase.InitDatabase();
 
+            TLMDatabase.GetTLMPSFromFEN("r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQq d6 2 3");
             //FirmataArdControl.CalculateAndExecutePath(ULONG_OPERATIONS.SetBitsToOne(0ul, 0), 0, 1);
-            FirmataArdControl.ARDUINO_GAME();
+            //FirmataArdControl.ARDUINO_GAME();
         }
 
         #region | MAIN METHODS |

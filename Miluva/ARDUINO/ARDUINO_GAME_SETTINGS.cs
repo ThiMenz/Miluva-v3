@@ -73,6 +73,7 @@
                         break;
                     case "START_FEN":
                         START_FEN = tStr2;
+                        if (START_FEN.Replace(" ", "") == "") START_FEN = ENGINE_VALS.DEFAULT_FEN;
                         break;
                     case "CAM_LINE":
                         CAM_LINE = (CAMERA_BOTTOM_LINE)Convert.ToInt32(tStr2);
